@@ -42,7 +42,8 @@ def deck_row(deck: dict[str, Any]) -> dict[str, Any]:
         "table_rule": rule["name"] if rule else None,
         "health": {"status": hc["status"], "summary": hc["summary"], "weak": weak},
         "games": {k: st[k] for k in ("games", "wins", "losses", "draws", "win_rate", "avg_turn")}
-                 | {"issues": [i["label"] for i in st["issues"][:3]], "lost_to": [n for n, _ in lost_to.most_common(3)]},
+                 | {"issues": [i["label"] for i in st["issues"][:3]], "lost_to": [n for n, _ in lost_to.most_common(3)]}
+                 | ({"hurt_by": [s["name"] for s in st["rounds"]["sources"][:3]]} if st["rounds"] else {}),
         "missing_cards": missing,
         "upgrade_plan_open_stages": open_stages if plan else None,
         "has_guide": bool(deck.get("guide")),
@@ -88,6 +89,8 @@ def _deck_line(d: dict[str, Any]) -> str:
             rec += ", Probleme: " + ", ".join(g["issues"])
         if g["lost_to"]:
             rec += ", verloren gegen " + ", ".join(g["lost_to"])
+        if g.get("hurt_by"):
+            rec += ", am meisten Schaden (Runden-Helfer) von " + ", ".join(g["hurt_by"])
         parts.append(rec)
     else:
         parts.append("noch keine Partien")

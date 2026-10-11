@@ -349,6 +349,11 @@ darunter Commander-Schaden je gegnerischem Commander (Partner zählen einzeln), 
   Protokoll als `round`. Bis dahin liegt die Runde nur auf dem Handy (localStorage) und übersteht Neuladen; sie steht
   als Karte auf dem Tisch-Tab, und der Bildschirm bleibt an.
 - **Danach:** Die Partie zeigt Endstand, eine Lebenskurve pro Zug, den Commander-Schaden und den ganzen Verlauf.
+- **Am PC:** Nach dem Abgleich zeigt der Partien-Tab des Decks unter der Partie „Runde ansehen“ (Lebenskurve,
+  Endstand, Commander-Schaden, Tabelle Zug für Zug mit Notizen). Die Bilanz fasst alle Runden zusammen: wer am meisten
+  Schaden gemacht hat und wie viel Leben ein eigener Zug im Schnitt kostet (der schwerste ist rot). Claude bekommt das
+  in Upgrades, Plänen und Fragen (`deck_games`, Upgrade-Prompt, App-Überblick), und „Aus den Partien lernen“ übernimmt
+  es als Fokus.
 
 ## Schritte
 

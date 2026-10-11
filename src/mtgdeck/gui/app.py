@@ -1360,6 +1360,8 @@ def upgrade_prompt(deck: dict[str, Any], req: UpgradeRequest, has_collection: bo
         common = ", ".join(f"{i['label']} ({i['count']}×)" for i in record["issues"][:4]) or "keine notiert"
         lines.append(f"- Festgehaltene Partien: {record['wins']} Siege, {record['losses']} Niederlagen; häufigste Probleme: "
                      f"{common}. Details über `deck_games` – die Tausche sollen genau diese Probleme angehen.")
+        if record["rounds"]:
+            lines.append(f"- {games.rounds_line(record['rounds'])} Die Tausche sollen auch dagegen helfen.")
     if has_collection:
         lines.append("- Sammlung: Karten, die der Nutzer schon besitzt (`collection_search`), kosten nichts – bevorzuge sie "
                      "bei gleicher Wirkung und setze `owned` auf true.")

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from . import storage
+from .fmt import num as de_num
 from .jsonstore import locked, read_json, write_json
 
 GAMES_DIRNAME = ".games"
@@ -112,19 +113,121 @@ def stats(items: list[dict[str, Any]]) -> dict[str, Any]:
         "per_version": [{"version": v, **per_version[v]} for v in sorted(per_version)],
         "mvps": [{"name": n, "count": c} for n, c in Counter(g["mvp"] for g in items if g.get("mvp")).most_common(5)],
         "opponents": [{"name": n, "count": c} for n, c in Counter(o for g in items for o in g.get("opponents") or []).most_common(5)],
+        "rounds": rounds(items),
     }  # fmt: skip
 
 
 def learn_focus(items: list[dict[str, Any]], top: int = 3) -> str:
-    """Focus text for upgrade suggestions from the most common problems (empty without problems)."""
-    common = stats(items)["issues"][:top]
-    if not common:
-        return ""
-    return "Aus den Partien: " + "; ".join(f"{ISSUES[i['key']][1]} ({i['count']}× „{i['label']}“)" for i in common)
+    """Focus text for upgrade suggestions from the most common problems and the Runden-Helfer's logs
+    (empty without either)."""
+    st = stats(items)
+    parts = [f"{ISSUES[i['key']][1]} ({i['count']}× „{i['label']}“)" for i in st["issues"][:top]]
+    r = st["rounds"]
+    if r and r["rounds"] >= 2:
+        src = next((s for s in r["sources"] if s["rounds"] >= 2), None)
+        if src:
+            parts.append(f"Antworten auf {src['name']} ({src['damage']} Schaden in {src['rounds']} Runden)")
+        worst = r["worst_turn"]
+        if worst and worst["avg_lost"] >= 8:
+            avg = de_num(worst["avg_lost"], 0 if worst["avg_lost"] == int(worst["avg_lost"]) else 1)
+            parts.append(f"früher verteidigen (in Zug {worst['turn']} im Schnitt {avg} Leben verloren)")
+    return "Aus den Partien: " + "; ".join(parts) if parts else ""
+
+
+# ---------- the phone's Runden-Helfer: ``game["round"]`` (cleaned by sync/appops._round) ----------
+def _event_text(e: dict[str, Any]) -> str:
+    d, src = int(e.get("delta") or 0), e.get("from")
+    von = f" von {src}" if src else ""
+    if e.get("kind") == "life":
+        return f"{'+' if d > 0 else '−'}{abs(d)} Leben{von if d < 0 else ''}"
+    if e.get("kind") == "cmd":
+        return f"{'' if d > 0 else '−'}{abs(d)} Commander-Schaden{von}"
+    if e.get("kind") == "poison":
+        return f"{'+' if d > 0 else '−'}{abs(d)} {'Giftmarke' if abs(d) == 1 else 'Giftmarken'}"
+    return ""
+
+
+def round_turns(rnd: dict[str, Any]) -> list[dict[str, Any]]:
+    """The user's turns of one round: life at the end, life lost/gained, commander damage, poison, what happened, notes."""
+    life = int(rnd.get("start_life") or 0)
+    out = []
+    events = [e for e in rnd.get("events") or [] if isinstance(e, dict)]
+    for n in range(1, int(rnd.get("turns") or 1) + 1):
+        t: dict[str, Any] = {"turn": n, "lost": 0, "gained": 0, "cmd": {}, "poison": 0, "events": [], "notes": []}
+        for e in events:
+            if e.get("turn") != n or e.get("kind") == "turn":
+                continue
+            d = int(e.get("delta") or 0)
+            if e.get("kind") == "note":
+                t["notes"].append(e.get("text") or "")
+                continue
+            if e.get("kind") == "life":
+                life += d
+                t["lost" if d < 0 else "gained"] += abs(d)
+            elif e.get("kind") == "cmd":
+                life -= d
+                t["lost"] += d
+                t["cmd"][e.get("from") or "?"] = t["cmd"].get(e.get("from") or "?", 0) + d
+            elif e.get("kind") == "poison":
+                t["poison"] += d
+            t["events"].append(_event_text(e))
+        t["life"] = life
+        out.append(t)
+    return out
+
+
+def slim_round(rnd: dict[str, Any]) -> dict[str, Any]:
+    """A round without its raw log: end state plus the turns (for Claude)."""
+    keep = ("start_life", "life", "poison", "turns", "started", "ended", "cmd")
+    return {k: rnd.get(k) for k in keep} | {"per_turn": round_turns(rnd)}
+
+
+def rounds(items: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """What the Runden-Helfer's logs say over all games: who dealt the most damage (commander damage plus life
+    losses put on an opponent), life lost per own turn and the worst turn. None without logged rounds."""
+    logged = [g["round"] for g in items if isinstance(g.get("round"), dict)]
+    if not logged:
+        return None
+    damage: Counter[str] = Counter()
+    cmd: Counter[str] = Counter()
+    hit: Counter[str] = Counter()
+    lost: dict[int, list[int]] = {}
+    for rnd in logged:
+        seen = set()
+        for e in rnd.get("events") or []:
+            src, d = e.get("from"), int(e.get("delta") or 0)
+            if src and (e.get("kind") == "cmd" or (e.get("kind") == "life" and d < 0)):
+                damage[src] += abs(d) if e.get("kind") == "life" else d
+                if e.get("kind") == "cmd":
+                    cmd[src] += d
+                seen.add(src)
+        hit.update(seen)
+        for t in round_turns(rnd):
+            lost.setdefault(t["turn"], []).append(t["lost"])
+    per_turn = [{"turn": n, "avg_lost": round(sum(v) / len(v), 1), "rounds": len(v)} for n, v in sorted(lost.items()) if n <= 15]
+    worst = max((t for t in per_turn if t["rounds"] >= min(2, len(logged))), key=lambda t: t["avg_lost"], default=None)
+    lives = [r["life"] for r in logged if isinstance(r.get("life"), int)]
+    return {
+        "rounds": len(logged), "avg_end_life": round(sum(lives) / len(lives), 1) if lives else None,
+        "sources": [{"name": n, "damage": d, "cmd": max(0, cmd[n]), "rounds": hit[n]} for n, d in damage.most_common(5) if d > 0],
+        "per_turn": per_turn, "worst_turn": worst if worst and worst["avg_lost"] > 0 else None,
+        "poison_rounds": sum(1 for r in logged if r.get("poison")),
+    }  # fmt: skip
+
+
+def rounds_line(r: dict[str, Any]) -> str:
+    """One German sentence about ``rounds()`` for Claude's prompts."""
+    hurt = ", ".join(f"{s['name']} {s['damage']}" + (f" (davon {s['cmd']} Commander-Schaden)" if s["cmd"] else "") for s in r["sources"][:3])
+    worst = r["worst_turn"]
+    return (f"Runden-Helfer ({r['rounds']} {'Runde' if r['rounds'] == 1 else 'Runden'} mitgezählt): "
+            + (f"am meisten Schaden: {hurt}; " if hurt else "")
+            + (f"schwerster eigener Zug: Zug {worst['turn']} (im Schnitt {de_num(worst['avg_lost'], 1)} Leben verloren); " if worst else "")
+            + (f"Leben am Ende im Schnitt {de_num(r['avg_end_life'], 1)}." if r["avg_end_life"] is not None else "")).rstrip("; ")
 
 
 def summary(deck_slug: str) -> dict[str, Any]:
-    """Games plus statistics – what the MCP tool and the GUI return."""
+    """Games plus statistics – what the MCP tool and the GUI return. A game with a round log gets ``round_turns``."""
     items = games(deck_slug)
-    return {"games": items, "stats": stats(items), "learn_focus": learn_focus(items),
+    shown = [g | {"round_turns": round_turns(g["round"])} if isinstance(g.get("round"), dict) else g for g in items]
+    return {"games": shown, "stats": stats(items), "learn_focus": learn_focus(items),
             "issue_labels": {k: v[0] for k, v in ISSUES.items()}, "result_labels": RESULTS, "how_labels": HOW}  # fmt: skip

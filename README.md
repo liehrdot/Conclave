@@ -275,6 +275,7 @@ ein Befehl auf dem Server.
     springt in Fünferschritten; Commander-Schaden und Gift trägst du nach Antippen der Kachel in einem eigenen Blatt
     ein. Bist du raus oder beendest du die Runde, öffnet sich das Partie-Formular vorbelegt; die Partie wird mit dem
     ganzen Verlauf gespeichert. „Beenden“ → „Ohne Ergebnis abbrechen“ verwirft eine Runde, ohne etwas zu speichern.
+    Am PC steht die Runde nach dem Abgleich im Deck unter *Partien* („Runde ansehen“).
   - **Frag Claude:** Im Tab „Claude“ stellst du Fragen zu Decks, Gegnern oder Regeln. Dein PC beantwortet sie mit dem
     „Frag Claude“ des Deckbuilders, solange er läuft – das Handy selbst braucht keine KI. Es zeigt ehrlich, ob der PC
     bereit ist und was Claude gerade tut („liest Kartentexte …“). Kommt eine Frage ohne Netz, wartet sie auf dem Handy;
@@ -429,8 +430,12 @@ sie sich auch bewusst ausschalten. KI-Knöpfe sind dann gesperrt und ein Hinweis
   - **Partien:** nach dem Spiel festhalten – Ergebnis, Gegner-Commander, letzter Zug, was schiefging
     (Schnellwahl wie „zu wenige Länder“, „kein Weg zu gewinnen“), beste Karte, Notiz. Die Bilanz zeigt
     Siegquote, Ø Zug, häufigste Probleme, Ergebnis pro Version, beste Karten und Gegner.
-    „Aus den Partien lernen“ trägt die häufigsten Probleme als Fokus für Upgrade-Vorschläge ein; Fragen und
-    Upgrades kennen die Partien auch (`deck_games`). Gespeichert in `decks/.games/<slug>.json`.
+    Partien aus dem Runden-Helfer des Handys haben „Runde ansehen“: Lebenskurve, Commander-Schaden und was in
+    jedem Zug passiert ist. Die Bilanz zeigt dazu, wer dir über alle Runden den meisten Schaden gemacht hat und in
+    welchem eigenen Zug du im Schnitt am meisten Leben verlierst.
+    „Aus den Partien lernen“ trägt die häufigsten Probleme als Fokus für Upgrade-Vorschläge ein (mit Runden auch
+    Antworten auf den stärksten Gegner und „früher verteidigen“); Fragen und
+    Upgrades kennen die Partien samt Runden auch (`deck_games`). Gespeichert in `decks/.games/<slug>.json`.
     Zu jedem Gegner gibt es ein Feld „Aufgefallen“; bekannte Gegnerdecks wählst du per Klick aus,
     neue Commander werden automatisch als Gegnerdeck gemerkt (abschaltbar).
   - **Verlauf:** Versionen vergleichen, wiederherstellen, als neues Deck kopieren. Darunter (und im ⋯-Menü)

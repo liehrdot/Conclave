@@ -192,6 +192,8 @@ For "make it cheaper / stronger / bracket X / more draw / swap Y":
 1. `load_deck` the deck (or `import_deck` a deck link – Archidekt, Moxfield, MTGGoldfish, TappedOut,
    Deckstats, EDHREC average deck –, `import_precon` a starter deck found with `search_precons`, or parse a
    pasted list). `deck_games` shows logged games and their most common problems – use them to decide what to change.
+   Games from the phone's round helper carry `round` (life, commander damage, poison, `per_turn`), and
+   `stats.rounds` sums them up (who dealt the most damage, the turn that costs the most life).
    `opponent_decks` lists the decks the user plays against (commander, traits, observations, record – no card
    lists; typical cards via `edhrec_recommendations` for that commander). Prepare for the relevant ones with
    fitting interaction and answers, without turning the deck into a pure hate deck. When the user tells you

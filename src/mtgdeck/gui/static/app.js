@@ -2040,15 +2040,45 @@ function renderGames(slug, data) {
       `<li><span>${esc(i.label)}</span><span class="bar"><i style="width:${(i.count / maxIssue) * 100}%"></i></span><span>${i.count}×</span></li>`).join("")}</ul>` : ""}
     ${st.per_version.length > 1 ? `<p class="game-stats-more">Pro Version: ${st.per_version.map((v) => `v${v.version} ${v.wins}/${v.games}`).join(" · ")}</p>` : ""}
     ${st.mvps.length ? `<p class="game-stats-more">Beste Karten: ${st.mvps.map((m) => `${esc(m.name)}${m.count > 1 ? ` (${m.count}×)` : ""}`).join(", ")}</p>` : ""}
-    ${st.opponents.length ? `<p class="game-stats-more">Häufigste Gegner: ${st.opponents.map((o) => esc(o.name)).join(", ")}</p>` : ""}`;
+    ${st.opponents.length ? `<p class="game-stats-more">Häufigste Gegner: ${st.opponents.map((o) => esc(o.name)).join(", ")}</p>` : ""}
+    ${st.rounds ? roundStatsHtml(st.rounds) : ""}`;
   $("#game-empty").hidden = !!data.games.length;
   $("#game-list").innerHTML = data.games.slice().reverse().map((g) => `<li data-id="${esc(g.id)}">
       <div class="when"><span class="res ${esc(g.result)}">${esc(data.result_labels[g.result] || g.result)}</span><br><span class="meta">${esc(fmtDate(g.played))}${g.version ? ` · v${esc(g.version)}` : ""}</span></div>
       <div>${g.opponents.length ? `gegen ${g.opponents.map((o, i) => g.opponent_ids?.[i] ? `<a href="#/opponents/${enc(g.opponent_ids[i])}">${esc(o)}</a>` : esc(o)).join(", ")}` : '<span class="meta">Gegner nicht notiert</span>'}${g.turn ? ` · Zug ${esc(g.turn)}` : ""}${g.how && data.how_labels?.[g.how] ? ` · ${esc(data.how_labels[g.how])}` : ""}
         ${g.started === "me" ? '<br><span class="meta">Ich habe angefangen</span>' : Number.isInteger(g.started) && g.opponents[g.started] ? `<br><span class="meta">Angefangen: ${esc(g.opponents[g.started])}</span>` : ""}
         ${g.mvp ? `<br>Beste Karte: <strong>${esc(g.mvp)}</strong>` : ""}${g.note ? `<br><span class="meta">${esc(g.note)}</span>` : ""}
-        ${g.issues.length ? `<div class="issues">${g.issues.map((i) => `<span>${esc(data.issue_labels[i] || i)}</span>`).join("")}</div>` : ""}</div>
+        ${g.issues.length ? `<div class="issues">${g.issues.map((i) => `<span>${esc(data.issue_labels[i] || i)}</span>`).join("")}</div>` : ""}
+        ${g.round_turns ? roundBoxHtml(g.round, g.round_turns) : ""}</div>
       <button type="button" class="icon-btn game-del" aria-label="Partie löschen" title="Partie löschen">${icon("x")}</button></li>`).join("");
+}
+
+// rounds counted with the phone's Runden-Helfer: what they say over all games, and one round turn by turn
+const cmdShort = (name) => String(name || "").split(",")[0].split(" // ")[0];
+function roundStatsHtml(r) {
+  const maxLost = Math.max(1, ...r.per_turn.map((t) => t.avg_lost));
+  return `<h3 class="small muted round-stats-head">Aus dem Runden-Helfer · ${r.rounds} ${r.rounds === 1 ? "Runde" : "Runden"}</h3>
+    ${r.sources.length ? `<p class="game-stats-more">Am meisten Schaden: ${r.sources.slice(0, 3).map((x) => `<strong>${esc(cmdShort(x.name))}</strong> ${x.damage}${x.cmd ? ` (${x.cmd} Commander-Schaden)` : ""}${r.rounds > 1 ? ` in ${x.rounds} ${x.rounds === 1 ? "Runde" : "Runden"}` : ""}`).join(" · ")}</p>` : ""}
+    ${r.per_turn.some((t) => t.avg_lost) ? `<p class="game-stats-more">Leben verloren pro eigenem Zug${r.rounds > 1 ? " (Schnitt)" : ""}:</p>
+      <ul class="issue-bars turn-bars">${r.per_turn.slice(0, 10).map((t) => `<li${r.worst_turn?.turn === t.turn ? ' class="worst"' : ""}><span>Zug ${t.turn}</span><span class="bar"><i style="width:${(t.avg_lost / maxLost) * 100}%"></i></span><span>${t.avg_lost ? "−" + fmtNum(t.avg_lost) : "0"}</span></li>`).join("")}</ul>` : ""}
+    ${r.avg_end_life !== null ? `<p class="game-stats-more">Leben am Ende${r.rounds > 1 ? " im Schnitt" : ""}: ${fmtNum(r.avg_end_life)}${r.poison_rounds ? ` · Gift in ${r.poison_rounds} ${r.poison_rounds === 1 ? "Runde" : "Runden"}` : ""}</p>` : ""}`;
+}
+
+function roundBoxHtml(r, turns) {
+  const mins = r.started && r.ended ? Math.max(0, Math.round((new Date(r.ended) - new Date(r.started)) / 60000)) : null;
+  const pts = [r.start_life, ...turns.map((t) => t.life)];
+  const W = 300, H = 56, max = Math.max(...pts, 1), min = Math.min(0, ...pts);
+  const spark = pts.length > 2 ? `<svg class="round-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Leben pro Zug: ${pts.join(", ")}">
+    <polyline points="${pts.map((v, i) => `${((i / (pts.length - 1)) * W).toFixed(1)},${(H - 4 - ((v - min) / (max - min || 1)) * (H - 8)).toFixed(1)}`).join(" ")}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>` : "";
+  const cmd = (r.cmd || []).filter((c) => c.dmg).sort((a, b) => b.dmg - a.dmg);
+  return `<details class="more round-box"><summary>Runde ansehen <span class="muted">· ${esc(r.life ?? "–")} Leben am Ende · ${turns.length} ${turns.length === 1 ? "Zug" : "Züge"}${mins !== null ? ` · ${mins} Min.` : ""}</span></summary>
+    <div class="round-head">${spark}
+      <div class="round-facts"><span>Start <b>${esc(r.start_life)}</b></span><span>Ende <b>${esc(r.life ?? "–")}</b></span>${r.poison ? `<span>Gift <b>${esc(r.poison)}</b></span>` : ""}
+        ${cmd.map((c) => `<span>${esc(cmdShort(c.name))} <b>${esc(c.dmg)}</b>/21</span>`).join("")}</div></div>
+    <table class="round-turns"><thead><tr><th>Zug</th><th>Leben</th><th>Was passiert ist</th></tr></thead><tbody>
+      ${turns.slice().reverse().map((t) => `<tr><td>${t.turn}</td><td><b>${t.life}</b>${t.lost || t.gained ? ` <span class="${t.lost > t.gained ? "down" : "up"}">${t.lost > t.gained ? "−" + (t.lost - t.gained) : "+" + (t.gained - t.lost)}</span>` : ""}</td>
+        <td>${t.events.length ? t.events.map(esc).join(" · ") : '<span class="muted">nichts</span>'}${t.notes.map((n) => `<br><em>${esc(n)}</em>`).join("")}</td></tr>`).join("")}
+    </tbody></table></details>`;
 }
 
 for (const n of [1, 2, 3]) wireAutocomplete($(`#game-form [name=opp${n}]`), $(`#ac-opp${n}`));

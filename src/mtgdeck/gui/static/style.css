@@ -883,7 +883,23 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .game-list .meta { color: var(--muted); }
 .game-list .issues { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .game-list .issues span { background: var(--warn-soft); color: var(--warn); border-radius: 99px; padding: 1px 8px; font-size: var(--fs-xs); }
+.turn-bars li.worst span:first-child, .turn-bars li.worst span:last-child { color: var(--bad); font-weight: 650; }
+.turn-bars li.worst .bar i { background: var(--bad); }
+.round-stats-head { margin: var(--space-4) 0 var(--space-1); }
+.round-box { margin-top: var(--space-2); }
+.round-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; margin-bottom: var(--space-2); }
+.round-spark { width: 100%; height: 56px; color: var(--accent); background: var(--surface-2); border-radius: var(--radius); padding: 4px 8px; }
+.round-facts { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: flex-end; max-width: 280px; color: var(--muted); font-size: var(--fs-xs); }
+.round-facts b { color: var(--text); font-size: var(--fs-sm); }
+.round-turns { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); }
+.round-turns th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px 8px 4px 0; border-bottom: 1px solid var(--border); }
+.round-turns td { padding: 6px 8px 6px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.round-turns td:nth-child(1) { width: 36px; color: var(--muted); }
+.round-turns td:nth-child(2) { width: 72px; white-space: nowrap; }
+.round-turns .down { color: var(--bad); } .round-turns .up { color: var(--ok); }
+.round-turns em { color: var(--muted); }
 @media (max-width: 860px) {
+  .round-head { grid-template-columns: 1fr; } .round-facts { justify-content: flex-start; max-width: none; }
   .games-layout, .game-row, .game-row.two { grid-template-columns: 1fr; }
   .game-row .field { margin-bottom: var(--space-3); }
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -568,13 +568,17 @@ async def load_deck(slug: str) -> dict[str, Any]:
 async def deck_games(slug: str) -> dict[str, Any]:
     """Games the user logged with a saved deck: result, opponents' commanders, end turn, problems
     (e.g. 'zu wenige Länder'), best card, note, deck version – plus win/loss record, most common
-    problems and a focus text for upgrades. Use it for questions and upgrades about the deck."""
+    problems and a focus text for upgrades. Games logged with the phone's Runden-Helfer carry `round`
+    (life per turn, commander damage by opposing commander, poison) and `stats.rounds` sums them up (who dealt
+    the most damage, life lost per turn). Use it for questions and upgrades about the deck."""
     try:
         storage.load(slug)
     except FileNotFoundError as exc:
         return {"error": str(exc)}
     data = games.summary(slug)
-    data["games"] = data["games"][-30:]  # recent games are enough for context
+    # recent games are enough for context; a Runden-Helfer log goes in turn by turn, without its raw entries
+    data["games"] = [{k: v for k, v in g.items() if k != "round_turns"} | ({"round": games.slim_round(g["round"])} if g.get("round") else {})
+                     for g in data["games"][-30:]]  # fmt: skip
     return data
 
 
