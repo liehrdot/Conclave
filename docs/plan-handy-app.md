@@ -321,8 +321,27 @@ schneller.
 - kein Konto und kein Login außer der Kopplung;
 - keine Benachrichtigungen, keine Bewertungsbitten;
 - kein Deck-Bearbeiten auf dem Handy (dafür ist der PC da);
-- kein Lebenspunkte-Zähler. Später denkbar: Ein Zähler, der Sieger und Zug gleich mitliefert, wäre die konsequenteste
-  Form von „Vorbelegen“. Das ist ein eigenes Thema.
+- kein Zähler für alle Spieler am Tisch. Der Runden-Helfer (unten) zählt nur die eigenen Werte.
+
+## Runden-Helfer
+
+Ein persönlicher Begleiter für die eigene Runde – kein Zähler für den ganzen Tisch. Er zeigt groß die eigenen Leben,
+darunter Commander-Schaden je gegnerischem Commander (Partner zählen einzeln), Gift und den eigenen Zug.
+
+- **Start:** „Runde starten“ auf dem Tisch-Tab: Deck, Gegner (aus der letzten Partie innerhalb von 8 h vorbelegt),
+  Startleben 40/30/20.
+- **Bedienen:** − und + neben der Zahl, gedrückt halten zählt weiter. Nach einem Lebensverlust bietet die Karte
+  „Schaden von“ mit den Gegnern an. Commander-Schaden: Kachel antippen = +1, das kostet auch ein Leben; das kleine −
+  korrigiert. „Zug N beginnt“ zählt den eigenen Zug hoch und zeigt kurz, was der letzte Zug gekostet hat.
+- **Protokoll:** Jede Änderung landet mit Zug, Uhrzeit und dem Lebensstand danach im Verlauf; Tipps auf denselben
+  Zähler innerhalb von 4 s werden ein Eintrag („−5“). Im Verlauf lassen sich Notizen zum laufenden Zug festhalten.
+  Rückgängig nimmt die letzte Änderung zurück, Notizen bleiben. Alle Werte werden aus dem Protokoll berechnet.
+- **Raus:** bei 0 Leben, 10 Gift oder 21 Commander-Schaden erscheint „Du bist raus“ mit „Als Niederlage speichern“.
+- **Ende:** „Beenden“ öffnet das Partie-Formular vorbelegt (Deck, Ergebnis, Zug, Gegner, bei Commander-Schaden
+  „Entschieden durch“). Erst das Speichern dort beendet die Runde und schickt sie als Partie an den Server, mit dem
+  Protokoll als `round`. Bis dahin liegt die Runde nur auf dem Handy (localStorage) und übersteht Neuladen; sie steht
+  als Karte auf dem Tisch-Tab, und der Bildschirm bleibt an.
+- **Danach:** Die Partie zeigt Endstand, eine Lebenskurve pro Zug, den Commander-Schaden und den ganzen Verlauf.
 
 ## Schritte
 

@@ -2,6 +2,7 @@
 
 import { currentDeck, deckBy, failedOps, gamesOf, isDemo, isPending, op, oppBy, oppName, oppSub, pendingCount, setPref, shortName, state } from "./data.js";
 import { askSheet } from "./claude.js";
+import { roundCard, running, startSheet } from "./round.js";
 import { cardSheet, gameDetailSheet, gameSheet, opponentSheet, settingsSheet, switchDeckSheet } from "./forms.js";
 import * as scry from "./scry.js";
 import { present, toast } from "./ui.js";
@@ -55,6 +56,7 @@ export function tisch() {
         </div>
       </article>`
       : empty("decks", "Noch keine Decks", "Deine Decks kommen vom PC, sobald er abgeglichen hat.")}
+    ${roundCard()}
     ${statusLine()}
     ${installHint()}
     <div class="section-head"><h2>Letzte Partien</h2></div>
@@ -70,7 +72,7 @@ export function tisch() {
         <span class="main"><span class="title">Claude fragen</span><span class="subtitle">Strategie, Matchup oder Regelfrage – dein PC antwortet</span></span>${icon("chev-r", "sm chev")}</button>
     </div>`;
   return {
-    html, fab: d ? { label: "Partie eintragen", run: () => gameSheet() } : null,
+    html, fab: running() ? { label: "Zur Runde", icon: "heart", run: () => { location.hash = "#/runde"; } } : d ? { label: "Partie eintragen", run: () => gameSheet() } : null,
     bar: { title: "Am Tisch", watch: ".large-title h1" },
     bind(el) {
       $("#open-settings", el).addEventListener("click", settingsSheet);
@@ -78,6 +80,7 @@ export function tisch() {
       $("#show-r0", el)?.addEventListener("click", () => showRule0(d));
       $("#quick-opp", el).addEventListener("click", () => opponentSheet());
       $("#quick-ask", el).addEventListener("click", () => askSheet());
+      $("#round-start", el)?.addEventListener("click", startSheet);
       $("#status-line", el)?.addEventListener("click", settingsSheet);
       $("#install-hint .x", el)?.addEventListener("click", () => { setPref("installHintDone", true); window.dispatchEvent(new Event("redraw")); });
       $("#install-now", el)?.addEventListener("click", async () => {

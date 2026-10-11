@@ -3,6 +3,7 @@
 
 import { currentDeck, deckBy, disconnect, dropOp, endDemo, failedOps, gamesOf, isDemo, op, oppBy, oppName, pendingCount, resetDemo, setPref, shortName, state, undo, wake } from "./data.js";
 import * as scry from "./scry.js";
+import { roundLogPage, roundSummary } from "./round.js";
 import { art, paint, rememberCard } from "./screens.js";
 import { closeSheet, openSheet, popPage, pushPage, redraw, toast } from "./ui.js";
 import { $, $$, RESULT_TEXT, ago, dateLong, debounce, esc, genitive, icon, load, mana, pips, plural, save, uid, vibrate } from "./util.js";
@@ -23,14 +24,20 @@ function freshGame() {
   return { id: uid(), deck: deck?.slug, result: null, opps, rematch: recent && opps.length > 0, issues: [], turn: null, how: null, started: null, mvp: "", note: "" };
 }
 
-export function gameSheet() {
-  const draft = load(KEY_DRAFT, null);
+/** The game sheet. ``fromRound`` = a finished round of the Runden-Helfer: the form comes prefilled from it, the
+ *  round's log goes along with the game, and ``fromRound.onSaved`` runs once the game is saved. */
+export function gameSheet(fromRound = null) {
+  const draft = fromRound ? null : load(KEY_DRAFT, null);
   const restored = !!(draft && state.snap.decks.some((d) => d.slug === draft.deck));
-  g = restored ? draft : freshGame();
+  g = fromRound ? { ...freshGame(), ...fromRound.prefill, round: fromRound.round, rematch: false } : restored ? draft : freshGame();
   g.restored = restored;
-  openSheet(gamePage, { full: true, onClose: () => { if (g) save(KEY_DRAFT, g.saved ? null : g); g = null; } });
+  openSheet(gamePage, { full: true, onClose: () => {
+    if (g?.round) { if (g.saved) fromRound.onSaved?.(); }
+    else if (g) save(KEY_DRAFT, g.saved ? null : g);
+    g = null;
+  } });
 }
-const keep = () => { if (g) save(KEY_DRAFT, g); };
+const keep = () => { if (g && !g.round) save(KEY_DRAFT, g); };
 
 // reasons for a loss: the ones that happen to you most first, then a sensible default order
 const ISSUE_ORDER = ["combo", "few_lands", "slow", "no_removal", "wiped", "no_draw", "commander_removed", "flood", "colors", "no_win", "fliers", "too_strong"];
@@ -53,6 +60,7 @@ function gamePage({ push }) {
   return {
     title: "Partie",
     body: `
+      ${g.round ? roundSummary(g.round) : ""}
       ${g.restored ? `<div class="draft-note">${icon("note", "xs")} Entwurf wiederhergestellt<button class="btn" type="button" id="draft-drop">Verwerfen</button></div>` : ""}
       <div class="field-label">Dein Deck</div>
       <div class="chips scroll" id="deck-pick" role="radiogroup" aria-label="Dein Deck">${decks.map((d) => `<button class="deckpill" type="button" role="radio" data-deck="${esc(d.slug)}" aria-pressed="${d.slug === g.deck}" aria-checked="${d.slug === g.deck}">
@@ -96,7 +104,7 @@ function gamePage({ push }) {
       for (const b of $$("[data-remove]", el)) b.addEventListener("click", () => {
         g.opps.splice(Number(b.dataset.remove), 1); g.rematch = false; g.started = null; keep(); redraw();
       });
-      $("#add-opp", el).addEventListener("click", () => push(pickerPage));
+      $("#add-opp", el).addEventListener("click", () => push(opponentPicker(g, "Partie", () => { g.rematch = false; g.started = null; keep(); })));
       $("#more-issues", el)?.addEventListener("click", () => { g.allIssues = true; redraw(); });
       for (const b of $$("[data-issue]", el)) b.addEventListener("click", () => toggleIn(g.issues, b.dataset.issue, b));
       $("#details-toggle", el).addEventListener("click", () => { setPref("detailsOpen", !state.prefs.detailsOpen); redraw(); });
@@ -138,6 +146,7 @@ function saveGame() {
   const deck = deckBy(g.deck);
   const game = { id: g.id, deck: g.deck, result: g.result, turn: g.turn, issues: g.result === "win" ? [] : g.issues,
     how: g.how, started: g.started === null ? null : g.started === "me" ? "me" : Number(g.started), mvp: g.mvp.trim() || null, note: g.note.trim() };
+  if (g.round) game.round = g.round;
   const opponents = g.opps.map((o) => {
     const commander = o.commander || oppBy(o.id)?.commanders?.[0] || "";
     return { id: o.id || null, commander, colors: o.colors || "", new_id: o.id ? null : uid().slice(0, 8), note: o.note || "",
@@ -167,14 +176,17 @@ function celebrate(game, deck) {
   return `${shortName(deck?.name)}: ${mine.filter((x) => x.result === "win").length}:${mine.filter((x) => x.result === "loss").length}`;
 }
 
-// ---- opponent picker (second page of the game sheet) ----
+// ---- opponent picker (second page of the game sheet and of the round start) ----
 let pickQuery = "";
-function pickerPage({ pop }) {
+/** A sheet page that picks opponents into ``target.opps``; ``onChange`` runs after every change. */
+export const opponentPicker = (target, backLabel, onChange) => (api) => pickerPage(api, target, backLabel, onChange);
+function pickerPage({ pop }, g, backLabel, onChange) {
+  const keep = onChange;
   const chosen = new Set(g.opps.map((o) => o.id).filter(Boolean));
   const opps = state.snap.opponents;
   return {
     title: "Gegner",
-    left: `<button class="back-btn" type="button" data-sheet-back>${icon("chev-l")}<span>Partie</span></button>`,
+    left: `<button class="back-btn" type="button" data-sheet-back>${icon("chev-l")}<span>${esc(backLabel)}</span></button>`,
     right: `<button class="btn plain" type="button" id="pick-done"><b>Fertig</b></button>`,
     body: `
       <label class="search"><span class="sr">Gegner oder Commander suchen</span>${icon("search")}
@@ -194,7 +206,6 @@ function pickerPage({ pop }) {
         if (i >= 0) g.opps.splice(i, 1);
         else if (g.opps.length < 5) g.opps.push({ id, commander: oppBy(id)?.commanders?.[0] || "" });
         b.setAttribute("aria-pressed", i < 0);
-        g.rematch = false; g.started = null;
         keep();
       });
       const input = $("#pick-q", el);
@@ -219,7 +230,7 @@ function pickerPage({ pop }) {
         }
         for (const b of $$("[data-new]", box)) b.addEventListener("click", () => {
           if (g.opps.length < 5) g.opps.push({ id: null, commander: b.dataset.new, colors: b.dataset.colors });
-          g.rematch = false; g.started = null; pickQuery = ""; keep(); pop();
+          pickQuery = ""; keep(); pop();
         });
         scry.hydrate(box);
       }, 300);
@@ -396,6 +407,7 @@ export function gameDetailSheet(deckSlug, id) {
     title: RESULT_TEXT[game.result], left: "", right: `<button class="btn plain" type="button" data-sheet-close><b>Fertig</b></button>`,
     body: `<div class="group">${line("Deck", d?.name)}${line("Gespielt", dateLong(game.played))}${line("Zug", game.turn)}${line("Entschieden durch", how[game.how])}
         ${line("Angefangen hat", started)}${line("Woran lag's", (game.issues || []).map((k) => issues[k]).filter(Boolean).join(", "))}${line("Beste Karte", game.mvp)}${line("Notiz", game.note)}</div>
+      ${game.round ? `<div class="field-label">Runde</div>${roundSummary(game.round)}<div class="btn-col"><button class="btn tint" type="button" id="round-log">${icon("clock", "sm")}Verlauf ansehen</button></div>` : ""}
       ${vs.length ? `<div class="field-label">Gegner</div><div class="group">${vs.map(({ o, name }) => `<a class="row" href="${o ? `#/gegner/${esc(o.id)}` : "#/gegner"}" data-sheet-close>
         <span class="thumb round">${art(o?.commanders?.[0] || name, "art", "thumb round")}</span><span class="main"><span class="title">${esc(o ? oppName(o) : shortName(name))}</span>
         <span class="subtitle">${esc(o?.player || name || "")}</span></span>${icon("chev-r", "sm chev")}</a>`).join("")}</div>` : ""}
@@ -403,9 +415,10 @@ export function gameDetailSheet(deckSlug, id) {
     bind(el) {
       scry.hydrate(el);
       for (const a of $$("a[data-sheet-close]", el)) a.addEventListener("click", closeSheet);
+      $("#round-log", el)?.addEventListener("click", () => pushPage(roundLogPage(game.round, RESULT_TEXT[game.result])));
       $("#del-game", el).addEventListener("click", () => {
         const restore = { game: { id: game.id, deck: deckSlug, result: game.result, turn: game.turn ?? null, issues: game.issues || [], how: game.how ?? null,
-          started: game.started ?? null, mvp: game.mvp ?? null, note: game.note || "", played: game.played },
+          started: game.started ?? null, mvp: game.mvp ?? null, note: game.note || "", played: game.played, ...(game.round ? { round: game.round } : {}) },
           opponents: (game.opponents || []).map((name, i) => ({ id: game.opponent_ids?.[i] || null, commander: name })) };
         const entry = op("game.delete", { deck: deckSlug, id, restore });
         closeSheet();

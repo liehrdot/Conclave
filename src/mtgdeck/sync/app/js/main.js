@@ -5,12 +5,13 @@ import { chatThread, claude, unreadCount } from "./claude.js";
 import { boot, onChange, state } from "./data.js";
 import { applyTheme } from "./forms.js";
 import { codeFrom, welcome } from "./pair.js";
+import { roundScreen } from "./round.js";
 import * as scry from "./scry.js";
 import { deck, decks, gegner, karten, opponent, paint, tisch } from "./screens.js";
 import { clearToast, sheetIsOpen, toast, topbar } from "./ui.js";
 import { $, $$, esc, icon, reducedMotion } from "./util.js";
 
-const TABS = ["tisch", "decks", "gegner", "karten", "claude"];
+const TABS = ["tisch", "decks", "gegner", "karten", "claude", "runde"];  // "runde" = the Runden-Helfer, no tab of its own
 const scrolls = {};
 let current = null;  // {key, depth}
 let linkCode = null;  // code from a pairing link
@@ -26,6 +27,7 @@ function screenFor(r) {
   if (r.tab === "decks" && r.id) return deck(r.id, r.seg || "rule0");
   if (r.tab === "gegner" && r.id) return opponent(r.id);
   if (r.tab === "claude" && r.id) return chatThread(r.id);
+  if (r.tab === "runde") return roundScreen();
   return { tisch, decks, gegner, karten, claude }[r.tab]();
 }
 
@@ -44,10 +46,12 @@ function draw({ keepScroll = false } = {}) {
   main.classList.toggle("has-fab", fabOn);
   document.body.classList.toggle("has-fab", fabOn);
   document.body.classList.toggle("no-tabs", state.mode === "none");
+  document.body.classList.toggle("immersive", !!s.immersive);  // the round screen: no tab bar
+  keepAwake(!!s.wake);
   const fab = $("#fab");
   fab.hidden = !fabOn;
   if (fabOn) {
-    fab.innerHTML = `<button class="fab" type="button">${icon("plus")}<span>${esc(s.fab.label)}</span></button>`;
+    fab.innerHTML = `<button class="fab" type="button">${icon(s.fab.icon || "plus")}<span>${esc(s.fab.label)}</span></button>`;
     fab.firstElementChild.addEventListener("click", s.fab.run);
   }
   for (const a of $$(".tabbar a")) {
@@ -79,6 +83,20 @@ function route() {
     document.startViewTransition(() => draw()).finished.finally(() => document.documentElement.classList.remove(dir));
   } else draw();
 }
+
+// the screen stays on while a round runs
+let wakeLock = null;
+function keepAwake(on) {
+  if (on && !wakeLock && navigator.wakeLock) {
+    wakeLock = navigator.wakeLock.request("screen").catch(() => null);
+  } else if (!on && wakeLock) {
+    wakeLock.then((w) => w?.release?.());
+    wakeLock = null;
+  }
+}
+document.addEventListener("visibilitychange", () => {  // the system drops the lock when the app is hidden
+  if (document.visibilityState === "visible" && wakeLock && document.body.classList.contains("immersive")) { wakeLock = null; keepAwake(true); }
+});
 
 // a tap on the active tab goes back to its top
 for (const a of $$(".tabbar a")) a.addEventListener("click", (e) => {

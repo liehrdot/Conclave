@@ -109,6 +109,30 @@ def test_game_add_matches_an_opponent_by_commander_and_rejects_bad_input():
         appops.paths(_op("deck.delete", {}))
 
 
+def test_game_add_keeps_the_round_log_of_the_round_helper_cleaned():
+    docs = {"decks/meren.json": _docs()["decks/meren.json"], "decks/.games/meren.json": [], "decks/.opponents.json": _docs()["decks/.opponents.json"]}
+    at = "2026-10-10T20:05:00+00:00"
+    events = [{"turn": 1, "kind": "life", "delta": -3, "from": "Atraxa, Praetors' Voice", "life": 37, "at": at},
+              {"turn": 2, "kind": "turn", "delta": 1, "life": 37, "at": at},
+              {"turn": 2, "kind": "cmd", "delta": 21, "from": "Atraxa, Praetors' Voice", "life": 16, "at": at},
+              {"turn": 2, "kind": "note", "delta": 0, "text": "x" * 900, "at": at},
+              {"turn": 2, "kind": "mill", "delta": 5, "at": at},              # unknown kind
+              {"turn": 0, "kind": "life", "delta": -1, "at": at},             # no such turn
+              {"turn": 2, "kind": "life", "delta": True, "at": "gestern"}]   # bad time
+    round_log = {"start_life": 40, "life": 16, "poison": 0, "turns": 2, "started": AT, "ended": at,
+                 "cmd": [{"name": "Atraxa, Praetors' Voice", "dmg": 21}, {"dmg": 3}], "events": events, "extra": "dropped"}
+    game = {"id": "g1", "deck": "meren", "result": "loss", "turn": 2, "how": "commander", "round": round_log}
+    entry = appops.apply_copy(_op("game.add", {"game": game, "opponents": [{"id": "o1"}]}), docs)["decks/.games/meren.json"][0]
+    r = entry["round"]
+    assert set(r) == {"start_life", "life", "poison", "turns", "started", "ended", "cmd", "events"}
+    assert r["cmd"] == [{"name": "Atraxa, Praetors' Voice", "dmg": 21}]
+    assert [e["kind"] for e in r["events"]] == ["life", "turn", "cmd", "note"]
+    assert r["events"][0] == events[0] and len(r["events"][3]["text"]) == 500
+    # a game without a round (or with a broken one) has no round key, like before
+    plain = appops.apply_copy(_op("game.add", {"game": {**game, "id": "g2", "round": {"life": 3}}}, "op000002"), docs)
+    assert "round" not in plain["decks/.games/meren.json"][0]
+
+
 def test_opponent_operations():
     docs = {"decks/.opponents.json": None}
     out = appops.apply_copy(_op("opponent.add", {"opponent": {"id": "neu1", "commanders": ["Muldrotha, the Gravetide"], "colors": "UBG",

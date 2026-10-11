@@ -29,6 +29,8 @@ TYPES = ("game.add", "game.delete", "opponent.add", "opponent.update", "opponent
 CHAT_RE = re.compile(r"[0-9a-f]{12}")  # like chat.py
 MSG_RE = re.compile(r"[0-9a-f]{10}")
 TITLE_LEN = 70  # like chat.py
+ROUND_KINDS = ("life", "cmd", "poison", "turn", "note")  # entries in the Runden-Helfer's log (js/round.js)
+ROUND_EVENTS_MAX = 400
 
 
 class OpError(ValueError):
@@ -112,6 +114,40 @@ def _match(items: list[dict[str, Any]], slot: dict[str, Any]) -> dict[str, Any] 
     return max(hits, key=lambda x: x.get("updated") or "") if hits else None
 
 
+def _int(value: Any, lo: int, hi: int) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) and lo <= value <= hi else None
+
+
+def _iso(value: Any) -> str | None:
+    return value if isinstance(value, str) and ISO_RE.fullmatch(value) else None
+
+
+def _round(value: Any) -> dict[str, Any] | None:
+    """The log of the phone's Runden-Helfer, cleaned: the user's life at the start and end, poison, turns,
+    commander damage per opposing commander and the changes turn by turn (``ROUND_EVENTS_MAX`` at most)."""
+    if not isinstance(value, dict) or _int(value.get("start_life"), 1, 999) is None:
+        return None
+    events = []
+    for e in value.get("events") or []:
+        if not isinstance(e, dict) or e.get("kind") not in ROUND_KINDS or _int(e.get("turn"), 1, 999) is None or not _iso(e.get("at")):
+            continue
+        item: dict[str, Any] = {"turn": e["turn"], "kind": e["kind"], "delta": _int(e.get("delta"), -999, 999) or 0, "at": e["at"]}
+        if _int(e.get("life"), -9999, 9999) is not None:
+            item["life"] = e["life"]
+        if _text(e.get("from"), 120):
+            item["from"] = _text(e.get("from"), 120)
+        if e["kind"] == "note":
+            item["text"] = _text(e.get("text"), 500)
+        events.append(item)
+    cmd = [{"name": _text(c.get("name"), 120), "dmg": _int(c.get("dmg"), 0, 999) or 0}
+           for c in value.get("cmd") or [] if isinstance(c, dict) and _text(c.get("name"), 120)][:10]  # fmt: skip
+    return {
+        "start_life": value["start_life"], "life": _int(value.get("life"), -9999, 9999), "poison": _int(value.get("poison"), 0, 999) or 0,
+        "turns": _int(value.get("turns"), 1, 999) or 1, "started": _iso(value.get("started")), "ended": _iso(value.get("ended")),
+        "cmd": cmd, "events": events[-ROUND_EVENTS_MAX:],
+    }  # fmt: skip
+
+
 def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
     """Apply ``op`` to ``docs`` (``{path: value or None}`` for ``paths(op)``); returns ``{path: new value}``."""
     t, p, at = op["type"], op.get("payload") or {}, str(op.get("at") or "")
@@ -168,6 +204,9 @@ def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
         started = g.get("started")
         if started == "me" or (isinstance(started, int) and 0 <= started < len(names)):
             entry["started"] = started
+        round_log = _round(g.get("round"))
+        if round_log:
+            entry["round"] = round_log
         out[f"decks/.games/{slug}.json"] = games + [entry]
         if changed:
             out[OPPONENTS] = opp_doc
