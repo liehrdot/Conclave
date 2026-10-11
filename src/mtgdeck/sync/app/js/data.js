@@ -149,7 +149,11 @@ function revoked() {
   emit();
 }
 
-const seqOf = (etag) => Number(String(etag || "").replace(/"/g, "").split("-").pop()) || 0;
+// The ETag is "<server id>-<epoch>-<seq>". An HTTPS proxy in front may change it: Caddy's ``encode`` appends the
+// compression ("…-5-zstd"), others make it weak (W/"…"). So only the three parts count – otherwise the seq reads
+// as 0, confirmed operations never leave the outbox and a game deleted at the PC stays on the phone.
+const tagCore = (etag) => String(etag || "").match(/[0-9a-f]+-[0-9a-f]+-\d+/)?.[0] || "";
+const seqOf = (etag) => Number(tagCore(etag).split("-").pop()) || 0;
 let refreshing = null;
 
 /** Load the read model (only when it changed – ETag). */
@@ -229,7 +233,7 @@ async function pollStatus() {
     state.pcs = st.pcs || [];
     state.jobs = st.jobs || [];
     state.online = true;
-    if (st.etag !== state.etag) await refresh();
+    if (tagCore(st.etag) !== tagCore(state.etag)) await refresh();
     else if (shown() !== before) emit();  // redraw only when something visible changed
   } catch { state.online = false; emit(); }
 }
