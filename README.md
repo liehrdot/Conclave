@@ -271,8 +271,10 @@ ein Befehl auf dem Server.
   - **Neue Versionen:** Sie kommen mit dem Server-Update. Die App bietet dann „Neu laden“ an.
   - **Abmelden:** in der App unter *Einstellungen* oder am PC in der Geräteliste.
   - **Runden-Helfer:** „Runde starten“ auf dem Tisch-Tab zählt während der Partie deine Leben, den
-    Commander-Schaden je Gegner, Gift und deine Züge und hält jede Änderung pro Zug fest. Bist du raus oder beendest
-    du die Runde, öffnet sich das Partie-Formular vorbelegt; die Partie wird mit dem ganzen Verlauf gespeichert.
+    Commander-Schaden je Gegner, Gift und deine Züge und hält jede Änderung pro Zug fest. Tippen zählt 1, Halten
+    springt in Fünferschritten; Commander-Schaden und Gift trägst du nach Antippen der Kachel in einem eigenen Blatt
+    ein. Bist du raus oder beendest du die Runde, öffnet sich das Partie-Formular vorbelegt; die Partie wird mit dem
+    ganzen Verlauf gespeichert. „Beenden“ → „Ohne Ergebnis abbrechen“ verwirft eine Runde, ohne etwas zu speichern.
   - **Frag Claude:** Im Tab „Claude“ stellst du Fragen zu Decks, Gegnern oder Regeln. Dein PC beantwortet sie mit dem
     „Frag Claude“ des Deckbuilders, solange er läuft – das Handy selbst braucht keine KI. Es zeigt ehrlich, ob der PC
     bereit ist und was Claude gerade tut („liest Kartentexte …“). Kommt eine Frage ohne Netz, wartet sie auf dem Handy;

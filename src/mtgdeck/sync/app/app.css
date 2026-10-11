@@ -88,7 +88,9 @@ body {
   overscroll-behavior-y: none;
 }
 button, input, textarea, select { font: inherit; color: inherit; letter-spacing: inherit; }
-button { touch-action: manipulation; }
+/* no double-tap zoom anywhere (fast taps on a counter zoomed in on iPhone); pinch zoom stays. On every element, because
+   WebKit starts over at each scroll container (sheet body, chip rows) */
+*, *::before, *::after { touch-action: manipulation; }
 img { display: block; max-width: 100%; }
 h1, h2, h3, p { margin: 0; }
 a { color: var(--accent); text-decoration: none; }
@@ -680,13 +682,12 @@ body.immersive .screen { padding-bottom: calc(max(env(safe-area-inset-bottom), 1
 
 .dmg-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
 @media (min-width: 560px) { .dmg-grid { grid-template-columns: 1fr 1fr; } }
-.dmg-tile { position: relative; }
-.dmg-main {
-  width: 100%; border: 0; padding: 12px 12px 12px 12px; border-radius: var(--r-card); background: var(--surface); box-shadow: var(--shadow-card);
-  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; grid-template-areas: "art name val" "bar bar bar"; gap: 10px 10px; text-align: left; align-items: center;
-  touch-action: manipulation; user-select: none; -webkit-user-select: none; padding-right: 54px;
+.dmg-tile {
+  width: 100%; border: 0; padding: 12px; border-radius: var(--r-card); background: var(--surface); color: var(--text); box-shadow: var(--shadow-card);
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto 32px; grid-template-areas: "art name val add" "bar bar bar bar"; gap: 10px; text-align: left; align-items: center;
+  user-select: none; -webkit-user-select: none;
 }
-.dmg-main:active { transform: scale(.97); }
+.dmg-tile:active { transform: scale(.98); }
 .dmg-art { grid-area: art; width: 36px; height: 36px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: var(--surface-2); }
 .dmg-art img { width: 100%; height: 100%; object-fit: cover; }
 .poison-art { background: var(--win-soft); color: var(--win); }
@@ -695,16 +696,46 @@ body.immersive .screen { padding-bottom: calc(max(env(safe-area-inset-bottom), 1
 .dmg-val { grid-area: val; display: flex; align-items: baseline; gap: 1px; }
 .dmg-val b { font-size: 1.6rem; font-weight: 760; font-variant-numeric: tabular-nums; letter-spacing: -.03em; line-height: 1; }
 .dmg-val small { color: var(--text-3); font-size: var(--t-cap); font-weight: 600; }
-.dmg-bar { grid-area: bar; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-right: -42px; }
+.dmg-add { grid-area: add; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--text-2); }
+.dmg-add .icon { width: 16px; height: 16px; stroke-width: 2.6; }
+.dmg-bar { grid-area: bar; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
 .dmg-bar span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--accent); transition: width .25s var(--ease-out); }
 .dmg-tile.poison .dmg-bar span { background: var(--win); }
 .dmg-tile.hot .dmg-val b { color: var(--loss); }
 .dmg-tile.hot .dmg-bar span { background: var(--loss); }
-.dmg-minus {
-  position: absolute; top: 9px; right: 10px; width: 38px; height: 38px; border: 0; border-radius: 50%;
-  background: var(--surface-2); color: var(--text-2); font-size: 1.3rem; font-weight: 600; display: grid; place-items: center;
+
+/* the sheet that enters commander damage or poison: big − and + far apart, quick amounts, what it does */
+.ds-who { display: flex; align-items: center; gap: 12px; margin: 2px 0 18px; }
+.ds-who .dmg-art { width: 52px; height: 52px; flex: none; }
+.ds-who .poison-art .icon { width: 26px; height: 26px; }
+.ds-who .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ds-who b { font-size: var(--t-title3); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ds-who .main span { font-size: var(--t-sub); color: var(--text-2); }
+.ds-step { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; margin-bottom: 18px; }
+.ds-btn {
+  width: 76px; height: 76px; border: 0; border-radius: 50%; display: grid; place-items: center; padding-bottom: 4px;
+  background: var(--surface-2); color: var(--text); font-size: 2.4rem; font-weight: 400; line-height: 1;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; transition: transform .12s, background .12s;
 }
-.dmg-minus:disabled { opacity: .35; }
+.ds-btn:active { transform: scale(.92); background: var(--surface-3); }
+.ds-btn:disabled { opacity: .35; }
+.ds-delta { display: flex; flex-direction: column; align-items: center; }
+.ds-delta output { font-size: 3.6rem; font-weight: 780; line-height: 1; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.ds-delta span { margin-top: 4px; font-size: var(--t-foot); color: var(--text-2); }
+.ds-quick { justify-content: center; margin-bottom: 20px; }
+.ds-quick .chip { font-variant-numeric: tabular-nums; }
+.ds-quick small { font-size: var(--t-cap); font-weight: 600; opacity: .8; }
+.ds-total { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; font-size: var(--t-sub); color: var(--text-2); }
+.ds-total b { font-size: 1.25rem; font-weight: 750; color: var(--text); font-variant-numeric: tabular-nums; }
+.ds-bar { display: flex; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.ds-bar span { height: 100%; width: 0; background: var(--accent); transition: width .2s var(--ease-out); }
+.ds-bar .add { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.ds-bar.out span { background: var(--loss); }
+.ds-bar.out .add { background: color-mix(in srgb, var(--loss) 45%, transparent); }
+.ds-effect { margin: 12px 0 2px; min-height: 2.8em; font-size: var(--t-sub); color: var(--text-2); }
+.ds-effect.out { color: var(--loss); font-weight: 650; }
+
+.end-state { margin: 2px 0 0; text-align: center; font-size: var(--t-sub); color: var(--text-2); font-variant-numeric: tabular-nums; }
 
 .round-bar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; display: flex; align-items: center; gap: 12px;

@@ -13,6 +13,9 @@ import { $, $$, esc, icon, load, nowIso, plural, save, uid, vibrate } from "./ut
 const KEY = "amtisch.round";
 const REMATCH_HOURS = 8;     // like the game sheet: the last game's opponents are offered again
 const MERGE_MS = 4000;       // taps on the same counter within this time become one log entry ("−5", not five "−1")
+const HOLD_STEP = 5;         // holding + or − jumps by this much ...
+const HOLD_AFTER = 450;      // ... once held this long (ms) ...
+const HOLD_EVERY = 550;      // ... and again every this many ms while still held
 const EVENTS_MAX = 400;      // like sync/appops.py
 const OUT = { life: 0, poison: 10, cmd: 21 };
 export const START_LIFE = [40, 30, 20];
@@ -60,11 +63,12 @@ function commanders(round) {
 }
 const oppLabel = (o) => (o.id && oppBy(o.id) ? oppName(oppBy(o.id)) : shortName(o.commander));
 
-function log(kind, delta, from = null) {
+/** Adds a change to the log (``merge``: into the previous entry of the same counter if it was just now) and returns its entry. */
+function log(kind, delta, from = null, merge = true) {
   const t = totals(r);
   const last = r.events[r.events.length - 1];
   const now = Date.now();
-  if (last && last.kind === kind && last.turn === t.turn && (last.from || null) === from && now - new Date(last.at).getTime() < MERGE_MS
+  if (merge && last && last.kind === kind && last.turn === t.turn && (last.from || null) === from && now - new Date(last.at).getTime() < MERGE_MS
       && Math.sign(last.delta) === Math.sign(delta)) {
     last.delta += delta;
     last.at = nowIso();
@@ -72,8 +76,19 @@ function log(kind, delta, from = null) {
     r.events.push({ turn: t.turn, kind, delta, ...(from ? { from } : {}), at: nowIso() });
     if (r.events.length > EVENTS_MAX) r.events.splice(1, r.events.length - EVENTS_MAX);
   }
-  r.events[r.events.length - 1].life = totals(r).life;
+  const entry = r.events[r.events.length - 1];
+  entry.life = totals(r).life;
   persist();
+  return entry;
+}
+
+// the life total after each entry, again (after an entry in the middle was taken back)
+function relife() {
+  let life = r.start_life;
+  for (const e of r.events) {
+    if (e.kind === "life") life += e.delta; else if (e.kind === "cmd") life -= e.delta;
+    if (e.kind !== "note") e.life = life;
+  }
 }
 
 // ======================================================================================
@@ -155,26 +170,22 @@ export function roundScreen() {
       </div>
       </section>
 
-      <div class="field-label">Commander-Schaden <span class="hint">tippen = +1, kostet auch Leben</span></div>
+      <div class="field-label">Commander-Schaden <span class="hint">tippen zum Eintragen</span></div>
       <div class="dmg-grid">
-        ${cmds.map((c) => `<div class="dmg-tile" data-cmd-tile="${esc(c.name)}">
-          <button class="dmg-main" type="button" data-cmd="${esc(c.name)}" aria-label="Commander-Schaden von ${esc(shortName(c.name))} plus eins">
+        ${cmds.map((c) => `<button class="dmg-tile" type="button" data-cmd="${esc(c.name)}">
             <span class="dmg-art" data-bg="${esc(c.colors)}">${art(c.name, "art")}</span>
             <span class="dmg-name">${esc(shortName(c.name))}</span>
             <span class="dmg-val"><b data-val></b><small>/21</small></span>
+            <span class="dmg-add" aria-hidden="true">${icon("plus")}</span>
             <span class="dmg-bar"><span data-bar></span></span>
-          </button>
-          <button class="dmg-minus" type="button" data-cmd-minus="${esc(c.name)}" aria-label="Commander-Schaden von ${esc(shortName(c.name))} minus eins">−</button>
-        </div>`).join("")}
-        <div class="dmg-tile poison">
-          <button class="dmg-main" type="button" data-poison="1" aria-label="Giftmarke plus eins">
-            <span class="dmg-art poison-art">${icon("alert")}</span>
-            <span class="dmg-name">Gift</span>
-            <span class="dmg-val"><b data-val></b><small>/10</small></span>
-            <span class="dmg-bar"><span data-bar></span></span>
-          </button>
-          <button class="dmg-minus" type="button" data-poison="-1" aria-label="Giftmarke minus eins">−</button>
-        </div>
+          </button>`).join("")}
+        <button class="dmg-tile poison" type="button" data-poison>
+          <span class="dmg-art poison-art">${icon("alert")}</span>
+          <span class="dmg-name">Gift</span>
+          <span class="dmg-val"><b data-val></b><small>/10</small></span>
+          <span class="dmg-add" aria-hidden="true">${icon("plus")}</span>
+          <span class="dmg-bar"><span data-bar></span></span>
+        </button>
       </div>
       ${cmds.length ? "" : `<p class="hint-small">Ohne Gegner gibt es keinen Commander-Schaden – Gegner lassen sich beim Start wählen.</p>`}
       <div class="round-bar">
@@ -195,18 +206,15 @@ function update(el) {
   $("#r-next", el).textContent = `Zug ${t.turn + 1} beginnt`;
   $("#r-undo", el).disabled = !r.events.some((x) => x.kind !== "note");
   $(".life-card", el).classList.toggle("low", t.life <= 10);
-  for (const tile of $$("[data-cmd-tile]", el)) {
-    const n = t.cmd[tile.dataset.cmdTile] || 0;
+  for (const tile of $$(".dmg-tile", el)) {
+    const name = tile.dataset.cmd;
+    const n = name ? t.cmd[name] || 0 : t.poison;
+    const max = name ? OUT.cmd : OUT.poison;
     $("[data-val]", tile).textContent = n;
-    $("[data-bar]", tile).style.width = `${Math.min(100, (100 * n) / OUT.cmd)}%`;
-    tile.classList.toggle("hot", n >= 15);
-    $(".dmg-minus", tile).disabled = !n;
+    $("[data-bar]", tile).style.width = `${Math.min(100, (100 * n) / max)}%`;
+    tile.classList.toggle("hot", n >= (name ? 15 : 7));
+    tile.setAttribute("aria-label", `${name ? `Commander-Schaden von ${shortName(name)}` : "Gift"}: ${n} von ${max}. Eintragen`);
   }
-  const p = $(".dmg-tile.poison", el);
-  $("[data-val]", p).textContent = t.poison;
-  $("[data-bar]", p).style.width = `${Math.min(100, (100 * t.poison) / OUT.poison)}%`;
-  p.classList.toggle("hot", t.poison >= 7);
-  $(".dmg-minus", p).disabled = !t.poison;
   // the latest life loss can be put on someone
   const last = r.events[r.events.length - 1];
   const from = $("#r-from", el);
@@ -240,40 +248,110 @@ function update(el) {
 const minutes = (iso) => { const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000)); return m < 60 ? `${m} Min.` : `${Math.floor(m / 60)} Std. ${m % 60} Min.`; };
 
 // takes back the last change of a counter or the turn (notes stay)
-function undoLast(el) {
-  const i = r.events.findLastIndex((x) => x.kind !== "note");
+function undoLast(el) { undoEntry(el, r.events.findLastIndex((x) => x.kind !== "note")); }
+function undoEntry(el, i) {
   if (i < 0) return;
   const [e] = r.events.splice(i, 1);
+  relife();
   persist();
   update(el);
   toast(undoText(e));
 }
 const undoText = (e) => (e.kind === "turn" ? `Zurück in Zug ${e.turn - 1}` : `Zurückgenommen: ${eventText(e)}`);
 
-// press = one step, holding repeats (faster after a moment)
+// a tap = one step; holding jumps by HOLD_STEP, again and again while held. ``step(n)`` gets 1 or HOLD_STEP.
 function repeatable(btn, step) {
-  let timer = null, n = 0;
+  let timer = null, held = false;
   const stop = () => { clearTimeout(timer); timer = null; };
   btn.addEventListener("pointerdown", (e) => {
     if (e.button) return;
-    n = 0;
-    step(); vibrate(8);
-    const again = () => { n++; step(); timer = setTimeout(again, n > 8 ? 70 : 140); };
-    timer = setTimeout(again, 420);
+    held = false;
+    const jump = () => { held = true; step(HOLD_STEP); vibrate(14); timer = setTimeout(jump, HOLD_EVERY); };
+    timer = setTimeout(jump, HOLD_AFTER);
   });
   for (const ev of ["pointerup", "pointercancel", "pointerleave"]) btn.addEventListener(ev, stop);
-  btn.addEventListener("click", (e) => { if (e.detail === 0) step(); });  // keyboard
+  btn.addEventListener("click", () => {  // a tap (or the keyboard); the click that ends a hold changes nothing more
+    if (held) { held = false; return; }
+    step(1); vibrate(8);
+  });
   btn.addEventListener("contextmenu", (e) => e.preventDefault());
 }
+
+// ---------- commander damage and poison: a tile opens a sheet, the amount is set there and only "Eintragen" counts ----------
+// (a stray tap on a tile changes nothing; − and + are big and far apart; the entry can be taken back from the toast)
+function damageSheet(el, from) {
+  const cmd = !!from;
+  const max = cmd ? OUT.cmd : OUT.poison;
+  const before = () => (cmd ? totals(r).cmd[from] || 0 : totals(r).poison);
+  const pt = cmd ? scry.cached(from)?.pt : null;
+  const power = /^\d+$/.test(pt?.split("/")[0] || "") ? Number(pt.split("/")[0]) : 0;
+  const quick = [...(power ? [power] : []), ...[1, 2, 3].filter((n) => n !== power)];
+  let delta = 0;
+  const page = () => ({
+    title: cmd ? "Commander-Schaden" : "Gift",
+    body: `
+      <div class="ds">
+        <div class="ds-who">
+          ${cmd ? `<span class="dmg-art" data-bg="${esc(oppColors(from))}">${art(from, "art")}</span>` : `<span class="dmg-art poison-art">${icon("alert")}</span>`}
+          <span class="main"><b>${cmd ? `von ${esc(shortName(from))}` : "Giftmarken"}</b><span>bisher ${before()} von ${max}</span></span>
+        </div>
+        <div class="ds-step">
+          <button class="ds-btn" type="button" data-step="-1" aria-label="Eins weniger (halten: ${HOLD_STEP} weniger)">−</button>
+          <div class="ds-delta" aria-live="polite"><output id="ds-delta">0</output><span id="ds-kind"></span></div>
+          <button class="ds-btn" type="button" data-step="1" aria-label="Eins mehr (halten: ${HOLD_STEP} mehr)">+</button>
+        </div>
+        <div class="chips ds-quick">${quick.map((n) => `<button class="chip" type="button" data-set="${n}" aria-pressed="false">+${n}${n === power ? ` <small>Stärke</small>` : ""}</button>`).join("")}</div>
+        <div class="ds-total"><span>Danach</span><span><b id="ds-new"></b> / ${max}</span></div>
+        <div class="ds-bar"><span data-was></span><span class="add" data-add></span></div>
+        <p class="ds-effect" id="ds-effect"></p>
+      </div>`,
+    foot: `<button class="btn primary big" type="button" id="ds-go" disabled>Eintragen</button>`,
+    bind(d) {
+      scry.hydrate(d); paint(d);
+      const show = () => {
+        const was = before(), now = was + delta, life = totals(r).life;
+        $("#ds-delta", d).textContent = delta > 0 ? `+${delta}` : delta < 0 ? `−${-delta}` : "0";
+        $("#ds-kind", d).textContent = delta < 0 ? "Korrektur" : delta > 0 ? "dazu" : "noch nichts";
+        $("#ds-new", d).textContent = now;
+        $("[data-was]", d).style.width = `${(100 * Math.min(was, now, max)) / max}%`;
+        $("[data-add]", d).style.width = `${(100 * Math.max(0, Math.min(now, max) - was)) / max}%`;
+        $('[data-step="-1"]', d).disabled = now <= 0;
+        for (const c of $$("[data-set]", d)) c.setAttribute("aria-pressed", String(Number(c.dataset.set) === delta));
+        const out = now >= max || (cmd && life - delta <= OUT.life);
+        const eff = $("#ds-effect", d);
+        eff.classList.toggle("out", delta > 0 && out);
+        $(".ds-bar", d).classList.toggle("out", delta > 0 && out);
+        eff.textContent = delta > 0 && out ? `Damit bist du raus${now >= max ? ` – ${max} ${cmd ? "Commander-Schaden" : "Giftmarken"}` : " – 0 Leben"}.`
+          : cmd && delta > 0 ? `Kostet dich auch ${delta} Leben: ${life} → ${life - delta}.`
+          : cmd && delta < 0 ? `Du bekommst ${-delta} Leben zurück: ${life} → ${life - delta}.`
+          : cmd ? "Commander-Schaden kostet dich auch Leben." : `Bei ${max} Giftmarken bist du raus.`;
+        const go = $("#ds-go", d);
+        go.disabled = !delta;
+        go.textContent = delta > 0 ? `+${delta} eintragen` : delta < 0 ? `${-delta} abziehen` : "Eintragen";
+      };
+      for (const b of $$("[data-step]", d)) repeatable(b, (n) => { delta = Math.max(-before(), Math.min(99, delta + n * Number(b.dataset.step))); show(); });
+      for (const c of $$("[data-set]", d)) c.addEventListener("click", () => { delta = Number(c.dataset.set); vibrate(8); show(); });
+      $("#ds-go", d).addEventListener("click", () => {
+        if (!delta) return;
+        const entry = log(cmd ? "cmd" : "poison", delta, from, false);
+        closeSheet();
+        vibrate(18);
+        update(el);
+        toast(eventText(entry), { sub: `${totals(r).life} Leben`, action: { label: "Rückgängig", run: () => undoEntry(el, r.events.indexOf(entry)) } });
+      });
+      show();
+    },
+  });
+  openSheet(page);
+}
+const oppColors = (name) => commanders(r).find((c) => c.name === name)?.colors || "";
 
 let ticker = null;
 function bindRound(el) {
   clearInterval(ticker);
   ticker = setInterval(() => { if ($("#r-turn") && r) $("#r-turn").textContent = `Zug ${totals(r).turn} · ${minutes(r.started)}`; else clearInterval(ticker); }, 30000);
-  for (const b of $$("[data-life]", el)) repeatable(b, () => { log("life", Number(b.dataset.life), keepFrom(Number(b.dataset.life))); update(el); });
-  for (const b of $$("[data-cmd]", el)) repeatable(b, () => { log("cmd", 1, b.dataset.cmd); update(el); });
-  for (const b of $$("[data-cmd-minus]", el)) b.addEventListener("click", () => { if (totals(r).cmd[b.dataset.cmdMinus]) { log("cmd", -1, b.dataset.cmdMinus); update(el); } });
-  for (const b of $$("[data-poison]", el)) b.addEventListener("click", () => { const dlt = Number(b.dataset.poison); if (dlt > 0 || totals(r).poison) { log("poison", dlt); vibrate(8); update(el); } });
+  for (const b of $$("[data-life]", el)) repeatable(b, (n) => { const dlt = n * Number(b.dataset.life); log("life", dlt, keepFrom(dlt)); update(el); });
+  for (const b of $$(".dmg-tile", el)) b.addEventListener("click", () => damageSheet(el, b.dataset.cmd || null));
   for (const b of $$("[data-from]", el)) b.addEventListener("click", () => {
     const last = r.events[r.events.length - 1];
     if (!last || last.kind !== "life") return;
@@ -288,7 +366,7 @@ function bindRound(el) {
     toast(`Zug ${t.turn + 1}`, { sub: turnRecap(t.turn) });
   });
   $("#r-log", el).addEventListener("click", () => openSheet(roundLogPage(r, "Verlauf", { live: true, onNote: () => update(el) }), { full: true }));
-  $("#r-end", el).addEventListener("click", () => endRound(null));
+  $("#r-end", el).addEventListener("click", endSheet);
   update(el);
 }
 
@@ -321,7 +399,37 @@ function endRound(result) {
   });
 }
 
-export function discardRound() { r = null; persist(); }
+// "Beenden": save it as a game, or drop it without a result (taken back from the toast)
+function endSheet() {
+  const t = totals(r);
+  openSheet(() => ({
+    title: "Runde beenden",
+    left: `<button class="btn plain" type="button" data-sheet-close>Weiterspielen</button>`,
+    body: `
+      <p class="end-state">Zug ${t.turn} · ${t.life} Leben · ${esc(minutes(r.started))}</p>
+      <div class="btn-col">
+        <button class="btn primary big" type="button" id="re-save">Als Partie speichern</button>
+        <button class="btn big danger" type="button" id="re-drop">Ohne Ergebnis abbrechen</button>
+      </div>
+      <p class="hint-small">Abbrechen verwirft die Runde – es wird keine Partie gespeichert.</p>`,
+    bind(d) {
+      $("#re-save", d).addEventListener("click", () => endRound(null));
+      $("#re-drop", d).addEventListener("click", () => {
+        const dropped = r;
+        r = null;
+        persist();
+        closeSheet();
+        vibrate(18);
+        addEventListener("hashchange", () => toast("Runde abgebrochen", {
+          sub: "Es wurde keine Partie gespeichert.",
+          action: { label: "Rückgängig", run: () => { if (!r) { r = dropped; persist(); location.hash = "#/runde"; } } },
+        }), { once: true });
+        setTimeout(() => { location.hash = "#/tisch"; }, 60);
+      });
+    },
+  }));
+}
+
 
 // ======================================================================================
 // Summary and log – used live and for saved games

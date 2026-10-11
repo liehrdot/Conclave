@@ -330,15 +330,22 @@ darunter Commander-Schaden je gegnerischem Commander (Partner zählen einzeln), 
 
 - **Start:** „Runde starten“ auf dem Tisch-Tab: Deck, Gegner (aus der letzten Partie innerhalb von 8 h vorbelegt),
   Startleben 40/30/20.
-- **Bedienen:** − und + neben der Zahl, gedrückt halten zählt weiter. Nach einem Lebensverlust bietet die Karte
-  „Schaden von“ mit den Gegnern an. Commander-Schaden: Kachel antippen = +1, das kostet auch ein Leben; das kleine −
-  korrigiert. „Zug N beginnt“ zählt den eigenen Zug hoch und zeigt kurz, was der letzte Zug gekostet hat.
+- **Bedienen:** − und + neben der Zahl: Tippen = 1, gedrückt halten springt in Fünferschritten. Nach einem
+  Lebensverlust bietet die Karte „Schaden von“ mit den Gegnern an. „Zug N beginnt“ zählt den eigenen Zug hoch und
+  zeigt kurz, was der letzte Zug gekostet hat. Doppeltippen zoomt nirgends in der App (Zwei-Finger-Zoom bleibt).
+- **Commander-Schaden und Gift:** Eine Kachel antippen ändert noch nichts, sie öffnet ein Blatt: großes − und + weit
+  auseinander (Tippen = 1, Halten = 5), Schnellwahl +1/+2/+3 und beim Commander seine Stärke („+5 Stärke“), dazu
+  „Danach 12 / 21“ und was es kostet („Kostet dich auch 5 Leben: 40 → 35“, „Damit bist du raus“). Erst
+  „+5 eintragen“ zählt; ein Minus-Betrag korrigiert („2 abziehen“, die Leben kommen zurück). Danach bietet der Hinweis
+  „Rückgängig“ an. So richtet ein versehentlicher Tipp auf eine Kachel keinen Schaden an (Rückgängig statt
+  Rückfrage, große getrennte Tippflächen – nach Baymard und den 48-dp/8-dp-Vorgaben von Material).
 - **Protokoll:** Jede Änderung landet mit Zug, Uhrzeit und dem Lebensstand danach im Verlauf; Tipps auf denselben
   Zähler innerhalb von 4 s werden ein Eintrag („−5“). Im Verlauf lassen sich Notizen zum laufenden Zug festhalten.
   Rückgängig nimmt die letzte Änderung zurück, Notizen bleiben. Alle Werte werden aus dem Protokoll berechnet.
 - **Raus:** bei 0 Leben, 10 Gift oder 21 Commander-Schaden erscheint „Du bist raus“ mit „Als Niederlage speichern“.
-- **Ende:** „Beenden“ öffnet das Partie-Formular vorbelegt (Deck, Ergebnis, Zug, Gegner, bei Commander-Schaden
-  „Entschieden durch“). Erst das Speichern dort beendet die Runde und schickt sie als Partie an den Server, mit dem
+- **Ende:** „Beenden“ fragt „Als Partie speichern“ oder „Ohne Ergebnis abbrechen“ (verwirft die Runde, der Hinweis
+  bietet „Rückgängig“ an). Speichern öffnet das Partie-Formular vorbelegt (Deck, Ergebnis, Zug, Gegner, bei
+  Commander-Schaden „Entschieden durch“). Erst das Speichern dort beendet die Runde und schickt sie als Partie an den Server, mit dem
   Protokoll als `round`. Bis dahin liegt die Runde nur auf dem Handy (localStorage) und übersteht Neuladen; sie steht
   als Karte auf dem Tisch-Tab, und der Bildschirm bleibt an.
 - **Danach:** Die Partie zeigt Endstand, eine Lebenskurve pro Zug, den Commander-Schaden und den ganzen Verlauf.
