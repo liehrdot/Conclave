@@ -3452,6 +3452,11 @@ $("#opp-form").addEventListener("submit", async (e) => {
       bracket: f.bracket.value ? Number(f.bracket.value) : null, table_rule: f.table_rule.value || null, tags: fd.getAll("tags") }, "Gespeichert.");
   } catch (err) { fail(err); }
 });
+$("#opp-edit").addEventListener("click", () => {
+  const form = $("#opp-form");
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+  form.elements.label.focus({ preventScroll: true });
+});
 $("#opp-note-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const note = e.target.elements.note.value.trim();

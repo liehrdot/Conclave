@@ -1076,6 +1076,7 @@
             <p id="opp-meta" class="lead"></p>
           </div>
           <div class="page-actions">
+            <button type="button" class="btn" id="opp-edit"><svg class="icon"><use href="#i-edit"/></svg>Bearbeiten</button>
             <details class="menu" id="opp-menu">
               <summary class="btn icon-only" aria-label="Weitere Aktionen" title="Weitere Aktionen"><svg class="icon"><use href="#i-more"/></svg></summary>
               <div class="menu-list" role="menu">
@@ -1098,6 +1099,7 @@
 
         <form class="panel" id="opp-form" autocomplete="off">
           <h2>Steckbrief</h2>
+          <p class="muted small">Name, Commander und Partner kannst du jederzeit ändern. Partien und Notizen bleiben an diesem Gegnerdeck.</p>
           <div class="row2">
             <label class="field">Commander <input name="commander" list="ac-opp-edit" required><datalist id="ac-opp-edit"></datalist></label>
             <label class="field">Partner<input name="partner" placeholder="optional" list="ac-opp-partner"><datalist id="ac-opp-partner"></datalist></label>

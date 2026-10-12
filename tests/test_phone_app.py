@@ -152,6 +152,28 @@ def test_opponent_operations():
     assert appops.apply_copy(_op("opponent.delete", {"id": "neu1"}), docs) == {}  # gone already
 
 
+def test_opponent_edit_keeps_the_games_linked():
+    docs = {"decks/.opponents.json": None}
+    docs = {**docs, **appops.apply_copy(_op("opponent.add", {"opponent": {"id": "neu1", "commanders": ["Tymna the Weaver"], "colors": "WB"}}), docs)}
+    game = {"id": "g1", "deck": "meren", "result": "loss"}
+    docs = {**docs, "decks/meren.json": {"slug": "meren", "version": 1}, "decks/.games/meren.json": []}
+    docs = {**docs, **appops.apply_copy(_op("game.add", {"game": game, "opponents": [{"id": "neu1", "commander": "Tymna the Weaver"}]}, "op000003"), docs)}
+    edit = {"id": "neu1", "label": "Tims Tymna", "commanders": ["Tymna the Weaver", "Kraum, Ludevic's Opus"], "colors": "WUBR",
+            "bracket": 4, "player": "Tim"}  # fmt: skip
+    docs = {**docs, **appops.apply_copy(_op("opponent.update", edit, "op000004"), docs)}
+    o = docs["decks/.opponents.json"]["opponents"][0]
+    assert o["label"] == "Tims Tymna" and o["commanders"] == ["Tymna the Weaver", "Kraum, Ludevic's Opus"]
+    assert o["color_identity"] == ["W", "U", "B", "R"] and o["bracket"] == 4 and o["player"] == "Tim"
+    snap = appdata.snapshot(docs)
+    assert snap["opponents"][0]["record"]["games"] == 1 and snap["opponents"][0]["title"].startswith("Tims Tymna")
+    # partner removed again, unknown bracket; a missing commander is refused
+    docs = {**docs, **appops.apply_copy(_op("opponent.update", {"id": "neu1", "commanders": ["Tymna the Weaver"], "colors": "WB", "bracket": None}, "op000005"), docs)}
+    o = docs["decks/.opponents.json"]["opponents"][0]
+    assert o["commanders"] == ["Tymna the Weaver"] and o["color_identity"] == ["W", "B"] and o["bracket"] is None
+    with pytest.raises(appops.OpError):
+        appops.apply_copy(_op("opponent.update", {"id": "neu1", "commanders": [" "]}, "op000006"), docs)
+
+
 # ---- the routes: data, status, operations; a phone game reaches the PC ------------------------
 
 def test_phone_reads_data_sends_operations_and_the_pc_gets_them(tmp_path, monkeypatch):
@@ -230,6 +252,7 @@ class Block:
             raise ImportError('blocked ' + name)
 sys.meta_path.insert(0, Block())
 from mtgdeck.sync.server import create_app, app_snapshot, run_op
+import pytest
 from fastapi.testclient import TestClient
 app = create_app({str(tmp_path)!r})
 print(app_snapshot(app.state.store)['decks'], TestClient(app).get('/app/sw.js').status_code)

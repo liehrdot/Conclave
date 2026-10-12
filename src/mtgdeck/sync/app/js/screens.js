@@ -3,7 +3,7 @@
 import { currentDeck, deckBy, failedOps, gamesOf, isDemo, isPending, op, oppBy, oppName, oppSub, pendingCount, setPref, shortName, state } from "./data.js";
 import { askSheet } from "./claude.js";
 import { roundCard, running, startSheet } from "./round.js";
-import { cardSheet, gameDetailSheet, gameSheet, opponentSheet, settingsSheet, switchDeckSheet } from "./forms.js";
+import { cardSheet, editOpponentSheet, gameDetailSheet, gameSheet, opponentSheet, settingsSheet, switchDeckSheet } from "./forms.js";
 import * as scry from "./scry.js";
 import { present, toast } from "./ui.js";
 import { $, $$, RESULT_TEXT, ago, artFallback, debounce, esc, icon, pips, plural, recordText, uid } from "./util.js";
@@ -274,9 +274,10 @@ export function opponent(id) {
   const tags = state.snap.options.tags;
   const html = `
     <div class="detail-hero" data-bg="${esc(o.colors)}">${art(o.commanders[0])}
-      <a class="float-back icon-btn glass" href="#/gegner" aria-label="Zurück zu Gegner">${icon("chev-l")}</a></div>
+      <a class="float-back icon-btn glass" href="#/gegner" aria-label="Zurück zu Gegner">${icon("chev-l")}</a>
+      <button class="float-edit" type="button" id="opp-edit">Bearbeiten</button></div>
     <div class="detail-head"><h1>${esc(oppName(o))}</h1>
-      <div class="meta">${pips(o.colors)} <span>${esc(oppSub(o))}</span></div>
+      <div class="meta">${pips(o.colors)} <span>${esc([oppSub(o), o.bracket ? `Bracket ${o.bracket}` : ""].filter(Boolean).join(" · "))}</span></div>
       <div class="recordbar"><div class="w"><b>${r.wins}</b><span>deine Siege</span></div><div class="l"><b>${r.losses}</b><span>Niederlagen</span></div>
         <div><b>${r.games}</b><span>${r.games === 1 ? "Partie" : "Partien"}</span></div></div>
       ${r.games && r.games < 5 ? `<p class="hint-small">Erst ${plural(r.games, "Partie", "Partien")} – die Bilanz sagt noch wenig.</p>` : ""}
@@ -293,8 +294,9 @@ export function opponent(id) {
       ${thumb(deckBy(p.slug)?.commanders[0] || p.name, deckBy(p.slug)?.colors)}<span class="main"><span class="title">${esc(p.name)}</span>
       <span class="subtitle">${p.wins}:${p.losses} · ${plural(p.games, "Partie", "Partien")}</span></span>${icon("chev-r", "sm chev")}</a>`).join("")}</div>` : ""}`;
   return {
-    html, bar: { title: oppName(o), back: { href: "#/gegner", label: "Gegner" }, watch: ".detail-head h1" },
+    html, bar: { title: oppName(o), back: { href: "#/gegner", label: "Gegner" }, watch: ".detail-head h1", action: { label: "Bearbeiten", run: () => editOpponentSheet(o.id) } },
     bind(el) {
+      $("#opp-edit", el).addEventListener("click", () => editOpponentSheet(o.id));
       $("#edit-tags", el).addEventListener("click", () => { editTags = !editTags; window.dispatchEvent(new Event("redraw")); });
       for (const b of $$("[data-tag]", el)) b.addEventListener("click", () => {
         if (!editTags) { editTags = true; window.dispatchEvent(new Event("redraw")); return; }

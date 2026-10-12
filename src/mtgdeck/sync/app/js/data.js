@@ -435,7 +435,7 @@ function apply(snap, op) {
     const o = snap.opponents.find((x) => x.id === p.id);
     if (!o) return;
     if (op.type === "opponent.update") {
-      for (const k of ["tags", "player", "label"]) if (k in p) o[k] = p[k];
+      for (const k of ["tags", "player", "label", "bracket", "commanders", "colors"]) if (k in p) o[k] = p[k];
       o.updated = op.at;
     } else if (op.type === "opponent.note") {
       if (!(o.notes || []).some((n) => n.id === p.note_id)) o.notes = [{ id: p.note_id, text: p.text, at: op.at }, ...(o.notes || [])];

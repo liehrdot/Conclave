@@ -88,7 +88,11 @@ async def _card_info(names: list[str]) -> tuple[list[str], dict[str, Any], list[
     except Exception:  # offline: keep the names as typed
         return names, {}, []
     resolved = [renames.get(n, n) for n in names if n not in missing]
-    return resolved, data.get(resolved[0], {}) if resolved else {}, missing
+    card = dict(data.get(resolved[0], {})) if resolved else {}
+    colors = {c for n in resolved for c in data.get(n, {}).get("color_identity") or []}  # partners add their colours
+    if colors:
+        card["color_identity"] = [c for c in "WUBRG" if c in colors]
+    return resolved, card, missing
 
 
 def _clean(changes: dict[str, Any]) -> dict[str, Any]:

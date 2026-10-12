@@ -95,8 +95,9 @@ export function hydrate(root) {
 
 // ---- search ----
 const ok = (d) => (d?.data || []);
-export async function searchCommanders(q) {
-  const data = await api(`/cards/search?q=${encodeURIComponent(`${q} is:commander`)}&include_multilingual=true&unique=cards&order=edhrec`);
+export async function searchCommanders(q, { partner = false } = {}) {  // partner: also Backgrounds and the like
+  const kind = partner ? "(is:commander OR t:background)" : "is:commander";
+  const data = await api(`/cards/search?q=${encodeURIComponent(`${q} ${kind}`)}&include_multilingual=true&unique=cards&order=edhrec`);
   return ok(data).slice(0, 8).map((c) => remember(c));
 }
 export async function searchCards(q) {

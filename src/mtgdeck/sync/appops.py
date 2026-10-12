@@ -238,12 +238,22 @@ def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
         if t in ("opponent.delete", "opponent.note_delete"):
             return out  # gone already
         raise OpError("Dieses Gegnerdeck gibt es nicht mehr")
-    if t == "opponent.update":
+    if t == "opponent.update":  # games stay linked by id, so the record survives a new name or commander
+        if "commanders" in p:
+            commanders = [_text(c, 120) for c in p.get("commanders") or [] if _text(c, 120)][:2]
+            if not commanders:
+                raise OpError("Bitte den Commander des Gegners angeben.")
+            if commanders != o.get("commanders"):
+                o["commanders"] = commanders
+                o["color_identity"] = [c for c in "WUBRG" if c in str(p.get("colors") or "")]
+                o["image"] = p.get("image") or None
         if "tags" in p:
             o["tags"] = [x for x in dict.fromkeys(p.get("tags") or []) if x in TAGS]
         for key in ("player", "label"):
             if key in p:
                 o[key] = _text(p.get(key), 80)
+        if "bracket" in p:
+            o["bracket"] = _int(p.get("bracket"), 1, 5)
         o["updated"] = at
     elif t == "opponent.note":
         note_id = _id(p.get("note_id"), "Notiz")

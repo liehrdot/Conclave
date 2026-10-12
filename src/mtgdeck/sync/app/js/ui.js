@@ -190,12 +190,14 @@ export function present(html, { actions = "", bind = null, onClose = null } = {}
 
 // ---------- compact top bar ----------
 let observer = null;
-/** ``title`` for the bar; ``watch`` = element whose disappearance shows the bar; ``back`` = {href, label}. */
-export function topbar({ title = "", watch = null, back = null, always = false } = {}) {
+/** ``title`` for the bar; ``watch`` = element whose disappearance shows the bar; ``back`` = {href, label};
+ *  ``action`` = {label, run}: a text button on the right (e.g. „Bearbeiten“). */
+export function topbar({ title = "", watch = null, back = null, always = false, action = null } = {}) {
   const bar = $("#topbar");
   observer?.disconnect();
   bar.innerHTML = `${back ? `<a class="back-btn" href="${back.href}">${icon("chev-l")}<span>${esc(back.label)}</span></a>` : `<span class="spacer"></span>`}
-    <span class="title">${esc(title)}</span><span class="spacer"></span>`;
+    <span class="title">${esc(title)}</span>${action ? `<button class="btn plain bar-action" type="button">${esc(action.label)}</button>` : `<span class="spacer"></span>`}`;
+  if (action) bar.querySelector(".bar-action").addEventListener("click", action.run);
   const show = (on) => { bar.classList.toggle("show", on); bar.setAttribute("aria-hidden", on ? "false" : "true"); };
   show(always);
   onScroll();

@@ -270,13 +270,9 @@ export function opponentSheet() {
     return {
       title: "Neues Gegnerdeck",
       body: f.commander ? `
-        <div class="group"><div class="row"><span class="thumb" data-bg="${esc(f.commander.colors)}">${art(f.commander.name, "art", "thumb")}</span>
-          <span class="main"><span class="title wrap">${esc(f.commander.name)}</span><span class="subtitle">${pips(f.commander.colors)} ${esc(f.partner ? `+ ${f.partner.name}` : f.commander.type || "")}</span></span>
-          <button class="btn plain" type="button" id="cmd-change">Ändern</button></div></div>
+        ${commanderRows(f)}
         <div class="field-label">Spieler <span class="hint">optional</span></div>
-        <div class="chips" id="players">${players.map((p) => `<button class="chip" type="button" data-player="${esc(p)}" aria-pressed="${f.player === p}">${esc(p)}</button>`).join("")}
-          ${f.newPlayer || !players.length ? "" : `<button class="chip add" type="button" id="new-player">${icon("plus")}Name</button>`}</div>
-        ${f.newPlayer || !players.length ? `<input class="input" id="player-in" value="${esc(players.includes(f.player) ? "" : f.player)}" placeholder="Name des Spielers" autocomplete="off" enterkeyhint="done">` : ""}
+        ${playerField(f, players)}
         <div class="field-label">Was fällt auf? <span class="hint">optional</span></div>
         <div class="chips" id="tags">${tags.slice(0, f.allTags ? tags.length : 8).map(([k, l]) => `<button class="chip" type="button" data-tag="${k}" aria-pressed="${f.tags.includes(k)}">${esc(l)}</button>`).join("")}
           ${f.allTags ? "" : `<button class="chip add" type="button" id="all-tags">mehr …</button>`}</div>
@@ -318,15 +314,13 @@ export function opponentSheet() {
           setTimeout(() => input.focus(), 60);  // the one field to type in: keyboard right away
           return;
         }
-        $("#cmd-change", el).addEventListener("click", () => { f.commander = null; redraw(); });
-        for (const b of $$("[data-player]", el)) b.addEventListener("click", () => { f.player = f.player === b.dataset.player ? "" : b.dataset.player; f.newPlayer = false; redraw(); });
-        $("#new-player", el)?.addEventListener("click", () => { f.newPlayer = true; f.player = ""; redraw(); setTimeout(() => $("#player-in")?.focus(), 30); });
-        $("#player-in", el)?.addEventListener("input", (e) => { f.player = e.target.value; });
+        bindCommanderRows(el, f, { onMain: () => { f.commander = null; f.partner = null; redraw(); }, backLabel: "Gegnerdeck" });
+        bindPlayerField(el, f);
         for (const b of $$("[data-tag]", el)) b.addEventListener("click", () => toggleTag(f.tags, b));
         $("#all-tags", el)?.addEventListener("click", () => { f.allTags = true; redraw(); });
         $("#opp-note", el).addEventListener("input", (e) => { f.note = e.target.value; });
         $("#opp-save", el).addEventListener("click", () => {
-          const opponent = { id: uid().slice(0, 8), commanders: [f.commander.name, ...(f.partner ? [f.partner.name] : [])], colors: f.commander.colors,
+          const opponent = { id: uid().slice(0, 8), commanders: [f.commander.name, ...(f.partner ? [f.partner.name] : [])], colors: joinColors(f.commander.colors, f.partner?.colors),
             player: f.player.trim(), tags: f.tags, image: scry.cached(f.commander.name)?.image || null };
           const entry = op("opponent.add", { opponent, note: f.note, note_id: uid().slice(0, 8) });
           vibrate(18);
@@ -339,6 +333,130 @@ export function opponentSheet() {
   };
   openSheet(page, { full: true });
 }
+
+// ---- shared parts of the opponent sheets: commander + partner rows, the player chips, commander search ----
+const joinColors = (...parts) => [..."WUBRG"].filter((c) => parts.some((p) => String(p || "").includes(c))).join("");
+const cmdOf = (name) => { const c = scry.cached(name); return { name, colors: c?.colors || "", type: c?.type || "" }; };
+
+function commanderRows(f) {
+  const row = (c, id, label) => `<div class="row"><span class="thumb" data-bg="${esc(c.colors)}">${art(c.name, "art", "thumb")}</span>
+    <span class="main"><span class="title wrap">${esc(c.name)}</span><span class="subtitle">${pips(c.colors)} ${esc(c.type || "")}</span></span>
+    <button class="btn plain" type="button" id="${id}">${label}</button></div>`;
+  return `<div class="group" id="cmd-rows">${row(f.commander, "cmd-change", "Ändern")}
+    ${f.partner ? row(f.partner, "partner-remove", "Entfernen")
+      : `<button class="row" type="button" id="partner-add"><span class="res draw">${icon("plus", "sm")}</span>
+        <span class="main"><span class="title">Partner hinzufügen</span><span class="subtitle">Zweiter Commander oder Hintergrund</span></span>${icon("chev-r", "sm chev")}</button>`}</div>`;
+}
+function bindCommanderRows(el, f, { onMain, backLabel }) {
+  $("#cmd-change", el).addEventListener("click", onMain);
+  $("#partner-remove", el)?.addEventListener("click", () => { f.partner = null; redraw(); });
+  $("#partner-add", el)?.addEventListener("click", () => pushPage(commanderPage({ title: "Partner", backLabel, partner: true, onPick: (c) => { f.partner = c; } })));
+}
+
+function playerField(f, players) {
+  const typed = f.newPlayer || !players.length || (f.player && !players.includes(f.player));
+  return `<div class="chips" id="players">${players.map((p) => `<button class="chip" type="button" data-player="${esc(p)}" aria-pressed="${f.player === p}">${esc(p)}</button>`).join("")}
+      ${typed ? "" : `<button class="chip add" type="button" id="new-player">${icon("plus")}Name</button>`}</div>
+    ${typed ? `<input class="input" id="player-in" value="${esc(players.includes(f.player) ? "" : f.player)}" placeholder="Name des Spielers" autocomplete="off" enterkeyhint="done">` : ""}`;
+}
+function bindPlayerField(el, f) {
+  for (const b of $$("[data-player]", el)) b.addEventListener("click", () => { f.player = f.player === b.dataset.player ? "" : b.dataset.player; f.newPlayer = false; redraw(); });
+  $("#new-player", el)?.addEventListener("click", () => { f.newPlayer = true; f.player = ""; redraw(); setTimeout(() => $("#player-in")?.focus(), 30); });
+  $("#player-in", el)?.addEventListener("input", (e) => { f.player = e.target.value; });
+}
+
+/** A sheet page that searches a commander (``partner``: also Backgrounds); ``onPick(c)`` then goes back. */
+function commanderPage({ title, backLabel, partner = false, onPick }) {
+  let query = "";
+  return ({ pop }) => ({
+    title,
+    left: `<button class="back-btn" type="button" data-sheet-back>${icon("chev-l")}<span>${esc(backLabel)}</span></button>`,
+    body: `<label class="search"><span class="sr">${partner ? "Partner suchen" : "Commander suchen"}</span>${icon("search")}
+        <input class="input" id="cmd-q" type="search" placeholder="${partner ? "Partner oder Hintergrund" : "Commander – deutsch oder englisch"}" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></label>
+      <div id="cmd-hits"><p class="hint-small">Ein paar Buchstaben reichen, z. B. „${partner ? "tymna" : "atra"}“.</p></div>`,
+    bind(el) {
+      const input = $("#cmd-q", el);
+      const hitsEl = $("#cmd-hits", el);
+      let seq = 0;
+      const pick = (c) => { onPick(c); document.activeElement?.blur(); pop(); };
+      const search = debounce(async (q) => {
+        const mine = ++seq;
+        try {
+          const hits = await scry.searchCommanders(q, { partner });
+          if (mine !== seq) return;
+          hitsEl.innerHTML = hits.length ? `<div class="group result-list">${hits.map((c) => `<button class="row" type="button" data-cmd="${esc(c.name)}">
+            <span class="thumb round">${art(c.name, "art", "thumb round")}</span><span class="main"><span class="title">${esc(c.name)}</span>
+            <span class="subtitle">${pips(c.colors)} ${esc(c.type)}</span></span></button>`).join("")}</div>` : `<p class="hint-small">Nichts gefunden.</p>`;
+        } catch {
+          if (mine !== seq) return;
+          hitsEl.innerHTML = `<div class="group"><button class="row" type="button" data-cmd="${esc(q)}"><span class="res draw">${icon("plus", "sm")}</span>
+            <span class="main"><span class="title">„${esc(q)}“ übernehmen</span><span class="subtitle">Ohne Netz – wird später nachgeschlagen</span></span></button></div>`;
+        }
+        scry.hydrate(hitsEl);
+        for (const b of $$("[data-cmd]", hitsEl)) b.addEventListener("click", () => pick(cmdOf(b.dataset.cmd)));
+      }, 280);
+      input.addEventListener("input", () => { query = input.value; if (query.trim().length >= 2) search(query.trim()); });
+      setTimeout(() => input.focus(), 60);
+    },
+  });
+}
+
+// ======================================================================================
+// Gegnerdeck bearbeiten: name, commander, partner, player, bracket – games and notes stay linked (by id)
+// ======================================================================================
+export function editOpponentSheet(id) {
+  const o = oppBy(id);
+  if (!o) return;
+  const [first, second] = o.commanders || [];
+  const own = (name, i) => ({ ...cmdOf(name), colors: scry.cached(name)?.colors || (o.commanders.length === 1 || i === 0 ? o.colors : "") });
+  const f = { label: o.label || "", commander: own(first, 0), partner: second ? own(second, 1) : null, player: o.player || "", bracket: o.bracket ?? null, newPlayer: false };
+  const page = () => {
+    const auto = oppName({ commanders: [f.commander.name, ...(f.partner ? [f.partner.name] : [])] });
+    return {
+      title: "Gegnerdeck bearbeiten",
+      body: `
+        <div class="field-label">Name <span class="hint">optional</span></div>
+        <input class="input" id="opp-label" value="${esc(f.label)}" placeholder="${esc(auto)}" maxlength="80" autocomplete="off" enterkeyhint="done">
+        <div class="field-label">Commander</div>
+        ${commanderRows(f)}
+        <div class="field-label">Spieler <span class="hint">optional</span></div>
+        ${playerField(f, state.snap.players)}
+        <div class="field-label">Etwa Bracket</div>
+        <div class="segmented" role="radiogroup" aria-label="Etwa Bracket" id="opp-bracket">${[[null, "?"], [1, "1"], [2, "2"], [3, "3"], [4, "4"], [5, "5"]].map(([v, l]) =>
+          `<button type="button" role="radio" data-b="${v ?? ""}" aria-pressed="${f.bracket === v}" aria-checked="${f.bracket === v}"${v === null ? ' aria-label="unbekannt"' : ""}>${l}</button>`).join("")}</div>
+        <p class="hint-small">Partien, Bilanz und Notizen bleiben an diesem Gegnerdeck.</p>`,
+      foot: `<button class="btn primary big" type="button" id="opp-done">Speichern</button>`,
+      bind(el) {
+        scry.hydrate(el); paint(el);
+        $("#opp-label", el).addEventListener("input", (e) => { f.label = e.target.value; });
+        bindCommanderRows(el, f, { backLabel: "Bearbeiten", onMain: () => pushPage(commanderPage({ title: "Commander", backLabel: "Bearbeiten", onPick: (c) => { f.commander = c; } })) });
+        bindPlayerField(el, f);
+        for (const b of $$("[data-b]", el)) b.addEventListener("click", () => { f.bracket = b.dataset.b ? Number(b.dataset.b) : null; redraw(); });
+        $("#opp-done", el).addEventListener("click", () => commit());
+      },
+    };
+  };
+  const commit = () => {
+    const now = { label: f.label.trim(), player: f.player.trim(), bracket: f.bracket, commanders: [f.commander.name, ...(f.partner ? [f.partner.name] : [])] };
+    const before = { label: o.label || "", player: o.player || "", bracket: o.bracket ?? null, commanders: o.commanders || [] };
+    const changed = Object.keys(now).filter((k) => JSON.stringify(now[k]) !== JSON.stringify(before[k]));
+    closeSheet();
+    if (!changed.length) return;
+    const payload = { id: o.id }, prev = {};
+    for (const k of changed) { payload[k] = now[k]; prev[k] = before[k]; }
+    if (changed.includes("commanders")) {
+      payload.colors = joinColors(f.commander.colors, f.partner?.colors);
+      payload.image = scry.cached(f.commander.name)?.image || null;
+      prev.colors = o.colors || "";
+      prev.image = scry.cached(before.commanders[0])?.image || null;
+    }
+    const entry = op("opponent.update", { ...payload, prev });
+    vibrate(12);
+    toast(`${oppName({ ...o, ...now })} gespeichert`, { ok: true, action: { label: "Rückgängig", run: () => undo(entry) } });
+  };
+  openSheet(page, { full: true });
+}
+
 function toggleTag(list, btn) {
   const k = btn.dataset.tag;
   const i = list.indexOf(k);

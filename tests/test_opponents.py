@@ -28,6 +28,10 @@ async def test_create_update_notes_and_delete():
     assert o["tags"] == ["counters"] and o["bracket"] is None
     o = await opponents.update(o["id"], remove_note=o["notes"][0]["id"])
     assert len(o["notes"]) == 1
+    o = await opponents.update(o["id"], commanders=[ATRAXA, "Krenko, Mob Boss"], label="Tims Partner")  # a partner adds its colours
+    assert o["commanders"] == [ATRAXA, "Krenko, Mob Boss"] and o["color_identity"] == ["W", "U", "B", "R", "G"]
+    o = await opponents.update(o["id"], commanders=[ATRAXA])
+    assert o["color_identity"] == ["W", "U", "B", "G"] and o["label"] == "Tims Partner"
     try:
         await opponents.create(["Gibt es nicht"])
         raise AssertionError("unknown commander accepted")
