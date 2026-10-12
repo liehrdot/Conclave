@@ -49,7 +49,7 @@ PROJECT_ROOT = storage.PROJECT_ROOT
 AGENT_ROOT = paths.agent_root()  # where Claude runs: its .claude/skills and CLAUDE.md (the repo, or the bundled agent/ folder)
 GUI_TOKEN = os.environ.get("MTG_GUI_TOKEN", "")  # set by the desktop shell: every request must carry it (cookie or Bearer)
 TOKEN_COOKIE = "mtg_token"
-VERSION = "0.1.4"
+VERSION = "0.1.5"
 
 
 @asynccontextmanager
