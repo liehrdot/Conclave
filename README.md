@@ -331,7 +331,9 @@ Aufbau (bewusst schlicht: eine Hauptaktion pro Seite, Selteneres eingeklappt):
 **Ohne KI nutzbar:** Claude Code braucht nur, wer Decks bauen, umbauen oder bewerten lässt (Deck bauen lassen,
 Commander vorschlagen, Gegen meine Runde bauen, Anpassen, Upgrade-Vorschläge/-Plan, Anleitung, Fragen, „Frag
 Claude“). Alles andere läuft ohne: Deck importieren (Link, Liste, Starterdeck) oder unter „Ich habe schon ein Deck“
-→ **„Selbst zusammenstellen“** ein leeres Deck mit Commander anlegen und Karten im Bearbeiten-Modus hinzufügen,
+→ **„Selbst zusammenstellen“** ein leeres Deck mit Commander anlegen und Karten im Bearbeiten-Modus hinzufügen
+(auch per **Drag & Drop von scryfall.com**: Kartenbild oder -link aus dem Browserfenster daneben in die App ziehen –
+im offenen Deck kommt die Karte in die Liste, sonst wird sie Commander eines neuen leeren Decks),
 Deck-Check mit Kartenvorschlägen, Testhand, Rule-0-Text, Drucken samt eigener Bilder und Tokens, Sammlung,
 Sammelbestellungen, Partien, Gegnerdecks, Tischregeln, Blacklist, Glossar, Sicherung. Die App erkennt, ob Claude Code installiert
 ist (und merkt sich, wenn ein Lauf an fehlender Anmeldung scheitert); unter Einstellungen → „KI-Funktionen“ lassen

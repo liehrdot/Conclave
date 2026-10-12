@@ -30,7 +30,7 @@ from pydantic import BaseModel, Field
 from .. import opponents as opponents_mod
 from .. import overview
 from ..jsonstore import ConflictError, StoreError, write_json
-from .. import backup, blacklist, brackets, chat, carddb, collection, deckedit, deckimport, importers, games, glossary, health, opponents, precons, printorders, proxy, rule0, scryfall, storage, tablerules
+from .. import backup, blacklist, brackets, chat, carddb, collection, deckedit, deckimport, dropcards, importers, games, glossary, health, opponents, precons, printorders, proxy, rule0, scryfall, storage, tablerules
 from .. import paths
 from .. import settings as settings_mod
 from ..cards import card_text, deck_tokens, resolve
@@ -1132,6 +1132,21 @@ async def api_card(name: str) -> dict[str, Any]:
     if missing or not cards:
         raise HTTPException(404, f"Karte nicht gefunden: {name}")
     return next(iter(cards.values()))
+
+
+class DropRequest(BaseModel):
+    uri_list: str = Field("", max_length=20_000)
+    html: str = Field("", max_length=200_000)
+    text: str = Field("", max_length=20_000)
+
+
+@app.post("/api/cards/drop")
+async def api_cards_drop(req: DropRequest) -> dict[str, Any]:
+    """Cards dragged in from another window (scryfall.com links, card images or names)."""
+    found = dropcards.refs(req.uri_list, req.html, req.text)
+    if not found:
+        raise HTTPException(400, "Das ist keine Karte. Zieh ein Kartenbild oder einen Kartenlink von scryfall.com herein.")
+    return await dropcards.resolve(found)
 
 
 @app.get("/api/cards/text")

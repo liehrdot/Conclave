@@ -1146,3 +1146,17 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .shortcuts { border-collapse: collapse; width: 100%; margin: var(--space-3) 0; }
 .shortcuts td { padding: 7px 8px; border-bottom: 1px solid var(--border); font-size: var(--fs-sm); vertical-align: top; }
 .shortcuts td:first-child { white-space: nowrap; width: 1%; }
+
+/* cards dragged in from scryfall.com in another window */
+.drop-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: var(--space-5); background: rgb(20 20 30 / .35); pointer-events: none; }
+.drop-overlay[hidden] { display: none; }
+.drop-box { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); max-width: 420px; padding: var(--space-6) var(--space-7); text-align: center;
+  border: 2px dashed var(--accent); border-radius: var(--radius-lg); background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); }
+.drop-box .icon { width: 36px; height: 36px; color: var(--accent); }
+.drop-box strong { font-size: var(--fs-lg); }
+.drop-box span { color: var(--muted); }
+.drop-tip { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius); background: var(--accent-soft); color: var(--on-accent-soft); }
+.drop-tip .icon { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+.card.just-dropped { animation: just-dropped 1.6s ease-out; }
+@keyframes just-dropped { from { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); } to { background: transparent; box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .card.just-dropped { animation: none; outline: 2px solid var(--accent); } }

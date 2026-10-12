@@ -146,6 +146,8 @@
               <div class="imode-manual">
                 <p class="muted small">Ein leeres Deck mit deinem Commander – die Karten fügst du danach unter „Karten“ → „Bearbeiten“ selbst hinzu
                   (mit Suche, „Ähnliche Karten“ und „Karten vorschlagen“ im Deck-Check). Geht ganz ohne KI.</p>
+                <p class="drop-tip small"><svg class="icon"><use href="#i-cards"/></svg><span><b>Tipp:</b> Öffne scryfall.com daneben und zieh den Commander
+                  einfach hier herein. Im offenen Deck landet jede hereingezogene Karte direkt in der Liste.</span></p>
                 <div class="row2">
                   <label class="field">Commander <input id="manual-cmd" list="ac-manual" placeholder="z. B. Meren (auch deutsch)"><datalist id="ac-manual"></datalist></label>
                   <label class="field">Partner / Background <span class="muted">(optional)</span><input id="manual-partner" list="ac-manual-p"><datalist id="ac-manual-p"></datalist></label>
@@ -1489,6 +1491,9 @@
   </details>
 </section>
 
+<div id="drop-overlay" class="drop-overlay" hidden aria-hidden="true">
+  <div class="drop-box"><svg class="icon"><use href="#i-cards"/></svg><strong id="drop-title">Karte hier loslassen</strong><span id="drop-hint" class="small"></span></div>
+</div>
 <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
 
 <dialog id="palette" class="dialog palette" aria-label="Schnellsuche">

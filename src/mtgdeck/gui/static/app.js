@@ -86,6 +86,7 @@ function toast(text, kind = "info", ms = 4500, action = null) {
   }
   $("#toasts").appendChild(el);
   setTimeout(() => el.remove(), kind === "error" ? ms + 3000 : ms);
+  return el;
 }
 const fail = (err) => toast(err.message || String(err), "error");
 
@@ -1223,6 +1224,89 @@ $("#edit-save").addEventListener("click", async () => {
   } catch (err) { fail(err); }
   finally { btn.disabled = false; btn.textContent = "Speichern & prüfen"; }
 });
+
+// ---------- drag cards in from scryfall.com (another window or app) ----------
+// Open deck → the cards go into its list (edit mode); anywhere else → commander of a new empty deck.
+let dragFromApp = false;  // text or links dragged inside the app itself are no card drops
+document.addEventListener("dragstart", () => { dragFromApp = true; });
+document.addEventListener("dragend", () => { dragFromApp = false; });
+const DROP_TYPES = ["text/uri-list", "text/html", "text/plain"];
+// a drop the page leaves alone makes the browser open the link instead of the app, so every outside drag is caught here;
+// only the artwork picker keeps its own image-file drops
+const isCardDrag = (e) => {
+  const types = [...(e.dataTransfer?.types || [])];
+  return !dragFromApp && types.some((t) => DROP_TYPES.includes(t)) && !($("#picker").open && types.includes("Files"));
+};
+const dropIntoDeck = () => parseHash().view === "deck" && !!currentDeck;
+
+let dropHideTimer = 0;
+function showDropOverlay(on) {
+  clearTimeout(dropHideTimer);
+  $("#drop-overlay").hidden = !on;
+  if (!on) return;
+  $("#drop-title").textContent = dropIntoDeck() ? `In „${currentDeck.name}“ legen` : "Als Commander für ein neues Deck";
+  $("#drop-hint").textContent = dropIntoDeck() ? "Loslassen – die Karte kommt in die Liste, du speicherst danach." : "Loslassen – danach nur noch „Leeres Deck anlegen“.";
+  dropHideTimer = setTimeout(() => showDropOverlay(false), 250);  // dragover repeats while the pointer is in the window
+}
+document.addEventListener("dragover", (e) => {
+  if (!isCardDrag(e)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  if (!document.querySelector("dialog[open]")) showDropOverlay(true);
+});
+document.addEventListener("drop", async (e) => {
+  if (!isCardDrag(e)) return;
+  e.preventDefault();
+  showDropOverlay(false);
+  if (document.querySelector("dialog[open]")) return toast("Schließ zuerst das offene Fenster, dann zieh die Karte herein.", "error");
+  const dt = e.dataTransfer;
+  const body = { uri_list: dt.getData("text/uri-list"), html: dt.getData("text/html"), text: dt.getData("text/plain") };
+  try {
+    const r = await api("/api/cards/drop", { method: "POST", body });
+    if (r.missing.length && !r.cards.length) throw new Error(`Karte nicht gefunden: ${r.missing.join(", ")}`);
+    if (dropIntoDeck()) await dropCardsIntoDeck(r.cards);
+    else dropCommander(r.cards);
+    if (r.missing.length) toast(`Nicht erkannt: ${r.missing.join(", ")}`, "error");
+  } catch (err) { fail(err); }
+});
+
+let dropToast = null;
+async function dropCardsIntoDeck(cards) {
+  if ($("#panel-karten").hidden) selectTab("karten");
+  if (!edit) setEditing(true);
+  const added = [];
+  for (const c of cards) {
+    try { added.push(await addCard(c.name)); } catch (err) { fail(err); }
+  }
+  if (!added.length) return;
+  renderCards(currentDeck);
+  for (const name of added) {
+    const row = $(`#cards .card[data-name="${CSS.escape(name)}"]`);
+    row?.classList.add("just-dropped");
+    if (name === added[added.length - 1]) row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  dropToast?.remove();  // one card after the other: one toast, not a stack
+  dropToast = toast(`${added.join(", ")} vorgemerkt – mit „Speichern & prüfen“ übernehmen.`, "info", 6000, { label: "Rückgängig", run: () => {
+    if (!edit) return;
+    for (const name of added) setQty(name, currentQty(name) - 1);
+    renderCards(currentDeck);
+  } });
+}
+
+function dropCommander(cards) {
+  const onForm = parseHash().view === "new" && buildForm.dataset.mode === "import" && $("#import-box").dataset.imode === "manual";
+  const cmd = $("#manual-cmd"), partner = $("#manual-partner");
+  if (parseHash().view !== "new") go("#/new");
+  setMode("import");
+  setImportMode("manual");
+  if (onForm && cmd.value.trim() && !partner.value.trim()) partner.value = cards[0].name;  // second drop = partner
+  else { cmd.value = cards[0].name; partner.value = cards[1]?.name || ""; }
+  const names = [cmd.value, partner.value].filter(Boolean).join(" + ");
+  const legendary = cards.every((c) => /legendary|legendär/i.test(c.type_line || ""));
+  toast(legendary ? `Commander: ${names}. Jetzt „Leeres Deck anlegen“ klicken.` : `${names} eingetragen – Achtung, das ist keine legendäre Karte.`,
+    legendary ? "info" : "error", 6000);
+  $("#manual-btn").focus();
+}
 
 // ---------- collection ownership in the deck (filled by loadOwnership) ----------
 let ownership = null;  // { cards: {name: {need, real, proxy, missing, other_decks}}, ... }
@@ -4696,6 +4780,7 @@ function paletteItems() {
     { label: "Stärkstes Deck gegen meine Runde bauen", hint: "Neues Deck", run: () => { go("#/new"); setMode("meta"); } },
     { label: "Deck per Link importieren", hint: "Moxfield, Archidekt, …", run: () => { go("#/new"); setMode("import"); setImportMode("link"); $("#import-url").focus(); } },
     { label: "Deckliste einfügen", hint: "Neues Deck", run: () => { go("#/new"); setMode("import"); setImportMode("text"); $("#import-text").focus(); } },
+    { label: "Leeres Deck anlegen", hint: "Neues Deck · Karten von scryfall.com hereinziehen", run: () => { go("#/new"); setMode("import"); setImportMode("manual"); $("#manual-cmd").focus(); } },
     { label: "Starterdeck (Precon) importieren", hint: "Neues Deck", run: () => { go("#/new"); setMode("import"); setImportMode("precon"); } },
     { label: "Meine Sammlung", hint: "Seite", run: () => go("#/collection") },
     { label: "Karte zur Sammlung hinzufügen", hint: "Sammlung", run: () => { go("#/collection"); openCollAdd(); } },
