@@ -187,6 +187,8 @@ function markNav(r = parseHash()) {
     if (a.dataset.nav === r.view) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
   }
+  if (r.view === "new") $("#nav-new").setAttribute("aria-current", "page");
+  else $("#nav-new").removeAttribute("aria-current");
 }
 
 // mobile: the sidebar becomes a drawer
@@ -617,28 +619,47 @@ async function openDeck(slug) {
   return true;
 }
 
-function renderDeckHead(d) {
+function deckFacts(d) {
   const v = d.validation || {};
   const cur = (d.currency || "eur").toUpperCase();
+  const bits = [];
+  if (d.proxy) bits.push("Proxy");
+  else if (v.price_total != null) bits.push(`${fmtPrice(v.price_total, cur)}${d.budget ? ` / ${fmtPrice(d.budget, cur)}` : ""}`);
+  if (d.version) bits.push(`v${d.version}`);
+  bits.push(fmtDate(d.updated));
+  if (d.power_profile?.style) bits.push(d.power_profile.style);
+  return bits.filter(Boolean).join(" · ");
+}
+
+// One sentence for the head, the check and the sticky line. Table-rule card names stay at the select.
+function deckVerdict(d) {
+  const v = d?.validation;
+  if (!v) return { text: "Noch nicht geprüft", cls: "" };
+  const br = v.bracket || {};
+  const goal = br.target_text || levelText(d.bracket ?? "?", d.power_profile?.tier);
+  let text, cls = "";
+  if (v.legal === false) { text = "Nicht legal"; cls = "bad"; }
+  else if (br.compliant === false) { text = "Legal, Ziel verfehlt"; cls = "warn"; }
+  else text = `Legal, passt zu ${goal}`;
+  const table = v.table_rule;
+  if (table && table.compliant === false && table.name) {
+    text += ` · Tischregel „${table.name}“ verletzt`;
+    cls = "bad";
+  }
+  return { text, cls };
+}
+
+function renderDeckHead(d) {
   $("#deck-name").textContent = d.name;
   const thumb = d.card_data?.[d.commanders[0]]?.image;
   $("#deck-thumb").hidden = !thumb;
   if (thumb) $("#deck-thumb").src = thumb;
-  const pills = [
-    `<span class="pill">${esc(d.commanders.join(" + "))}</span>`,
-    `<span class="pill accent">${esc(levelText(d.bracket ?? "?", d.power_profile?.tier))}</span>`,
-  ];
-  if (v.legal === true) pills.push(`<span class="pill ok">${icon("check")}legal</span>`);
-  if (v.legal === false) pills.push(`<span class="pill bad">${icon("alert")}nicht legal</span>`);
-  if (d.proxy) pills.push('<span class="pill">Proxy-Deck</span>');
-  else if (v.price_total != null) pills.push(`<span class="pill">${esc(fmtPrice(v.price_total, cur))}${d.budget ? ` / ${esc(fmtPrice(d.budget, cur))}` : ""}</span>`);
-  if (d.power_profile?.style) pills.push(`<span class="pill">Stil: ${esc(d.power_profile.style)}</span>`);
-  if (d.table_rule_info) {
-    const t = v.table_rule || {};
-    pills.push(`<a class="pill ${t.compliant === false ? "bad" : ""}" href="#/deck/${enc(d.slug)}/karten" title="Tischregel">${icon("table")}${esc(d.table_rule_info.name)}</a>`);
-  }
-  pills.push(`<span class="muted small">${d.version ? `v${d.version} · ` : ""}${esc(fmtDate(d.updated))}</span>`);
-  $("#deck-meta").innerHTML = pills.join("");
+  $("#deck-commanders").textContent = d.commanders.join(" + ");
+  $("#deck-facts").textContent = deckFacts(d);
+  const verdict = deckVerdict(d);
+  const line = $("#deck-verdict");
+  line.textContent = verdict.text;
+  line.className = `verdict${verdict.cls ? ` ${verdict.cls}` : ""}`;
   $("#deck-desc").textContent = d.description || "";
   $("#deck-desc").hidden = !d.description;
   const against = d.built_against_info || [];
@@ -649,14 +670,10 @@ function renderDeckHead(d) {
 }
 
 function renderDeckStatus(d) {
-  const v = d.validation || {};
-  const bits = [];
-  if (v.legal === true) bits.push("legal");
-  else if (v.legal === false) bits.push("nicht legal");
-  bits.push(levelText(d.bracket ?? "?", d.power_profile?.tier));
-  if (d.table_rule_info) bits.push(d.table_rule_info.name);
-  $("#deck-status-text").textContent = bits.filter(Boolean).join(" · ");
-  $("#deck-status").classList.toggle("bad", v.legal === false || v.table_rule?.compliant === false);
+  const verdict = deckVerdict(d);
+  $("#deck-status-text").textContent = `${verdict.text} · Zum Deck-Check`;
+  $("#deck-status").classList.toggle("bad", verdict.cls === "bad");
+  $("#deck-status").classList.toggle("warn", verdict.cls === "warn");
 }
 $("#deck-status").addEventListener("click", () => $("#check-panel").scrollIntoView({ behavior: "smooth", block: "start" }));
 
@@ -706,18 +723,17 @@ function renderValidation(v) {
   const box = $("#validation");
   if (!v) { box.innerHTML = '<p class="muted">Noch nicht geprüft – „⋯ → Neu prüfen“.</p>'; return; }
   const br = v.bracket || {};
-  const goal = br.target_text || `Bracket ${br.target}`;
-  const status = [
-    v.legal ? `<span class="pill ok">${icon("check")}legal</span>` : `<span class="pill bad">${icon("alert")}nicht legal</span>`,
-    br.compliant ? `<span class="pill ok">passt zu ${esc(goal)}</span>` : `<span class="pill warn">${esc(goal)} verletzt</span>`,
-  ];
-  const issues = [...(v.errors || []).map((t) => ["bad", t]), ...(br.violations || []).map((t) => ["warn", t]), ...(v.warnings || []).map((t) => ["warn", t])];
+  const table = v.table_rule || {};
+  const skip = new Set([...(table.violations || []), ...(table.warnings || [])]);
+  const issues = [...(v.errors || []).map((t) => ["bad", t]), ...(br.violations || []).map((t) => ["warn", t]), ...(v.warnings || []).map((t) => ["warn", t])]
+    .filter(([, t]) => !skip.has(t));
   const li = ([cls, t]) => `<li class="${cls}">${esc(t)}</li>`;
   const shown = issues.slice(0, 4), rest = issues.slice(4);
   const list = (items) => (items.length ? `<ul class="issues">${items.map(li).join("")}</ul>` : "");
   const kv = (label, items) => `<dt>${label}</dt><dd>${esc(items.length ? items.join(", ") : "–")}</dd>`;
+  const verdict = deckVerdict(currentDeck);
   box.innerHTML = `
-    <div class="status-line">${status.join("")}</div>
+    <p class="verdict${verdict.cls ? ` ${verdict.cls}` : ""}">${esc(verdict.text)}</p>
     ${br.estimated ? `<p class="muted small">Commander Spellbook schätzt Bracket ${esc(br.estimated)}.</p>` : ""}
     ${list(shown)}
     ${rest.length ? `<details class="more"><summary>${rest.length} weitere Hinweise</summary>${list(rest)}</details>` : ""}
@@ -909,6 +925,7 @@ $("#edit-discard").addEventListener("click", () => setEditing(false));
 function updateEditBar(total) {
   const n = editChanges();
   $("#edit-bar").hidden = !edit || !n;
+  syncSaveButtons();
   if (!edit || !n) return;
   const parts = [];
   if (edit.add.size) parts.push(`${edit.add.size} neu`);
@@ -1226,17 +1243,23 @@ function renderHealth(d) {
   const h = d.health;
   $("#health-panel").hidden = !h;
   if (!h) return;
-  $("#health-summary").textContent = h.summary;
-  $("#health-list").innerHTML = h.items.map((it) => `<li><details data-key="${esc(it.key)}">
+  const row = (it) => `<li><details data-key="${esc(it.key)}">
       <summary><span class="light ${esc(it.status)}" role="img" aria-label="${STATUS_TEXT[it.status]}"></span>
         <span class="h-label">${esc(it.label)}</span><span class="h-val">${esc(fmtNum(it.value))} · Ziel ${esc(it.target)}</span></summary>
       <div class="h-body"><p>${esc(it.text)}</p><p class="why"><strong>Warum wichtig?</strong> ${esc(it.why)}</p>
         ${it.cards.length ? `<p class="why">Erkannt: ${it.cards.slice(0, 12).map(esc).join(", ")}${it.cards.length > 12 ? " …" : ""}</p>` : ""}
         ${it.fix ? `<div class="btn-group">
           ${it.fix.role ? `<button type="button" class="btn small" data-role="${esc(it.fix.role)}" data-label="${esc(it.label)}">Karten vorschlagen</button>` : ""}
-        </div>` : ""}</div></details></li>`).join("");
+        </div>` : ""}</div></details></li>`;
+  const open = h.items.filter((it) => it.status !== "green" && it.key !== "table_rule");
+  const n = open.length;
+  $("#health-summary").textContent = n
+    ? `${n} ${n === 1 ? "Bereich braucht" : "Bereiche brauchen"} Aufmerksamkeit.`
+    : "Alles im grünen Bereich.";
+  $("#health-list").innerHTML = open.map(row).join("");
+  $("#health-all-list").innerHTML = h.items.map(row).join("");
 }
-$("#health-list").addEventListener("click", (e) => {
+$("#health-panel").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.dataset.role) openRoleCandidates(b.dataset.role, b.dataset.label);
@@ -1672,6 +1695,37 @@ $("#step-up").addEventListener("click", () => stepTarget(+1));
 $("#step-down").addEventListener("click", () => stepTarget(-1));
 $("#retune-form").addEventListener("change", () => renderPower(currentDeck));
 
+function profileSnapshot(p) {
+  p = p || {};
+  const num = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
+  return {
+    tier: p.tier || null,
+    max_game_changers: num(p.max_game_changers),
+    max_tutors: num(p.max_tutors),
+    allow_two_card_combos: p.allow_two_card_combos === false ? false : null,
+    allow_extra_turns: p.allow_extra_turns === false ? false : null,
+    allow_mass_land_denial: p.allow_mass_land_denial === false ? false : null,
+    style: (p.style || "").trim(),
+  };
+}
+
+function targetDirty(d) {
+  if (!d || !$("#retune-form").querySelector('[name="rbracket"]')) return false;
+  const bracket = Number($("#retune-form").querySelector('[name="rbracket"]:checked')?.value || d.bracket || 3);
+  if (bracket !== (d.bracket || 3)) return true;
+  const form = profileSnapshot(readProfile($("#retune-form .profile-fields")) || {});
+  return JSON.stringify(form) !== JSON.stringify(profileSnapshot(d.power_profile));
+}
+
+function syncSaveButtons() {
+  const dirty = targetDirty(currentDeck);
+  const edits = !!(edit && editChanges());
+  const retune = $("#retune-btn");
+  retune.hidden = !dirty;
+  retune.classList.toggle("primary", dirty && !edits);
+  $("#edit-save").classList.toggle("primary", edits);
+}
+
 function renderPower(d) {
   if (!d) return;
   const power = d.validation?.bracket?.power;
@@ -1683,12 +1737,13 @@ function renderPower(d) {
     ${[1, 2, 3, 4, 5].map((b) => `<span class="tick" style="left:${pos(b + 0.5)}" title="Bracket ${b}">${b}</span>`).join("")}
     ${power ? `<div class="mark now" style="left:${pos(power.value)}" title="Aktuell ${power.value}"></div>` : ""}
     <div class="mark goal" style="left:${pos(goal)}" title="Ziel"></div>`;
-  const changed = bracket !== d.bracket || (tier || null) !== (d.power_profile?.tier || null);
+  const changed = targetDirty(d);
   $("#power-text").innerHTML = (power
     ? `<span class="legend-bar"></span> Aktuell: <b>${esc(fmtPower(power.value))}</b> · ${esc(power.text)}
        <details class="more"><summary>Wie kommt der Wert zustande?</summary>${esc(power.components.map((c) => `${c.reason} ${c.points > 0 ? "+" : ""}${c.points}`).join(", "))}${power.floor_from_rules ? ` – durch die Regeln mindestens Bracket ${power.floor_from_rules}` : ""}</details>`
     : "Noch keine Power-Einschätzung – „⋯ → Neu prüfen“.<br>")
     + `<span class="legend-dot"></span> Ziel: <b>${esc(levelText(bracket, tier))}</b>${changed ? " – mit „Ziel speichern“ übernehmen" : ""}`;
+  syncSaveButtons();
 }
 
 $("#retune-form").addEventListener("submit", async (e) => {
@@ -3041,14 +3096,21 @@ function renderDeckTable(d) {
     return;
   }
   const bad = t.violations || [];
-  box.innerHTML = `<p class="${bad.length ? "bad-text" : "ok-text"}">${icon(bad.length ? "alert" : "check")}
-      ${bad.length ? `${bad.length} ${bad.length === 1 ? "Verstoß" : "Verstöße"} gegen „${esc(t.name)}“` : `Passt zu „${esc(t.name)}“`}</p>
-    ${bad.length ? `<ul class="tr-violations">${bad.map((v) => `<li>${esc(v.split(": ").slice(1).join(": ") || v)}</li>`).join("")}</ul>` : ""}
-    ${(t.warnings || []).map((w) => `<p class="muted small">${esc(w)}</p>`).join("")}
-    <p class="muted small">${esc((t.summary || []).join(" · "))}</p>
+  const summary = (t.summary || []).join(" · ");
+  const warnings = (t.warnings || []).map((w) => `<p class="muted small">${esc(w)}</p>`).join("");
+  const link = `<a class="link small" href="#/tables/${enc(id)}">Tischregel bearbeiten</a>`;
+  if (!bad.length) {
+    box.innerHTML = `${summary ? `<p class="muted small">${esc(summary)}</p>` : ""}${warnings}<p class="small">${link}</p>`;
+    return;
+  }
+  box.innerHTML = `<p class="bad-text">${icon("alert")}
+      ${bad.length} ${bad.length === 1 ? "Verstoß" : "Verstöße"} gegen „${esc(t.name)}“</p>
+    <ul class="tr-violations">${bad.map((v) => `<li>${esc(v.split(": ").slice(1).join(": ") || v)}</li>`).join("")}</ul>
+    ${warnings}
+    ${summary ? `<p class="muted small">${esc(summary)}</p>` : ""}
     <div class="btn-row">
-      ${bad.length ? `<button type="button" class="btn" id="deck-table-fix">${icon("edit")}Karten bearbeiten</button>` : ""}
-      <a class="link small" href="#/tables/${enc(id)}">Tischregel bearbeiten</a>
+      <button type="button" class="btn" id="deck-table-fix">${icon("edit")}Karten bearbeiten</button>
+      ${link}
     </div>`;
 }
 $("#deck-table").addEventListener("change", async (e) => {

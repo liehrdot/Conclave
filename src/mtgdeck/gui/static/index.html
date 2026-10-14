@@ -48,7 +48,7 @@
 
   <aside id="sidebar" class="sidebar" aria-label="Navigation">
     <a class="brand" href="#/"><span class="logo" aria-hidden="true"></span>Commander Deckbuilder</a>
-    <a class="btn primary block" href="#/new" data-nav="new"><svg class="icon"><use href="#i-plus"/></svg>Neues Deck</a>
+    <a class="btn block" id="nav-new" href="#/new" data-nav="new"><svg class="icon"><use href="#i-plus"/></svg>Neues Deck</a>
     <button type="button" class="search-btn" id="palette-btn"><svg class="icon"><use href="#i-search"/></svg><span>Suchen …</span><kbd>Strg K</kbd></button>
     <a id="job-indicator" class="job-indicator" href="#/new" hidden>
       <span class="spinner" aria-hidden="true"></span><span id="job-indicator-text">Auftrag läuft …</span></a>
@@ -151,7 +151,9 @@
         <img id="deck-thumb" class="deck-thumb" alt="" hidden>
         <div class="deck-title">
           <h1 id="deck-name"></h1>
-          <div id="deck-meta" class="meta-row"></div>
+          <p id="deck-commanders" class="deck-commanders"></p>
+          <p id="deck-facts" class="muted small"></p>
+          <p id="deck-verdict" class="verdict"></p>
           <p id="deck-desc" class="lead"></p>
           <p id="deck-against" class="muted small" hidden></p>
         </div>
@@ -238,7 +240,6 @@
                     <button type="button" class="btn small" id="step-up">▲ Stärker</button>
                   </div>
                 </div>
-                <p class="muted small">Nur dieses Deck. Für alle Decks gilt die Blacklist, für eine Runde die Tischregel.</p>
                 <div id="power-scale" class="scale"></div>
                 <div id="power-text" class="muted small"></div>
                 <form id="retune-form" autocomplete="off">
@@ -250,7 +251,7 @@
                     <summary>Feiner einstellen</summary>
                     <div class="profile-fields"></div>
                   </details>
-                  <button type="submit" id="retune-btn" class="btn primary">Ziel speichern</button>
+                  <button type="submit" id="retune-btn" class="btn" hidden>Ziel speichern</button>
                 </form>
               </div>
               <div class="tune-table" id="table-panel">
@@ -267,14 +268,18 @@
                 <h3>Bereiche</h3>
                 <p id="health-summary" class="muted small"></p>
                 <ul id="health-list" class="health"></ul>
+                <details class="more" id="health-all">
+                  <summary>Alle Bereiche</summary>
+                  <ul id="health-all-list" class="health"></ul>
+                </details>
               </div>
             </section>
-            <section class="panel" id="own-panel" hidden><h2>Sammlung</h2><div id="own-summary"></div></section>
-            <section class="panel" id="token-panel" hidden>
+            <section class="deck-aside" id="own-panel" hidden><h2>Sammlung</h2><div id="own-summary"></div></section>
+            <section class="deck-aside" id="token-panel" hidden>
               <h2>Tokens &amp; Marker <span id="token-count" class="count"></span></h2>
               <ul id="token-list" class="token-list"></ul>
             </section>
-            <section class="panel"><h2>Statistik</h2><div id="stats"></div></section>
+            <section class="deck-aside"><h2>Statistik</h2><div id="stats"></div></section>
           </aside>
         </div>
       </div>

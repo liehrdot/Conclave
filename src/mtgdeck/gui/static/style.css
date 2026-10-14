@@ -77,7 +77,7 @@ html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--text); font: var(--fs-base)/1.5 var(--font); }
 h1, h2, h3, h4 { line-height: 1.25; margin: 0; }
 h1 { font-size: var(--fs-xl); font-weight: 600; letter-spacing: -.011em; }
-h2 { font-size: var(--fs-md); font-weight: 600; }
+h2 { font-size: 20px; font-weight: 600; }
 h3 { font-size: var(--fs-base); font-weight: 600; }
 p { margin: 0 0 var(--space-3); }
 a { color: var(--accent); }
@@ -117,7 +117,8 @@ img { max-width: 100%; }
 .deck-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .deck-list a { display: block; padding: 6px 8px; border-radius: var(--radius); color: var(--text); text-decoration: none; }
 .deck-list a:hover { background: var(--surface-2); }
-.deck-list a[aria-current="page"] { background: var(--surface-2); color: var(--text); }
+.deck-list a[aria-current="page"] { background: var(--surface-2); color: var(--text); box-shadow: inset 3px 0 0 var(--text); }
+.deck-list a[aria-current="page"] .name { font-weight: 650; }
 .deck-list .name { display: flex; align-items: center; gap: 6px; font-weight: 550; font-size: 14px; }
 .deck-list .name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .deck-list .meta { display: block; color: var(--muted); font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -128,7 +129,8 @@ img { max-width: 100%; }
 .nav-bottom { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: var(--space-3); border-top: 1px solid var(--border); }
 .nav-bottom a { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: var(--radius); color: var(--text); text-decoration: none; font-size: 14px; }
 .nav-bottom a:hover { background: var(--surface-2); }
-.nav-bottom a[aria-current="page"] { background: var(--surface-2); color: var(--text); }
+.nav-bottom a[aria-current="page"] { background: var(--surface-2); color: var(--text); font-weight: 650; box-shadow: inset 3px 0 0 var(--text); }
+#nav-new[aria-current="page"] { background: var(--surface-2); font-weight: 650; box-shadow: inset 3px 0 0 var(--text); }
 .nav-bottom .count { margin-left: auto; }
 .nav-bottom .nav-group { margin: var(--space-3) 0 0; padding: 0 8px; font-size: var(--fs-sm); font-weight: 600; color: var(--muted); }
 .nav-bottom a { padding-top: 6px; padding-bottom: 6px; }
@@ -342,6 +344,14 @@ details.more[open] > summary { margin-bottom: var(--space-3); }
 
 .deck-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--space-4); align-items: start; }
 .deck-side { position: sticky; top: var(--space-4); max-height: calc(100vh - 2 * var(--space-4)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.deck-aside { padding: var(--space-4) var(--space-5); margin-bottom: var(--space-4); }
+.deck-aside > h2 { margin-bottom: var(--space-3); }
+.deck-title h1 { margin-bottom: 2px; }
+.deck-commanders { margin: 2px 0 var(--space-2); }
+.deck-facts { margin-bottom: var(--space-2); }
+.verdict { margin: 0 0 var(--space-3); font-weight: 550; font-size: var(--fs-sm); }
+.verdict.bad { color: var(--bad); }
+.verdict.warn { color: var(--warn); }
 
 /* card list */
 .cards { columns: 3 220px; column-gap: var(--space-6); }
@@ -369,7 +379,7 @@ details.more[open] > summary { margin-bottom: var(--space-3); }
 
 /* card tools + edit mode */
 .card-tools { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
-.card-tools select { width: auto; min-height: 32px; font-size: var(--fs-sm); }
+.card-tools select { width: auto; min-height: 32px; font-size: var(--fs-sm); border-color: var(--border-strong); }
 .card-tools .btn { height: 32px; }
 .card-tools .btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--on-accent-soft); }
 #card-total.bad { color: var(--bad); font-weight: 700; }
@@ -519,7 +529,7 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 /* my collection */
 .coll-toolbar { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-2); }
 .coll-toolbar input[type="search"] { flex: 1 1 220px; width: auto; }
-.coll-toolbar select { width: auto; }
+.coll-toolbar select { width: auto; border-color: var(--border-strong); }
 .coll-list { display: flex; flex-direction: column; }
 .coll-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto auto auto 76px 28px; gap: var(--space-3); align-items: center; padding: 6px 4px; border-bottom: 1px solid var(--border); }
 .coll-row:last-child { border-bottom: none; }
@@ -602,7 +612,6 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .tr-decks > li:first-child { border-top: none; }
 .tr-decks > li > div { min-width: 0; }
 .tr-decks .tr-violations { margin-top: 4px; }
-#deck-meta a.pill { text-decoration: none; color: inherit; }
 
 /* ---------- print studio ---------- */
 .toolbar { display: flex; gap: var(--space-3); align-items: flex-end; flex-wrap: wrap; margin-bottom: var(--space-2); }
@@ -696,7 +705,8 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 @media (max-width: 1100px) {
   .deck-layout { grid-template-columns: 1fr; }
   .deck-side { position: static; max-height: none; overflow: visible; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); }
-  .deck-side .panel { margin: 0; }
+  .deck-side .panel, .deck-aside { margin: 0; }
+  .deck-head .verdict { display: none; }
   .main { padding: var(--space-5) var(--space-5) var(--space-7); }
 }
 @media (max-width: 860px) {
@@ -905,6 +915,9 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 }
 .deck-status:hover { border-color: var(--accent); }
 .deck-status.bad { border-color: var(--bad); color: var(--bad); }
+.deck-status.warn { border-color: var(--warn); color: var(--warn); }
+#retune-btn { margin-top: var(--space-3); }
+#health-all { margin-top: var(--space-2); }
 @media (max-width: 1100px) {
   .deck-status { display: block; position: sticky; top: 0; z-index: 15; }
 }
