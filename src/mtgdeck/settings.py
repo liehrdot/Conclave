@@ -38,6 +38,7 @@ DEFAULTS: dict[str, Any] = {
     "sync_interval": 5,
     # desktop app: system notifications while the window is hidden (print files ready, news from the phone)
     "desktop_notify": True,
+    "font": "cascadia",  # cascadia | inter — the UI face; code and the console stay Cascadia
 }
 _ENV = {
     "autofill_path": "MTG_AUTOFILL_PATH",

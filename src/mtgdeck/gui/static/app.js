@@ -3612,8 +3612,14 @@ document.addEventListener("visibilitychange", () => {
 // settings: proxy printing, AI upscaling, local card DB
 // ============================================================================================
 let appSettings = {};
+function applyFont(font) {
+  document.documentElement.dataset.font = font === "inter" ? "inter" : "cascadia";
+}
 async function loadSettings() {
   appSettings = await api("/api/settings");
+  applyFont(appSettings.font);
+  const fontChoice = $("#font-choice");
+  if (fontChoice) fontChoice.value = appSettings.font === "inter" ? "inter" : "cascadia";
   const f = $("#settings-form").elements;
   const MODEL_HINTS = { "realesrgan-x4plus": " (empfohlen)", "realesrgan-x4plus-anime": " (für Zeichnungen, glättet stärker)" };
   f.upscale_model.innerHTML = appSettings.upscale_models.map((m) => `<option value="${esc(m)}">${esc(m + (MODEL_HINTS[m] || ""))}</option>`).join("")
@@ -3632,6 +3638,18 @@ async function loadSettings() {
   $("#print-form").elements.foil.checked = !!appSettings.foil;
   $("#pdf-paper").value = appSettings.paper || "A4";
 }
+$("#font-choice").addEventListener("change", async (e) => {
+  const font = e.target.value === "inter" ? "inter" : "cascadia";
+  applyFont(font);
+  try {
+    appSettings = await api("/api/settings", { method: "POST", body: { font } });
+    applyFont(appSettings.font);
+  } catch (err) {
+    applyFont(appSettings.font);
+    e.target.value = appSettings.font === "inter" ? "inter" : "cascadia";
+    fail(err);
+  }
+});
 $("#settings-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const body = Object.fromEntries(new FormData(e.target));

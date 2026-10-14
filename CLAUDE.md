@@ -159,7 +159,7 @@ No linter or formatter is configured. Code uses `# fmt: skip` on some dense lite
   - Raw output goes out as `term` SSE events and is rendered by the vendored xterm.js in `static/vendor/xterm`.
   - Keystrokes go through `/api/jobs/{id}/input` (`raw: true`). `/resize` also exists.
   - Fallback: `launch_autofill()` in its own console window (`CREATE_NEW_CONSOLE`).
-  - `settings.py`: user paths/servers in gitignored `mtgdeck.settings.json`, with env overrides.
+  - `settings.py`: user paths/servers in gitignored `mtgdeck.settings.json`, with env overrides. `font` is `cascadia` (default) or `inter`; the GUI sets `html[data-font]` from it. Code, the import box and the console keep Cascadia via `--mono`.
   - To verify an XML against upstream, clone mpc-autofill and call `src.order.CardOrder.from_xmls_in_folder`.
 - **`gui/app.py`**: a FastAPI app with vanilla JS in `gui/static/`.
   - **Frontend conventions** (`index.html`, `style.css`, `app.js`; no framework, no build step, vendored libs only):

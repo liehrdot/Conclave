@@ -45,6 +45,14 @@ async def test_gui_routes():
     assert client.get("/api/decks/gui-deck").status_code == 200
 
 
+def test_ui_font_setting():
+    client = TestClient(app)
+    assert client.get("/api/settings").json()["font"] == "cascadia"
+    assert client.post("/api/settings", json={"font": "inter"}).json()["font"] == "inter"
+    assert client.get("/api/settings").json()["font"] == "inter"
+    assert client.post("/api/settings", json={"font": "comic"}).status_code == 422
+
+
 def test_deck_view_has_back_faces():
     storage.save({"name": "Dfc Deck", "commanders": ["Meren of Clan Nel Toth"], "bracket": 2,
                   "cards": [{"name": "Delver of Secrets // Insectile Aberration", "qty": 1}, {"name": "Sol Ring", "qty": 1}]})  # fmt: skip
