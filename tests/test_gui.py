@@ -32,7 +32,7 @@ async def test_gui_routes():
     client = TestClient(app)
     assert len(client.get("/api/brackets").json()) == 5
     decks = client.get("/api/decks").json()
-    assert decks[0]["slug"] == "gui-deck" and decks[0]["valid"] is True
+    assert decks[0]["slug"] == "gui-deck" and decks[0]["valid"] is True and decks[0]["fits"] is True
     d = client.get("/api/decks/gui-deck").json()
     assert d["card_data"]["Sol Ring"]["image"].split("?")[0].endswith("Sol Ring.jpg")
     assert "18 Forest" in d["export_text"]

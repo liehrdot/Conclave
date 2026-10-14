@@ -218,8 +218,8 @@ function renderDeckList() {
   const list = deckIndex.filter((d) => !q || `${d.name} ${d.commanders.join(" ")}`.toLowerCase().includes(q));
   $("#deck-list").innerHTML = list.length ? list.map((d) => `<li>
       <a href="#/deck/${enc(d.slug)}" data-slug="${esc(d.slug)}">
-        <span class="name">${d.valid === false ? '<span class="dot bad" title="nicht legal"></span><span class="sr-only">nicht legal:</span>' : ""}<span>${esc(d.name)}</span></span>
-        <span class="meta">${esc(d.commanders.join(" + "))} · ${esc(d.level || `Bracket ${d.bracket ?? "?"}`)}${d.proxy ? " · Proxy" : ""}</span>
+        <span class="name">${d.valid === false ? '<span class="dot bad" title="nicht legal"></span><span class="sr-only">nicht legal:</span>' : ""}<span class="label">${esc(d.name)}</span></span>
+        ${d.updated ? `<span class="meta">${esc(fmtDate(d.updated))}</span>` : ""}
       </a></li>`).join("")
     : `<li class="empty-inline">${deckIndex.length ? "Kein Treffer." : "Noch keine Decks – starte mit „Neues Deck“."}</li>`;
   markNav();
@@ -626,7 +626,6 @@ function deckFacts(d) {
   if (d.proxy) bits.push("Proxy");
   else if (v.price_total != null) bits.push(`${fmtPrice(v.price_total, cur)}${d.budget ? ` / ${fmtPrice(d.budget, cur)}` : ""}`);
   if (d.version) bits.push(`v${d.version}`);
-  bits.push(fmtDate(d.updated));
   if (d.power_profile?.style) bits.push(d.power_profile.style);
   return bits.filter(Boolean).join(" · ");
 }
@@ -649,8 +648,23 @@ function deckVerdict(d) {
   return { text, cls };
 }
 
+// Legal and on bracket: a green check and the bracket number. Otherwise the verdict sentence stays.
+function deckFits(d) {
+  const v = d?.validation;
+  if (!v || v.legal !== true || d.bracket == null) return false;
+  if ((v.bracket || {}).compliant === false) return false;
+  const table = v.table_rule;
+  return !(table && table.compliant === false);
+}
+
+function deckMark(bracket) {
+  const label = `Legal, Bracket ${bracket}`;
+  return `<span class="deck-mark" title="${esc(label)}">${icon("check")}<span class="num">${esc(bracket)}</span><span class="sr-only">${esc(label)}</span></span>`;
+}
+
 function renderDeckHead(d) {
-  $("#deck-name").textContent = d.name;
+  const fits = deckFits(d);
+  $("#deck-name").innerHTML = `${esc(d.name)}${fits ? deckMark(d.bracket) : ""}`;
   const thumb = d.card_data?.[d.commanders[0]]?.image;
   $("#deck-thumb").hidden = !thumb;
   if (thumb) $("#deck-thumb").src = thumb;
@@ -658,10 +672,12 @@ function renderDeckHead(d) {
   $("#deck-facts").textContent = deckFacts(d);
   const verdict = deckVerdict(d);
   const line = $("#deck-verdict");
-  line.textContent = verdict.text;
+  line.hidden = fits;
+  line.textContent = fits ? "" : verdict.text;
   line.className = `verdict${verdict.cls ? ` ${verdict.cls}` : ""}`;
-  $("#deck-desc").textContent = d.description || "";
-  $("#deck-desc").hidden = !d.description;
+  const desc = (d.description || "").startsWith("Vorgefertigtes Commander-Deck") ? "" : (d.description || "");
+  $("#deck-desc").textContent = desc;
+  $("#deck-desc").hidden = !desc;
   const against = d.built_against_info || [];
   $("#deck-against").hidden = !against.length;
   $("#deck-against").innerHTML = against.length ? `${icon("swords")} Gebaut gegen ${against.map((o) => `<a href="#/opponents/${enc(o.id)}">${esc(o.title)}</a>`).join(", ")}` : "";
