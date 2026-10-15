@@ -1178,7 +1178,11 @@ $("#on-draw").addEventListener("change", () => { renderHand(); if (currentDeck) 
 $("#hand").addEventListener("click", (e) => {
   const b = e.target.closest(".hand-card");
   if (!b || !hand) return;
-  if (!hand.bottom) { showCardView(b.dataset.name, hand.hand[Number(b.dataset.i)].cd); return; }
+  if (!hand.bottom) {
+    const i = Number(b.dataset.i);
+    showCardView(b.dataset.name, hand.hand[i].cd, hand.hand.map((c) => ({ name: c.name, cd: c.cd })), i);
+    return;
+  }
   hand.lib.push(...hand.hand.splice(Number(b.dataset.i), 1));
   hand.bottom -= 1;
   renderHand();
@@ -1248,7 +1252,10 @@ async function loadTokens(d) {
 }
 $("#token-list").addEventListener("click", (e) => {
   const li = e.target.closest("li[data-name]");
-  if (li) showCardView(li.dataset.name, { image: li.dataset.img, token: true, type_line: li.dataset.type, id: li.dataset.id });
+  if (!li) return;
+  const items = [...$("#token-list").querySelectorAll("li[data-name]")];
+  const tokenCd = (el) => ({ image: el.dataset.img, token: true, type_line: el.dataset.type, id: el.dataset.id });
+  showCardView(li.dataset.name, tokenCd(li), items.map((el) => ({ name: el.dataset.name, cd: tokenCd(el) })), items.indexOf(li));
 });
 
 // ---------- replacement suggestions ----------
@@ -1521,8 +1528,10 @@ function openCardFromEvent(e) {
     return;
   }
   if (edit && !act) return;  // clicks on the row background in edit mode
-  const cd = currentDeck.card_data?.[name] || edit?.add.get(name)?.data || {};
-  showCardView(name, cd);
+  const cdOf = (n) => currentDeck.card_data?.[n] || edit?.add.get(n)?.data || {};
+  const rows = [...$("#cards").querySelectorAll(".card[data-name]:not(.removed)")];
+  const row = e.target.closest(".card[data-name]");
+  showCardView(name, cdOf(name), rows.map((el) => ({ name: el.dataset.name, cd: cdOf(el.dataset.name) })), rows.indexOf(row));
 }
 $("#cards").addEventListener("click", openCardFromEvent);
 $("#cards").addEventListener("keydown", (e) => {
@@ -1530,19 +1539,47 @@ $("#cards").addEventListener("keydown", (e) => {
 });
 
 let cardViewCard = null;  // { name, cd } of the open card view
-function showCardView(name, cd) {
+let cardViewList = null;  // [{name, cd}] frozen when the view opened
+let cardViewIndex = -1;
+
+function showCardView(name, cd, list, index) {
   cardViewCard = { name, cd: cd || {} };
+  cardViewList = list || null;
+  cardViewIndex = list ? index : -1;
   const faces = name.split(" // ");
-  const imgs = [[cd.image, faces[0]], ...(cd.image_back ? [[cd.image_back, faces[1] || "Rückseite"]] : [])];
+  const imgs = [[cd.image, faces[0]], ...(cd.image_back ? [[cd.image_back, faces[1] || "Rückseite"]] : [])].filter(([u]) => u);
   $("#card-view-title").textContent = name + (cd.image_back ? " – doppelseitig" : "");
-  $("#card-view-faces").innerHTML = imgs.filter(([u]) => u).map(([u, label], i) =>
-    `<figure><img src="${esc(u.replace("/normal/", "/large/"))}" alt="${esc(label)}"><figcaption>${i ? "Rückseite" : "Vorderseite"}: ${esc(label)}</figcaption></figure>`).join("")
+  $("#card-view-faces").innerHTML = imgs.map(([u, label]) =>
+    `<figure><img src="${esc(u.replace("/normal/", "/large/"))}" alt="${esc(label)}">${imgs.length > 1 ? `<figcaption>${esc(label)}</figcaption>` : ""}</figure>`).join("")
     || '<p class="muted">Kein Bild verfügbar.</p>';
   $("#card-view-link").href = cd.scryfall_uri || `https://scryfall.com/search?q=${enc('!"' + name + '"')}`;
+  const prev = cardViewList && cardViewIndex > 0 ? cardViewList[cardViewIndex - 1] : null;
+  const next = cardViewList && cardViewIndex < cardViewList.length - 1 ? cardViewList[cardViewIndex + 1] : null;
+  $("#card-view-prev").hidden = !prev;
+  $("#card-view-next").hidden = !next;
+  $("#card-view-prev").setAttribute("aria-label", prev ? `Vorherige: ${prev.name}` : "Vorherige Karte");
+  $("#card-view-next").setAttribute("aria-label", next ? `Nächste: ${next.name}` : "Nächste Karte");
   preview.hidden = true;
-  $("#card-view").showModal();
+  const dlg = $("#card-view");
+  if (!dlg.open) dlg.showModal();
   loadCardText(name);
 }
+function stepCardView(dir) {
+  if (!cardViewList) return;
+  const i = cardViewIndex + dir;
+  if (i < 0 || i >= cardViewList.length) return;
+  const item = cardViewList[i];
+  showCardView(item.name, item.cd, cardViewList, i);
+}
+$("#card-view-prev").addEventListener("click", () => stepCardView(-1));
+$("#card-view-next").addEventListener("click", () => stepCardView(1));
+$("#card-view").addEventListener("keydown", (e) => {
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if (e.target.closest(".segmented")) return;
+  e.preventDefault();
+  stepCardView(e.key === "ArrowLeft" ? -1 : 1);
+});
 $("#card-view-close").addEventListener("click", () => $("#card-view").close());
 $("#card-view-order").addEventListener("click", () => {
   if (!cardViewCard) return;
@@ -1568,6 +1605,8 @@ async function loadCardText(name) {
   box.hidden = false;
   $("#card-view-rules").innerHTML = '<p class="muted small">Kartentext wird geladen …</p>';
   $("#card-view-terms").hidden = true;
+  $("#card-view-note").hidden = true;
+  $("#card-view-note").textContent = "";
   let data = cardTexts.get(name);
   if (!data) {
     try { data = await api(`/api/cards/text?name=${enc(name)}&lang=de`); cardTexts.set(name, data); }
@@ -1616,9 +1655,11 @@ function renderCardText(data) {
       <div class="type">${esc(f.type_line)}</div>
       ${f.text.split("\n").filter(Boolean).map((line) => `<p>${rulesHtml(line, data.terms)}</p>`).join("") || '<p class="muted small">Kein Regeltext.</p>'}
     </div>`).join("")
-    + (data.pt && faces.length === 1 ? `<p class="pt">${esc(data.pt)}</p>` : "")
-    + (cardLang === "de" && !data.printed ? '<p class="note">Keine deutsche Ausgabe gefunden – das ist der englische Originaltext.</p>' : "")
-    + (german ? `<p class="note">Gedruckter Text${data.printed.set_name ? " aus " + esc(data.printed.set_name) : ""}. Maßgeblich ist der aktuelle englische Oracle-Text.</p>` : "");
+    + (data.pt && faces.length === 1 ? `<p class="pt">${esc(data.pt)}</p>` : "");
+  const note = $("#card-view-note");
+  if (cardLang !== "de") { note.hidden = true; note.textContent = ""; }
+  else if (!data.printed) { note.hidden = false; note.textContent = "Keine deutsche Ausgabe – englischer Oracle-Text."; }
+  else { note.hidden = false; note.textContent = `Drucktext${data.printed.set_name ? " aus " + data.printed.set_name : ""}. Maßgeblich ist der englische Oracle-Text.`; }
   $("#card-view-terms").hidden = !data.terms.length;
   $("#card-view-terms-list").innerHTML = data.terms.map((t) =>
     `<dt data-term="${esc(t.term)}">${esc(t.de || t.term)}${t.de ? ` <span class="de">(${esc(t.term)})</span>` : ""}</dt><dd data-term="${esc(t.term)}">${esc(t.text)}</dd>`).join("");
@@ -4020,8 +4061,14 @@ $("#dc-added").addEventListener("change", updateDcSelection);
 $("#deck-compare").addEventListener("click", (e) => {
   const b = e.target.closest("button.name");
   if (!b) return;
-  const i = [...(dcData?.added || []), ...(dcData?.removed || [])].find((x) => x.name === b.dataset.name) || {};
-  showCardView(b.dataset.name, { image: i.image, image_back: i.image_back });
+  const col = b.closest("#dc-added, #dc-removed");
+  const pool = col?.id === "dc-removed" ? (dcData?.removed || []) : (dcData?.added || []);
+  const buttons = col ? [...col.querySelectorAll("button.name")] : [b];
+  const list = buttons.map((btn) => {
+    const hit = pool.find((x) => x.name === btn.dataset.name) || {};
+    return { name: btn.dataset.name, cd: { image: hit.image, image_back: hit.image_back } };
+  });
+  showCardView(b.dataset.name, list[buttons.indexOf(b)].cd, list, buttons.indexOf(b));
 });
 $("#dc-close").addEventListener("click", () => $("#deck-compare").close());
 $("#dc-copy").addEventListener("click", async () => {

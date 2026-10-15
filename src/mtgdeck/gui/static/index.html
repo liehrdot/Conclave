@@ -24,6 +24,7 @@
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17h.01"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-forward" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
   <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
   <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
@@ -1274,26 +1275,35 @@
   <div id="similar-grid" class="similar-grid"></div>
 </dialog>
 
-<dialog id="card-view" class="dialog card-view">
-  <div class="dialog-head">
-    <h2 id="card-view-title"></h2>
-    <div class="btn-group">
-      <button type="button" class="btn small" id="card-view-order"><svg class="icon"><use href="#i-cart"/></svg>Zur Sammelbestellung</button>
-      <a id="card-view-link" class="link" href="#" target="_blank" rel="noopener">Auf Scryfall öffnen</a>
-      <button type="button" class="icon-btn" id="card-view-close" aria-label="Schließen" autofocus><svg class="icon"><use href="#i-x"/></svg></button>
-    </div>
+<dialog id="card-view" class="dialog card-view" aria-labelledby="card-view-title">
+  <div class="card-view-bar">
+    <h2 id="card-view-title" class="sr-only"></h2>
+    <button type="button" class="icon-btn" id="card-view-close" aria-label="Schließen" autofocus><svg class="icon"><use href="#i-x"/></svg></button>
   </div>
   <div class="card-view-body">
-    <div id="card-view-faces" class="card-view-faces"></div>
-    <div id="card-view-text" class="card-view-text" hidden>
-      <div class="segmented small" role="radiogroup" aria-label="Sprache des Kartentexts">
-        <label><input type="radio" name="cardlang" value="de" checked><span>Deutsch</span></label>
-        <label><input type="radio" name="cardlang" value="en"><span>Englisch</span></label>
+    <div class="card-view-stage">
+      <div id="card-view-faces" class="card-view-faces"></div>
+      <button type="button" class="icon-btn card-view-nav prev" id="card-view-prev" hidden><svg class="icon"><use href="#i-back"/></svg></button>
+      <button type="button" class="icon-btn card-view-nav next" id="card-view-next" hidden><svg class="icon"><use href="#i-forward"/></svg></button>
+    </div>
+    <div class="card-view-col">
+      <div id="card-view-text" class="card-view-text" hidden>
+        <div class="card-view-panel">
+          <div class="segmented small" role="radiogroup" aria-label="Sprache des Kartentexts">
+            <label><input type="radio" name="cardlang" value="de" checked><span>Deutsch</span></label>
+            <label><input type="radio" name="cardlang" value="en"><span>Englisch</span></label>
+          </div>
+          <div id="card-view-rules" class="rules" aria-live="polite"></div>
+          <div id="card-view-terms" class="terms" hidden>
+            <h3>Begriffe auf dieser Karte</h3>
+            <dl id="card-view-terms-list"></dl>
+          </div>
+        </div>
+        <p id="card-view-note" class="card-view-note" hidden></p>
       </div>
-      <div id="card-view-rules" class="rules" aria-live="polite"></div>
-      <div id="card-view-terms" class="terms" hidden>
-        <h3>Begriffe auf dieser Karte</h3>
-        <dl id="card-view-terms-list"></dl>
+      <div class="card-view-actions">
+        <button type="button" class="btn small" id="card-view-order"><svg class="icon"><use href="#i-cart"/></svg>Zur Sammelbestellung</button>
+        <a id="card-view-link" class="card-view-ext" href="#" target="_blank" rel="noopener">Auf Scryfall öffnen</a>
       </div>
     </div>
   </div>
