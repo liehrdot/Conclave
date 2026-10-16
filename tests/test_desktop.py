@@ -100,6 +100,27 @@ async def test_feed_is_stable_unless_previews_are_on_or_a_version_is_picked(monk
         pass
 
 
+async def test_feed_only_takes_this_repos_files_and_previews_only_with_the_setting(monkeypatch):
+    evil = _release("v0.3.0")
+    evil["assets"][1]["browser_download_url"] = releases.DOWNLOAD + "../../../../other/repo/releases/download/x/latest.json"
+    encoded = _release("v0.3.1")
+    encoded["assets"][1]["browser_download_url"] = releases.DOWNLOAD + "%2e%2e/latest.json"
+
+    async def fake(url, params=None, ttl=0):
+        return [*GITHUB, evil, encoded]
+
+    monkeypatch.setattr(releases.http, "get_json", fake)
+    assert [r["version"] for r in await releases.available(preview=True)][:2] == ["0.1.10-preview.12", "0.1.10-preview.9"]
+    assert "0.3.0" not in [r["version"] for r in await releases.available(preview=True)]
+    try:  # going back to a preview build needs the setting, like the list in the settings panel
+        await releases.feed("0.1.10-preview.9")
+        raise AssertionError("a preview build must not be installable with the setting off")
+    except LookupError:
+        pass
+    settings.update({"desktop_preview": True})
+    assert (await releases.feed("0.1.10-preview.9"))["version"] == "0.1.10-preview.9"
+
+
 def test_routes_offer_versions_and_queue_the_switch(monkeypatch):
     async def fake(url, params=None, ttl=0):
         return GITHUB

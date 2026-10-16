@@ -28,26 +28,33 @@ from typing import Any
 from ..jsonstore import atomic_write_text, locked, write_json
 from .. import paths
 
-RULES: list[tuple[re.Pattern[str], str]] = [(re.compile(p), k) for p, k in [
-    (r"decks/[^/.][^/]*\.json", "deck"),
-    (r"decks/\.versions/[^/.][^/]*/v\d{4,}\.json", "snapshot"),
-    (r"decks/\.games/[^/.][^/]*\.json", "json"),
+SLUG = r"[a-z0-9][a-z0-9-]*"  # storage.slug() and order ids; nothing else is a folder or file name here
+RULES: list[tuple[re.Pattern[str], str]] = [(re.compile(p.replace("<slug>", SLUG)), k) for p, k in [
+    (r"decks/<slug>\.json", "deck"),
+    (r"decks/\.versions/<slug>/v\d{4,}\.json", "snapshot"),
+    (r"decks/\.games/<slug>\.json", "json"),
     (r"decks/\.chats/[0-9a-f]{12}\.json", "json"),
     (r"decks/\.(opponents|meta-suggestions)\.json", "json"),
     (r"collection\.json|tablerules\.json", "json"),
     (r"blacklist\.txt", "lines"),
-    (r"proxies/\.orders/[^/.][^/]*\.json", "json"),
-    (r"proxies/[^/.][^/]*/(selection|tokens)\.json", "json"),
-    (r"proxies/[^/.][^/]*/uploads/index\.json", "json"),
-    (r"proxies/[^/.][^/]*/uploads/[0-9a-f]{16}(-original)?\.(jpg|png|webp|tif|bmp|gif)", "blob"),
+    (r"proxies/\.orders/<slug>\.json", "json"),
+    (r"proxies/<slug>/(selection|tokens)\.json", "json"),
+    (r"proxies/<slug>/uploads/index\.json", "json"),
+    (r"proxies/<slug>/uploads/[0-9a-f]{16}(-original)?\.(jpg|png|webp|tif|bmp|gif)", "blob"),
 ]]  # fmt: skip
-SNAPSHOT_RE = re.compile(r"decks/\.versions/([^/]+)/v(\d+)\.json")
-DECK_RE = re.compile(r"decks/([^/.][^/]*)\.json")
+SNAPSHOT_RE = re.compile(rf"decks/\.versions/({SLUG})/v(\d+)\.json")
+DECK_RE = re.compile(rf"decks/({SLUG})\.json")
 
 
 def kind_of(path: str) -> str | None:
-    """The kind of a logical path, ``None`` when it does not sync."""
-    if ".." in path.split("/") or path.startswith("/"):
+    """The kind of a logical path, ``None`` when it does not sync.
+
+    Paths come from the server and other devices, so only plain ASCII names count: no backslash,
+    drive letter, ``..`` or control character can reach the file system on any platform.
+    """
+    if not isinstance(path, str) or not re.fullmatch(r"[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*", path):
+        return None
+    if ".." in path.split("/"):
         return None
     return next((k for rx, k in RULES if rx.fullmatch(path)), None)
 
@@ -90,7 +97,10 @@ class Roots:
         base = {"decks": self.decks, "proxies": self.proxies}.get(head)
         if base is None or not rest:
             raise ValueError(f"Kein Sync-Pfad: {path}")
-        return base.joinpath(*rest.split("/"))
+        target = base.joinpath(*rest.split("/"))
+        if not target.resolve().is_relative_to(base.resolve()):
+            raise ValueError(f"Kein Sync-Pfad: {path}")
+        return target
 
     def scan(self) -> dict[str, Path]:
         """All local files that sync: logical path -> file."""
@@ -159,6 +169,11 @@ def _write_bytes(path: Path, data: bytes) -> None:
 def write_local(roots: Roots, path: str, kind: str, value: Any) -> None:
     """Write a value to its local file (decks also get their ``.txt`` export)."""
     target = roots.physical(path)
+    if kind in ("deck", "snapshot") and isinstance(value, dict):
+        # the file name decides the slug: a deck must never carry one that points elsewhere
+        m = DECK_RE.fullmatch(path) or SNAPSHOT_RE.fullmatch(path)
+        if m:
+            value = {**value, "slug": m.group(1)}
     if kind in ("deck", "snapshot", "json"):
         write_json(target, value)
         if kind == "deck":

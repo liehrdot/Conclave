@@ -16,6 +16,7 @@ API = f"https://api.github.com/repos/{REPO}/releases"
 DOWNLOAD = f"https://github.com/{REPO}/releases/download/"
 STABLE_FEED = f"https://github.com/{REPO}/releases/latest/download/latest.json"
 TTL = 600  # seconds; GitHub allows 60 unauthenticated API calls an hour
+_FEED = re.compile(re.escape(DOWNLOAD) + r"[A-Za-z0-9._-]+/latest\.json", re.IGNORECASE)  # no ../ or %2e tricks
 _SEMVER = re.compile(r"(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?")
 
 
@@ -38,7 +39,7 @@ def parse(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
         feed = next((a.get("browser_download_url") for a in r.get("assets") or [] if a.get("name") == "latest.json"), None)
         tag = str(r.get("tag_name") or "")
         version = tag.removeprefix("preview-").lstrip("v")
-        if not feed or not str(feed).lower().startswith(DOWNLOAD.lower()) or version_key(version) == (-1,):
+        if not feed or not _FEED.fullmatch(str(feed)) or version_key(version) == (-1,):
             continue
         out.append({"version": version, "tag": tag, "preview": bool(r.get("prerelease")), "feed": feed,
                     "date": r.get("published_at"), "notes": (r.get("body") or "").strip()[:500]})  # fmt: skip
@@ -60,7 +61,7 @@ async def feed(version: str | None = None) -> dict[str, Any]:
     preview = bool(settings.load().get("desktop_preview", False))
     if not version and not preview:
         return {"feed": STABLE_FEED, "preview": False}
-    found = await available(preview=True if version else preview)
+    found = await available(preview=preview)  # a preview build only with the setting on, also when going back
     if version:
         pick = next((r for r in found if r["version"] == version.lstrip("v")), None)
         if not pick:

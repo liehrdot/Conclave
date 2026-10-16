@@ -5,6 +5,7 @@ name: Sync-Server-Image
 
 on:
   push:
+    branches: ["**"]  # never on tags: a tag named like the default branch must not publish
     paths:
       - "src/mtgdeck/sync/**"
       - "src/mtgdeck/jsonstore.py"
@@ -31,7 +32,7 @@ jobs:
     env:
       IMAGE: ghcr.io/${{ github.repository_owner }}/mtgdeck-sync
       # scheduled runs always use the default branch (their event has no repository data)
-      PUBLISH: ${{ github.event_name == 'schedule' || github.ref_name == github.event.repository.default_branch }}
+      PUBLISH: ${{ github.event_name == 'schedule' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     steps:
       - uses: actions/checkout@v4
 

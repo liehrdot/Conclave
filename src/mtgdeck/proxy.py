@@ -226,11 +226,20 @@ def _uploads_dir(slug: str) -> Path:
 
 
 def _local_path(ref: str | None) -> Path | None:
-    """Own images are stored relative to the proxies folder (portable across backups); old ones absolute."""
+    """Own images are stored relative to the proxies folder (portable across backups); old ones absolute.
+
+    ``selection.json`` syncs, so a path outside the proxies folder is ignored: another device must
+    not make this PC read (and print or upload) an arbitrary local file.
+    """
     if not ref:
         return None
     p = Path(ref)
-    return p if p.is_absolute() else PROXIES_DIR / p
+    p = p if p.is_absolute() else PROXIES_DIR / p
+    try:
+        inside = p.resolve().is_relative_to(PROXIES_DIR.resolve())
+    except (OSError, ValueError):
+        return None
+    return p if inside else None
 
 
 def _upload_option(slug: str, key: str, meta: dict[str, Any]) -> dict[str, Any]:
