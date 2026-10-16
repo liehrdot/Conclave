@@ -2808,12 +2808,76 @@ async function loadCollection() {
   renderCollection();
 }
 
+// where cards are (Ort): one of the decks (its slug, shown by its current name) or free text like "Binder rot"
+const collSel = new Set();  // marked entries, for "Ort setzen"
+function placeLabel(e) {
+  if (e.place_deck) return deckIndex.find((d) => d.slug === e.place_deck)?.name || e.place || e.place_deck;
+  return e.place || "";
+}
+const placeKey = (e) => (e.place_deck ? `deck:${e.place_deck}` : e.place ? `text:${e.place.trim().toLowerCase()}` : "none");
+function parsePlace(text) {
+  const t = text.trim().replace(/\s+/g, " ");
+  const deck = deckIndex.find((d) => d.name.toLowerCase() === t.toLowerCase());
+  return deck ? { place: deck.name, place_deck: deck.slug } : { place: t, place_deck: "" };
+}
+function fillPlaces() {
+  const names = [...new Set([...(coll.places || []).map((p) => placeLabel(p)), ...deckIndex.map((d) => d.name)].filter(Boolean))];
+  $("#place-options").innerHTML = names.map((n) => `<option value="${esc(n)}"></option>`).join("");
+  const sel = $("#coll-place"), now = sel.value;
+  sel.innerHTML = `<option value="">Alle Orte</option><option value="none">Ohne Ort</option>`
+    + (coll.places || []).map((p) => `<option value="${esc(placeKey(p))}">${esc(placeLabel(p))} (${p.cards})</option>`).join("");
+  sel.value = [...sel.options].some((o) => o.value === now) ? now : "";
+  sel.hidden = !(coll.places || []).length;
+}
+function renderBulk() {
+  for (const id of [...collSel]) if (!coll.entries.some((e) => e.id === id)) collSel.delete(id);
+  const n = collSel.size;
+  $("#coll-bulk").hidden = !n || collView === "grid";
+  $("#coll-bulk-count").textContent = `${n} markiert`;
+}
+function openPlaceDialog(ids) {
+  const entries = coll.entries.filter((e) => ids.includes(e.id));
+  const labels = [...new Set(entries.map(placeLabel))];
+  $("#place-title").textContent = entries.length === 1 ? `Ort: ${entries[0].name}` : `Ort für ${entries.length} Einträge`;
+  $("#place-text").textContent = `${entries.reduce((n, e) => n + e.qty, 0)} Karten. Leer lassen = kein Ort.`;
+  $("#place-input").value = labels.length === 1 ? labels[0] : store.get("collplace") || "";
+  const recent = [...new Set([...(coll.places || []).map(placeLabel), ...deckIndex.map((d) => d.name)])].slice(0, 8);
+  $("#place-chips").innerHTML = recent.map((n) => `<button type="button" class="chip" data-place="${esc(n)}">${esc(n)}</button>`).join("");
+  const dlg = $("#place-dialog");
+  dlg.onclose = null;
+  $("#place-form").onsubmit = async (ev) => {
+    ev.preventDefault();
+    const p = parsePlace($("#place-input").value);
+    try {
+      const r = await api("/api/collection/place", { method: "POST", body: { ids, ...p } });
+      if (p.place) store.set("collplace", p.place);
+      dlg.close();
+      collSel.clear();
+      toast(p.place ? `${r.moved} ${r.moved === 1 ? "Eintrag" : "Einträge"} → ${p.place}` : `Ort bei ${r.moved} ${r.moved === 1 ? "Eintrag" : "Einträgen"} entfernt.`);
+      await loadCollection();
+    } catch (err) { fail(err); }
+  };
+  dlg.showModal();
+  $("#place-input").focus();
+}
+$("#place-chips").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-place]");
+  if (b) { $("#place-input").value = b.dataset.place; $("#place-input").focus(); }
+});
+$("#place-cancel").addEventListener("click", () => $("#place-dialog").close());
+$("#coll-place").addEventListener("change", () => { collShown = COLL_PAGE; renderCollection(); });
+$("#coll-bulk-place").addEventListener("click", () => openPlaceDialog([...collSel]));
+$("#coll-bulk-none").addEventListener("click", () => { collSel.clear(); renderCollection(); });
+$("#coll-bulk-all").addEventListener("click", () => { for (const e of collFiltered()) collSel.add(e.id); renderCollection(); });
+
 function collFiltered() {
   const q = $("#coll-q").value.trim().toLowerCase();
   const filter = document.querySelector('[name="collfilter"]:checked').value;
   const sort = $("#coll-sort").value;
+  const place = $("#coll-place").value;
   const list = coll.entries.filter((e) => (filter === "all" || (filter === "proxy") === !!e.proxy)
-    && (!q || `${e.name} ${e.set_name || ""} ${e.set || ""} ${e.note || ""}`.toLowerCase().includes(q)));
+    && (!place || placeKey(e) === place)
+    && (!q || `${e.name} ${e.set_name || ""} ${e.set || ""} ${e.note || ""} ${placeLabel(e)}`.toLowerCase().includes(q)));
   const price = (e) => Number(e.price_eur) || 0;
   const cmp = { name: (a, b) => a.name.localeCompare(b.name), qty: (a, b) => b.qty - a.qty || a.name.localeCompare(b.name),
     price: (a, b) => price(b) - price(a), added: (a, b) => (b.added || "").localeCompare(a.added || ""),
@@ -2822,6 +2886,7 @@ function collFiltered() {
 }
 
 function renderCollection() {
+  fillPlaces();
   const s = coll.summary || {};
   const empty = !coll.entries.length;
   $("#coll-empty").hidden = !empty;
@@ -2846,10 +2911,12 @@ function renderCollection() {
         <span class="qty-badge">${e.qty}×</span>${e.proxy ? '<span class="own proxy tile-p" title="Proxy">P</span>' : ""}
         <span class="tile-name">${esc(e.name)} ${badges}</span></div>`;
     }
-    return `<div class="coll-row" data-id="${esc(e.id)}">
+    const where = placeLabel(e);
+    return `<div class="coll-row${collSel.has(e.id) ? " selected" : ""}" data-id="${esc(e.id)}">
+      <input type="checkbox" class="coll-sel" data-act="select" ${collSel.has(e.id) ? "checked" : ""} aria-label="${esc(e.name)} markieren">
       <button type="button" class="thumb card" data-act="art" data-img="${esc(e.image || "")}" data-name="${esc(e.name)}" title="Artwork ändern" aria-label="Artwork von ${esc(e.name)} ändern">${img}</button>
       <div class="coll-main">
-        <div class="coll-name">${esc(e.name)} ${badges}</div>
+        <div class="coll-name">${esc(e.name)} ${badges}${where ? ` <button type="button" class="tagb place" data-act="place" title="Ort ändern">${esc(where)}</button>` : ` <button type="button" class="tagb place empty" data-act="place" title="Ort setzen">+ Ort</button>`}</div>
         <div class="muted small">${esc(printing)}${e.note ? ` · ${esc(e.note)}` : ""}${decks.length ? ` · in ${decks.length === 1 ? "Deck" : "Decks"}: ${esc(decks.join(", "))}` : ""}</div>
       </div>
       <label class="check small"><input type="checkbox" data-act="proxy" ${e.proxy ? "checked" : ""}> Proxy</label>
@@ -2864,6 +2931,7 @@ function renderCollection() {
     </div>`;
   }).join("");
   $("#coll-more").hidden = list.length <= collShown;
+  renderBulk();
 }
 
 $("#coll-q").addEventListener("input", debounce(() => { collShown = COLL_PAGE; renderCollection(); }, 150));
@@ -2882,7 +2950,7 @@ async function patchEntry(id, body) {
 $("#coll-list").addEventListener("click", async (e) => {
   const act = e.target.closest("[data-act]")?.dataset.act;
   const row = e.target.closest("[data-id]");
-  if (!act || !row || act === "proxy" || act === "foil") return;
+  if (!act || !row || act === "proxy" || act === "foil" || act === "select") return;
   const entry = coll.entries.find((x) => x.id === row.dataset.id);
   if (!entry) return;
   if (act === "plus") patchEntry(entry.id, { qty: entry.qty + 1 });
@@ -2894,6 +2962,7 @@ $("#coll-list").addEventListener("click", async (e) => {
     await api(`/api/collection/${enc(entry.id)}`, { method: "DELETE" }).catch(fail);
     loadCollection();
   }
+  if (act === "place") openPlaceDialog([entry.id]);
   if (act === "art") {
     const p = await pickPrinting(entry.name);
     if (p) patchEntry(entry.id, { printing: p });
@@ -2902,7 +2971,11 @@ $("#coll-list").addEventListener("click", async (e) => {
 $("#coll-list").addEventListener("change", (e) => {
   const box = e.target.closest("input[data-act]");
   const row = e.target.closest("[data-id]");
-  if (box && row) patchEntry(row.dataset.id, { [box.dataset.act]: box.checked });
+  if (box && row && box.dataset.act === "select") {
+    if (box.checked) collSel.add(row.dataset.id); else collSel.delete(row.dataset.id);
+    row.classList.toggle("selected", box.checked);
+    renderBulk();
+  } else if (box && row) patchEntry(row.dataset.id, { [box.dataset.act]: box.checked });
 });
 
 // artwork picker: all printings of a card, page by page; resolves with the chosen printing (or null)
@@ -2973,6 +3046,8 @@ function openCollAdd(name = "") {
   $("#coll-add-name").value = name;
   $("#coll-add-art").hidden = true;
   $("#coll-add-art-text").textContent = "Artwork: Standard-Druck";
+  $("#coll-add-place").value = store.get("collplace") || "";  // the last place, easy to change
+  fillPlaces();
   $("#coll-add-dialog").showModal();
   $("#coll-add-name").focus();
 }
@@ -2998,10 +3073,12 @@ $("#coll-add-form").addEventListener("submit", async (e) => {
     ...(addPrinting ? { printing: addPrinting } : {}),
   };
   try {
-    const r = await api("/api/collection", { method: "POST", body: { items: [item] } });
+    const where = parsePlace($("#coll-add-place").value);
+    store.set("collplace", where.place);
+    const r = await api("/api/collection", { method: "POST", body: { items: [item], ...where } });
     if (r.not_found.length) { toast(`Nicht gefunden: ${r.not_found.join(", ")}`, "error"); return; }
     $("#coll-add-dialog").close();
-    toast(`${item.qty}× ${item.name} hinzugefügt.`);
+    toast(`${item.qty}× ${item.name} hinzugefügt${where.place ? ` → ${where.place}` : ""}.`);
     await loadCollection();
     if (currentDeck) loadOwnership(currentDeck);
   } catch (err) { fail(err); }

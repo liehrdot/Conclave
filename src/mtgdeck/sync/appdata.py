@@ -22,7 +22,7 @@ from .files import DECK_RE
 GAMES_RE = re.compile(r"decks/\.games/([^/.][^/]*)\.json")
 OPPONENTS_PATH = "decks/.opponents.json"
 COLLECTION_PATH = "collection.json"
-COLLECTION_KEYS = ("id", "name", "qty", "proxy", "foil", "lang", "set", "set_name", "collector_number", "scryfall_id", "price_eur")
+COLLECTION_KEYS = ("id", "name", "qty", "proxy", "foil", "lang", "set", "set_name", "collector_number", "scryfall_id", "price_eur", "place", "place_deck")
 GAMES_MAX = 400
 NOTES_MAX = 30
 VERSION = 1

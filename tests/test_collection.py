@@ -156,3 +156,28 @@ def test_parse_lines_printing_and_flags():
         ("Llanowar Elves", 1, "m19", "314", False, True),
         ("Opt", 1, "m19", "59", False, False),
     ]
+
+
+async def test_places_split_entries_and_move_together():
+    from fastapi.testclient import TestClient
+
+    from mtgdeck.gui.app import app
+
+    await collection.add([{"name": "Sol Ring", "qty": 2}], place="Binder rot")
+    await collection.add([{"name": "Sol Ring", "qty": 1}], place="  binder   ROT ")  # same place, other spelling
+    await collection.add([{"name": "Sol Ring", "qty": 1}], place="Meren", place_deck="meren")
+    await collection.add([{"name": "Sol Ring", "qty": 1}])
+    entries = collection.load()
+    assert sorted((e["place"], e["place_deck"], e["qty"]) for e in entries) == [("", "", 1), ("Binder rot", "", 3), ("Meren", "meren", 1)]
+    assert collection.places() == [{"place": "Binder rot", "place_deck": "", "cards": 3}, {"place": "Meren", "place_deck": "meren", "cards": 1}]
+    assert collection.clean_place(" a " * 50, "../x") == (" ".join(["a"] * 50)[: collection.PLACE_MAX], "")
+
+    client = TestClient(app)
+    ids = [e["id"] for e in entries if e["place_deck"] != "meren"]
+    assert client.post("/api/collection/place", json={"ids": ids + ["gone"], "place": "Meren", "place_deck": "meren"}).json() == {"moved": 2}
+    [one] = collection.load()  # all in the deck now: one entry
+    assert one["qty"] == 5 and one["place_deck"] == "meren"
+    assert client.get("/api/collection").json()["places"] == [{"place": "Meren", "place_deck": "meren", "cards": 5}]
+    assert client.patch(f"/api/collection/{one['id']}", json={"place": "Kiste", "place_deck": ""}).json()["entry"]["place"] == "Kiste"
+    r = client.post("/api/collection", json={"items": [{"name": "Sol Ring", "qty": 1}], "place": "Kiste"}).json()
+    assert r["entries"] == 1 and collection.load()[0]["qty"] == 6

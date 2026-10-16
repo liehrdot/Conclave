@@ -574,11 +574,65 @@ export async function addByName(name, opts = {}) {
 const own = (oracleName) => (state.snap?.collection || []).filter((e) => e.name === oracleName);
 export const fmtEur = (v) => (v == null || v === "" ? "" : `${Number(v).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`);
 
+// ---------- where a card lives: one of the decks or a free text ("Binder rot") ----------
+export function placeName(e) {
+  if (e?.place_deck) return state.snap?.decks?.find((d) => d.slug === e.place_deck)?.name || e.place_deck;
+  return e?.place || "";
+}
+
+function knownPlaces() {  // free-text places from the collection, most cards first
+  const n = new Map();
+  for (const e of state.snap?.collection || []) {
+    const t = !e.place_deck && (e.place || "").trim();
+    if (!t) continue;
+    const k = t.toLowerCase();
+    const hit = n.get(k) || { place: t, cards: 0 };
+    hit.cards += e.qty;
+    n.set(k, hit);
+  }
+  return [...n.values()].sort((a, b) => b.cards - a.cards || a.place.localeCompare(b.place));
+}
+
+// a sheet page to pick the place; onPick({place, place_deck}) gets "" for both when there is none
+export function placePage(current, onPick) {
+  return () => {
+    const decks = [...(state.snap?.decks || [])].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    const texts = knownPlaces();
+    const cur = current() || {};
+    const on = (deck, text) => (deck ? cur.place_deck === deck : !cur.place_deck && (cur.place || "").toLowerCase() === text.toLowerCase());
+    const row = (attrs, title, sub, pressed) => `<button class="row" type="button" ${attrs}>
+        <span class="main"><span class="title">${esc(title)}</span>${sub ? `<span class="subtitle">${esc(sub)}</span>` : ""}</span>${pressed ? icon("check", "sm") : ""}</button>`;
+    return {
+      title: "Ort", left: `<button class="btn plain" type="button" data-sheet-back>${icon("chev-l", "sm")}Zurück</button>`,
+      body: `<form class="place-new" id="place-form"><label class="sr" for="place-text">Eigener Ort</label>
+          <input class="input" id="place-text" maxlength="80" placeholder="z. B. Binder rot" autocomplete="off" enterkeyhint="done" value="${esc(cur.place_deck ? "" : cur.place || "")}">
+          <button class="btn tint" type="submit">Übernehmen</button></form>
+        <div class="group">${row('data-place-none', "Kein Ort", "", !cur.place_deck && !cur.place)}</div>
+        ${decks.length ? `<div class="field-label">Decks</div><div class="group">${decks.map((d) => row(`data-place-deck="${esc(d.slug)}"`, d.name, (d.commanders || []).join(" + "), on(d.slug, ""))).join("")}</div>` : ""}
+        ${texts.length ? `<div class="field-label">Deine Orte</div><div class="group">${texts.map((t) => row(`data-place-text="${esc(t.place)}"`, t.place, `${t.cards} ${t.cards === 1 ? "Karte" : "Karten"}`, on("", t.place))).join("")}</div>` : ""}`,
+      bind(el) {
+        const pick = (place, place_deck) => { onPick({ place, place_deck }); popPage(); };
+        $("[data-place-none]", el).addEventListener("click", () => pick("", ""));
+        for (const b of $$("[data-place-deck]", el)) b.addEventListener("click", () => pick("", b.dataset.placeDeck));
+        for (const b of $$("[data-place-text]", el)) b.addEventListener("click", () => pick(b.dataset.placeText, ""));
+        $("#place-form", el).addEventListener("submit", (ev) => {
+          ev.preventDefault();
+          const t = $("#place-text", el).value.trim().replace(/\s+/g, " ").slice(0, 80);
+          const deck = t && decks.find((d) => d.name.toLowerCase() === t.toLowerCase());  // a typed deck name means the deck
+          pick(deck ? "" : t, deck ? deck.slug : "");
+        });
+      },
+    };
+  };
+}
+
 export function addSheet(first, { lang = "", onAdded = null, onClose = null } = {}) {
   const sticky = state.prefs.scanAdd || {};
   let card = first;
   const finishes = () => card.finishes?.length ? card.finishes : ["nonfoil", "foil"];
   const s = { proxy: !!sticky.proxy, foil: finishes()[0] !== "nonfoil", lang: lang || card.lang || "en", qty: 1 };
+  const last = state.prefs.scanPlace || {};  // the place used last, kept while it still exists
+  const where = { place: last.place || "", place_deck: last.place_deck && state.snap?.decks?.some((d) => d.slug === last.place_deck) ? last.place_deck : "" };
   let printsList = null;
 
   const swapLang = async (to) => {  // the same printing in the chosen language, when Scryfall has it
@@ -618,6 +672,9 @@ export function addSheet(first, { lang = "", onAdded = null, onClose = null } = 
           return `<button type="button" role="radio" data-finish="${f}" aria-pressed="${on}" aria-checked="${on}"${can || on ? "" : " disabled"}>${label}</button>`; }).join("")}</div>
         <div class="field-label">Sprache</div>
         <div class="chips" id="add-lang">${langs.map((l) => `<button class="chip" type="button" data-lang="${esc(l)}" aria-pressed="${s.lang === l}">${esc(LANG_NAMES[l] || l)}</button>`).join("")}</div>
+        <div class="field-label">Ort<span class="hint">optional</span></div>
+        <div class="group"><button class="row" type="button" id="add-place"><span class="main"><span class="title">${esc(placeName(where) || "Kein Ort")}</span>
+          <span class="subtitle">${where.place_deck ? "Deck" : where.place ? "Eigener Ort" : "Deck oder eigener Ort, z. B. Binder"}</span></span>${icon("chev-r", "sm")}</button></div>
         <div class="field-label">Anzahl</div>
         <div class="stepper big-stepper"><button type="button" data-step="-1" aria-label="Eine weniger"${s.qty > 1 ? "" : " disabled"}>−</button><output id="add-qty">${s.qty}</output><button type="button" data-step="1" aria-label="Eine mehr">+</button></div>`,
       foot: `<button class="btn primary big" type="button" id="add-go">${icon("plus", "sm")}${s.qty > 1 ? `${s.qty} Karten hinzufügen` : "Hinzufügen"}</button>`,
@@ -627,14 +684,17 @@ export function addSheet(first, { lang = "", onAdded = null, onClose = null } = 
         for (const b of $$("[data-lang]", el)) b.addEventListener("click", () => swapLang(b.dataset.lang));
         for (const b of $$("[data-step]", el)) b.addEventListener("click", () => { s.qty = Math.max(1, Math.min(99, s.qty + Number(b.dataset.step))); redraw(); });
         $("#add-print", el).addEventListener("click", () => pushPage(printPage));
+        $("#add-place", el).addEventListener("click", () => pushPage(placePage(() => where, (w) => Object.assign(where, w))));
         $("#add-go", el).addEventListener("click", () => {
-          const entry = { id: uid(), ...scry.entryFacts(card, { foil: s.foil }), proxy: s.proxy, foil: s.foil, lang: s.lang, qty: s.qty };
+          const entry = { id: uid(), ...scry.entryFacts(card, { foil: s.foil }), proxy: s.proxy, foil: s.foil, lang: s.lang, qty: s.qty,
+            place: where.place_deck ? "" : where.place, place_deck: where.place_deck };
           const sent = op("collection.add", { entry });
           setPref("scanAdd", { proxy: s.proxy });
+          setPref("scanPlace", { place: entry.place, place_deck: entry.place_deck });
           onAdded?.(entry);
           closeSheet();
           const what = `${s.qty > 1 ? `${s.qty}× ` : ""}${printed || card.name}`;
-          toast(`${what} ist in der Sammlung`, { ok: true, sub: [s.proxy ? "Proxy" : "Original", s.foil ? "Foil" : "", LANG_NAMES[s.lang]].filter(Boolean).join(" · "),
+          toast(`${what} ist in der Sammlung`, { ok: true, sub: [s.proxy ? "Proxy" : "Original", s.foil ? "Foil" : "", LANG_NAMES[s.lang], placeName(where)].filter(Boolean).join(" · "),
             action: { label: "Rückgängig", run: () => undo(sent) } });
         });
       },

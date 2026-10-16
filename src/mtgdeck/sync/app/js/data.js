@@ -353,9 +353,12 @@ export const isPending = (gameId) => state.ops.some((o) => o.status === "pending
 
 // ---------- applying operations (mirrors sync/appops.py) ---------------------------------------
 
-// one collection entry per printing: name, Scryfall id, proxy, foil, language (like collection._key on the PC)
-export const collKey = (e) => [String(e.name || "").toLowerCase(), e.scryfall_id || "", !!e.proxy, !!e.foil, e.lang || "en"].join("|");
-const COLL_KEYS = ["id", "name", "qty", "proxy", "foil", "lang", "set", "set_name", "collector_number", "scryfall_id", "price_eur"];
+// one collection entry per printing and place: name, Scryfall id, proxy, foil, language, deck or place text
+// (like collection._key on the PC)
+export const collKey = (e) => [String(e.name || "").toLowerCase(), e.scryfall_id || "", !!e.proxy, !!e.foil, e.lang || "en",
+  e.place_deck || "", e.place_deck ? "" : String(e.place || "").trim().toLowerCase()].join("|");
+const COLL_KEYS = ["id", "name", "qty", "proxy", "foil", "lang", "set", "set_name", "collector_number", "scryfall_id", "price_eur",
+  "place", "place_deck"];
 
 function applyCollection(snap, op) {
   const p = op.payload || {};
@@ -366,7 +369,8 @@ function applyCollection(snap, op) {
     if (hit) hit.qty += e.qty;
     else if (e.qty > 0) {
       const row = Object.fromEntries(COLL_KEYS.map((k) => [k, e[k] ?? null]));
-      Object.assign(row, { id: e.id || op.id, proxy: !!e.proxy, foil: !!e.foil, lang: e.lang || "en" });
+      Object.assign(row, { id: e.id || op.id, proxy: !!e.proxy, foil: !!e.foil, lang: e.lang || "en",
+        place: String(e.place || "").trim(), place_deck: e.place_deck || "" });
       if (!row.scryfall_id && e.image) row.image = e.image;
       list.push(row);
     }
@@ -374,7 +378,7 @@ function applyCollection(snap, op) {
     const e = list.find((x) => x.id === p.id);
     if (!e) return;
     if ("qty" in p) e.qty = p.qty;
-    for (const k of ["proxy", "foil", "lang"]) if (k in p) e[k] = p[k];
+    for (const k of ["proxy", "foil", "lang", "place", "place_deck"]) if (k in p) e[k] = p[k];
     const seen = new Map();  // entries that now describe the same thing become one
     for (const x of [...list]) {
       const k = collKey(x);

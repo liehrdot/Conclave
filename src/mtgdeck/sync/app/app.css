@@ -920,7 +920,7 @@ body.immersive:not(.has-build-bar) .toasts { bottom: calc(max(env(safe-area-inse
 .chip .n { font-size: var(--t-cap); opacity: .7; margin-left: 2px; }
 .coll-row .trail.qty { font-size: var(--t-body); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
 .entry-row { align-items: center; }
-.entry-flags { display: flex; gap: 6px; margin-top: 8px; }
+.entry-flags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .chip.small { min-height: 30px; padding: 0 10px; font-size: var(--t-foot); }
 .chip.small::after { inset: -7px 0; }
 .card-image.small-card { width: min(46%, 190px); }
@@ -986,3 +986,9 @@ body.camera .toasts { z-index: 120; bottom: calc(max(env(safe-area-inset-bottom)
 body.camera:has(.cam-lens:not([hidden])) .toasts { bottom: calc(max(env(safe-area-inset-bottom), 12px) + 136px); }
 body.camera:has(.toasts .toast) .cam-hint { visibility: hidden; }  /* the toast sits where the hint is */
 .segmented button:disabled { opacity: .38; }
+
+/* Ort: a free-text place above the deck list */
+.place-new { display: flex; gap: 8px; margin-bottom: 12px; }
+.place-new .input { flex: 1 1 auto; min-width: 0; }
+.place-chip { max-width: 100%; min-width: 0; gap: 4px; border: 1px dashed var(--text-3); background: transparent; color: var(--text-2); }
+.place-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

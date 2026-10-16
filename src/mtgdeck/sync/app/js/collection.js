@@ -1,10 +1,10 @@
 // The Sammlung tab: the collection from the PC (one entry per printing), searchable and filterable, with a sheet per
-// card to change quantities, original/proxy and foil. New cards come in through the scanner (scan.js).
+// card to change quantities, original/proxy, foil and the place (a deck or a free text). New cards come in through the scanner (scan.js).
 
 import { op, setPref, state, undo } from "./data.js";
-import { LANG_NAMES, addByName, fmtEur, scanner, searchSheet } from "./scan.js";
+import { LANG_NAMES, addByName, fmtEur, placeName, placePage, scanner, searchSheet } from "./scan.js";
 import * as scry from "./scry.js";
-import { closeSheet, openSheet, redraw, toast } from "./ui.js";
+import { closeSheet, openSheet, pushPage, redraw, toast } from "./ui.js";
 import { $, $$, debounce, esc, icon } from "./util.js";
 
 const FILTERS = [["all", "Alle"], ["real", "Original"], ["proxy", "Proxy"], ["foil", "Foil"]];
@@ -21,7 +21,7 @@ function groups(filter) {
   const q = query.trim().toLowerCase();
   const out = new Map();
   for (const e of items()) {
-    if (!matches(e, filter) || (q && !e.name.toLowerCase().includes(q) && !(e.set || "").startsWith(q))) continue;
+    if (!matches(e, filter) || (q && !e.name.toLowerCase().includes(q) && !(e.set || "").startsWith(q) && !placeName(e).toLowerCase().includes(q))) continue;
     if (!out.has(e.name)) out.set(e.name, []);
     out.get(e.name).push(e);
   }
@@ -29,7 +29,7 @@ function groups(filter) {
 }
 
 const badges = (e) => [e.proxy ? "Proxy" : "", e.foil ? "Foil" : "", e.lang && e.lang !== "en" ? e.lang.toUpperCase() : ""].filter(Boolean);
-const printLine = (e) => [e.set ? `${e.set.toUpperCase()}${e.collector_number ? ` #${e.collector_number}` : ""}` : "", ...badges(e)].filter(Boolean).join(" · ");
+const printLine = (e) => [e.set ? `${e.set.toUpperCase()}${e.collector_number ? ` #${e.collector_number}` : ""}` : "", ...badges(e), placeName(e)].filter(Boolean).join(" · ");
 
 export function sammlung() {
   const filter = FILTERS.some(([k]) => k === state.prefs.collFilter) ? state.prefs.collFilter : "all";
@@ -44,7 +44,7 @@ export function sammlung() {
         <div><b>${proxies.toLocaleString("de-DE")}</b><span>Proxy</span></div>
         <div><b>${value >= 1000 ? `${Math.round(value).toLocaleString("de-DE")} €` : esc(fmtEur(value))}</b><span>Wert</span></div>
       </div>
-      <label class="search"><span class="sr">In der Sammlung suchen</span>${icon("search")}<input class="input" id="coll-q" type="search" placeholder="In der Sammlung suchen" value="${esc(query)}" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      <label class="search"><span class="sr">In der Sammlung suchen</span>${icon("search")}<input class="input" id="coll-q" type="search" placeholder="Name, Set oder Ort" value="${esc(query)}" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
       <div class="chips coll-filter" role="radiogroup" aria-label="Zeigen">${FILTERS.map(([k, l]) => `<button class="chip" type="button" role="radio" data-filter="${k}" aria-pressed="${filter === k}" aria-checked="${filter === k}">${l}${k === "foil" && foils ? ` <span class="n">${foils}</span>` : ""}</button>`).join("")}</div>
       <div id="coll-list">${listHtml(list)}</div>`
     : `<div class="empty">${icon("box")}<h3>Noch keine Karten in der Sammlung</h3>
@@ -119,6 +119,7 @@ function entrySheet(name) {
               <span class="entry-flags">
                 <button class="chip small" type="button" data-flag="proxy" aria-pressed="${e.proxy}">${e.proxy ? "Proxy" : "Original"}</button>
                 <button class="chip small" type="button" data-flag="foil" aria-pressed="${e.foil}">Foil</button>
+                <button class="chip small place-chip" type="button" data-place aria-label="Ort ändern">${placeName(e) ? `<span>${esc(placeName(e))}</span>` : `${icon("plus", "xs")}<span>Ort</span>`}</button>
               </span></span>
             <div class="stepper"><button type="button" data-step="-1" aria-label="Eine weniger">${qtyOf(e) > 1 ? "−" : icon("trash", "xs")}</button><output>${qtyOf(e)}</output><button type="button" data-step="1" aria-label="Eine mehr">+</button></div>
           </div>`).join("")}</div>`
@@ -146,6 +147,10 @@ function entrySheet(name) {
             op("collection.update", { id: e.id, [k]: !e[k], prev: { [k]: e[k] } });
             redraw();
           });
+          $("[data-place]", row).addEventListener("click", () => pushPage(placePage(() => e, (w) => {
+            if ((w.place_deck || "") === (e.place_deck || "") && (w.place || "") === (e.place_deck ? "" : e.place || "")) return;
+            op("collection.update", { id: e.id, ...w, prev: { place: e.place || "", place_deck: e.place_deck || "" } });
+          })));
         }
         $("#entry-add", el).addEventListener("click", () => addByName(name));
       },
