@@ -1,0 +1,5 @@
+name: Conclave CodeQL
+paths-ignore:
+  - src/mtgdeck/gui/static/vendor
+  - src/mtgdeck/sync/app/vendor
+  - tests

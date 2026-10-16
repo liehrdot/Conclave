@@ -1,0 +1,7 @@
+**Conclave-specific areas (check these closely):**
+- The web GUI (FastAPI, src/mtgdeck/gui/app.py) listens on 127.0.0.1. With GUI_TOKEN set, the `_guard` middleware must protect every route except `_OPEN_PATHS`; a new route that skips it, or a cookie/redirect change that leaks the token, is a finding.
+- File paths built from request data (deck slugs, upload names, backup names, print faces, sync logical paths) must stay inside their data folder: path traversal, zip-slip in backup restore, symlinks.
+- The sync server (src/mtgdeck/sync/server.py) is reachable from the internet: device tokens and pairing codes, rate limits on pairing claims, the phone app's ops (`appops.py`) applied for a device, and the strict CSP of the phone app under /app/.
+- Secrets: the Claude API key stored by the sync server must never be returned to clients, logged, or written into synced documents.
+- Subprocesses (MPC Autofill, Real-ESRGAN, the Tauri shell's backend supervisor and updater): argument injection, and update feeds that must stay on this repository's GitHub releases.
+- Frontend (vanilla JS): HTML built from card names, deck names, notes or server data without `esc()`.

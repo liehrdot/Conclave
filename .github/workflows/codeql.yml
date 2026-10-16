@@ -1,0 +1,42 @@
+# CodeQL code scanning: GitHub's fixed security queries over Python, the JavaScript of the GUI and the phone
+# app, and the workflows themselves. Same result on every run, so it is the baseline next to the Claude
+# review (security-review.yml). Findings show under Security → Code scanning; the master ruleset's
+# "Require code scanning results" rule blocks a merge on new high or critical alerts.
+# This is CodeQL's "advanced setup": the repository's "default setup" must stay off, or the two clash.
+name: CodeQL
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          config-file: ./.github/codeql/codeql-config.yml
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
