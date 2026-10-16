@@ -23,8 +23,8 @@ GUI (Browser / Desktop-App) ──► FastAPI ──► Scryfall API + Bulk-Date
 ## Einrichtung
 
 ```bash
-git clone https://github.com/liehrdot/mtgdeckbuilder.git
-cd mtgdeckbuilder
+git clone https://github.com/liehrdot/Conclave.git
+cd Conclave
 uv sync --extra gui          # Abhängigkeiten inkl. GUI installieren
 uv run mtg-gui               # GUI starten → http://127.0.0.1:8765
 ```
@@ -234,7 +234,7 @@ ein Befehl auf dem Server.
 ## Desktop-App (Windows)
 
 Dieselbe Oberfläche als eigenes Programm – ohne Python oder uv installieren zu müssen. Fertige Versionen
-liegen unter [Releases](https://github.com/liehrdot/mtgdeckbuilder/releases) (`Conclave_<Version>_x64-setup.exe`,
+liegen unter [Releases](https://github.com/liehrdot/Conclave/releases) (`Conclave_<Version>_x64-setup.exe`,
 pro Benutzer, ohne Adminrechte); jeder Push baut außerdem einen Test-Installer als Artefakt `mtgdeck-desktop-windows-setup`
 des Workflows „Desktop“.
 

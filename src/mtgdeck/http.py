@@ -19,7 +19,7 @@ import httpx
 
 from . import paths
 
-USER_AGENT = "mtgdeck/0.1 (Commander deckbuilder; +https://github.com/liehrdot/mtgdeckbuilder)"
+USER_AGENT = "mtgdeck/0.1 (Commander deckbuilder; +https://github.com/liehrdot/Conclave)"
 
 # Minimum seconds between two requests to the same host (or host + path prefix).
 _MIN_INTERVAL = {
