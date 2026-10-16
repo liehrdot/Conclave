@@ -289,6 +289,21 @@ $("#manual-btn").addEventListener("click", async () => {
   finally { b.disabled = false; b.textContent = "Leeres Deck anlegen"; }
 });
 $("#import-text-btn").addEventListener("click", () => loadImport({ text: $("#import-text").value }));
+$("#import-clip-btn").addEventListener("click", importFromClipboard);
+
+// Reads a copied decklist (e.g. Moxfield „Export“ → „Copy for MTGA“) and checks it right away.
+async function importFromClipboard() {
+  let text = "";
+  try { text = (await navigator.clipboard.readText()).trim(); }
+  catch {
+    toast("Die Zwischenablage ließ sich nicht lesen – füge die Liste mit Strg+V ein.", "error");
+    $("#import-text").focus();
+    return;
+  }
+  if (!text) { toast("Die Zwischenablage ist leer. Kopiere zuerst die Liste, z. B. in Moxfield mit „Copy for MTGA“.", "error"); return; }
+  $("#import-text").value = text;
+  loadImport({ text });
+}
 
 async function loadImport(body) {
   if (body.url !== undefined && !body.url.trim()) { toast("Füge zuerst einen Link ein.", "error"); $("#import-url").focus(); return; }
@@ -315,7 +330,7 @@ function moxfieldFallback(id) {
   const msg = $("#import-msg");
   msg.className = "small";
   msg.innerHTML = `Moxfield lässt keine Programme an seine Decks, darum geht es hier über die Liste:
-    öffne das Deck, wähle „Export“ → „Copy for MTGA“ und füge die Liste oben ein.
+    öffne das Deck, wähle „Export“ → „Copy for MTGA“ und klicke dann „Aus Zwischenablage einfügen“.
     <a href="https://moxfield.com/decks/${esc(id)}" target="_blank" rel="noopener">Deck in Moxfield öffnen</a>`;
   $("#import-text").focus();
 }
