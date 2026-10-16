@@ -39,6 +39,8 @@ DEFAULTS: dict[str, Any] = {
     # desktop app: system notifications while the window is hidden (print files ready, news from the phone)
     "desktop_notify": True,
     "font": "cascadia",  # cascadia | inter — the UI face; code and the console stay Cascadia
+    # floating card image that follows the pointer over list rows (hand, tokens, collection thumbs too)
+    "hover_preview": True,
 }
 _ENV = {
     "autofill_path": "MTG_AUTOFILL_PATH",

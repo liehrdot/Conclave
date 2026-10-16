@@ -151,6 +151,7 @@ function go(hash) {
 
 async function route() {
   const r = parseHash();
+  preview.hidden = true;
   if (r.bare) return go(homeHash());
   if (r.view === "deck" && !r.slug) return go(homeHash());
   if (r.view === "deck" && (!currentDeck || currentDeck.slug !== r.slug)) {
@@ -1491,9 +1492,15 @@ $("#describe-setup").addEventListener("submit", async (e) => {
 $("#describe-open").addEventListener("click", openDescribe);
 $("#describe-close").addEventListener("click", () => $("#describe").close());
 
-// hover preview of card images (list view, hand, swaps)
+// hover preview of card images (list view, hand, swaps); off via Einstellungen → Darstellung
 const preview = $("#preview");
+let hoverPreview = true;
+function applyHoverPreview(on) {
+  hoverPreview = on !== false;
+  if (!hoverPreview) preview.hidden = true;
+}
 document.addEventListener("mouseover", (e) => {
+  if (!hoverPreview) return;
   const el = e.target.closest(".card[data-img]");
   if (!el || !el.dataset.img || el.closest(".cards.grid")) return;
   const [front, back] = preview.querySelectorAll("img");
@@ -3659,8 +3666,11 @@ function applyFont(font) {
 async function loadSettings() {
   appSettings = await api("/api/settings");
   applyFont(appSettings.font);
+  applyHoverPreview(appSettings.hover_preview);
   const fontChoice = $("#font-choice");
   if (fontChoice) fontChoice.value = appSettings.font === "inter" ? "inter" : "cascadia";
+  const hoverChoice = $("#hover-preview");
+  if (hoverChoice) hoverChoice.checked = hoverPreview;
   const f = $("#settings-form").elements;
   const MODEL_HINTS = { "realesrgan-x4plus": " (empfohlen)", "realesrgan-x4plus-anime": " (für Zeichnungen, glättet stärker)" };
   f.upscale_model.innerHTML = appSettings.upscale_models.map((m) => `<option value="${esc(m)}">${esc(m + (MODEL_HINTS[m] || ""))}</option>`).join("")
@@ -3679,6 +3689,24 @@ async function loadSettings() {
   $("#print-form").elements.foil.checked = !!appSettings.foil;
   $("#pdf-paper").value = appSettings.paper || "A4";
 }
+let hoverSave = 0;
+$("#hover-preview").addEventListener("change", async (e) => {
+  const on = e.target.checked;
+  const seq = ++hoverSave;
+  applyHoverPreview(on);
+  try {
+    const saved = await api("/api/settings", { method: "POST", body: { hover_preview: on } });
+    if (seq !== hoverSave) return; // a newer toggle or the settings form already saved
+    appSettings = saved;
+    applyHoverPreview(appSettings.hover_preview);
+    e.target.checked = hoverPreview;
+  } catch (err) {
+    if (seq !== hoverSave) return;
+    applyHoverPreview(appSettings.hover_preview);
+    e.target.checked = hoverPreview;
+    fail(err);
+  }
+});
 $("#font-choice").addEventListener("change", async (e) => {
   const font = e.target.value === "inter" ? "inter" : "cascadia";
   applyFont(font);
@@ -3695,6 +3723,8 @@ $("#settings-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const body = Object.fromEntries(new FormData(e.target));
   body.upscale = e.target.elements.upscale.checked;
+  body.hover_preview = $("#hover-preview").checked; // outside the form; unchecked boxes are omitted from FormData
+  hoverSave++;
   try {
     await api("/api/settings", { method: "POST", body });
     await loadSettings();

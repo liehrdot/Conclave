@@ -53,6 +53,18 @@ def test_ui_font_setting():
     assert client.post("/api/settings", json={"font": "comic"}).status_code == 422
 
 
+def test_hover_preview_setting():
+    client = TestClient(app)
+    assert client.get("/api/settings").json()["hover_preview"] is True
+    assert client.post("/api/settings", json={"hover_preview": False}).json()["hover_preview"] is False
+    assert client.get("/api/settings").json()["hover_preview"] is False
+    # the settings form posts the other fields and must keep an explicit false
+    saved = client.post("/api/settings", json={"autofill_path": "", "descreen": "normal", "upscale": False}).json()
+    assert saved["hover_preview"] is False
+    assert client.post("/api/settings", json={"hover_preview": False, "upscale": False}).json()["hover_preview"] is False
+    assert client.post("/api/settings", json={"hover_preview": True}).json()["hover_preview"] is True
+
+
 def test_deck_view_has_back_faces():
     storage.save({"name": "Dfc Deck", "commanders": ["Meren of Clan Nel Toth"], "bracket": 2,
                   "cards": [{"name": "Delver of Secrets // Insectile Aberration", "qty": 1}, {"name": "Sol Ring", "qty": 1}]})  # fmt: skip
