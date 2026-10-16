@@ -27,6 +27,14 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 2
+      # The action's API check (used only by its false-positive filter) still calls the retired
+      # claude-3-5-haiku-20241022; the 404 turns that filter off. Point it at a current model in the pinned copy.
+      # Fails when the line is gone, so an action update without the bug gets noticed and this step removed.
+      - name: Fix retired model in the action
+        run: |
+          f="${{ runner.workspace }}/../_actions/anthropics/claude-code-security-review/0c6a49f1fa56a1d472575da86a94dbc1edb78eda/claudecode/claude_api_client.py"
+          grep -q 'claude-3-5-haiku-20241022' "$f"
+          sed -i 's/claude-3-5-haiku-20241022/claude-haiku-5-5/' "$f"
       - name: Review
         id: review
         uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda # main, 2026-02-11
