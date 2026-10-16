@@ -107,25 +107,36 @@ export async function identify(name, line) {
       .then((x) => x || (line.lang !== "en" ? scry.printing(line.set, line.number) : null)));
     // agrees with the name, or the name is a cut-off piece of it ("Fight" from "Rejoin the Fight")
     const piece = norm(name).length >= 4 && [bySet?.name, bySet?.printed_name].some((n) => norm(n).includes(norm(name)));
-    if (bySet && (piece || similar(name, bySet) >= 0.45)) return { card: bySet, sure: true };
+    if (bySet && (piece || similar(name, bySet) >= 0.45)) return { card: bySet, sure: true, bySet: true };
   }
   // a set line that disagrees with a clearly read name was misread: the name wins
   if (name.length < 3) return bySet ? { card: bySet, sure: false } : null;
   const c = await lookup(`${name}|${line?.set || ""}`, async () => (line?.set ? await scry.named(name, line.set) : null) || scry.named(name));
   if (c && similar(name, c) >= 0.7) return { card: c, sure: similar(name, c) >= 0.85 };
-  const list = await lookup(`*${name}`, () => (name.length >= 5 ? scry.byPrintedName(name) : []));  // a German (or other) printed name
+  // a German (or other) printed name; a misread letter fails Scryfall's search, so its longest word is asked too
+  const word = name.split(/[\s\-,]+/).sort((a, b) => b.length - a.length)[0] || "";
+  const list = await lookup(`*${name}`, async () => {
+    if (name.length < 5) return [];
+    const found = await scry.byPrintedName(name);
+    return found.length || word.length < 6 || word === name ? found : scry.byPrintedName(word);
+  });
   const p = list.reduce((best, x) => (similar(name, x) > (best ? similar(name, best) : 0) ? x : best), null);
   if (p && similar(name, p) >= 0.75) return { card: p, sure: similar(name, p) >= 0.85 };
   return null;
 }
 
 // ---------- camera picture → the two strips the text recognition reads ----------
-function strip(video, frame, box, height, angle = 0) {
+// Where the card should be: its centre and size in the picture's own pixels. Live: the frame on the screen, mapped onto
+// the video (object-fit: cover); a photo: a card-sized box tried at a few sizes (photoViews()).
+function videoView(video, frame) {
   const vw = video.videoWidth, vh = video.videoHeight;
   const vr = video.getBoundingClientRect(), fr = frame.getBoundingClientRect();
-  const s = Math.max(vr.width / vw, vr.height / vh);  // object-fit: cover
+  const s = Math.max(vr.width / vw, vr.height / vh);
   const ox = vr.left + (vr.width - vw * s) / 2, oy = vr.top + (vr.height - vh * s) / 2;
-  const fw = fr.width / s, fh = fr.height / s, fcx = (fr.left + fr.width / 2 - ox) / s, fcy = (fr.top + fr.height / 2 - oy) / s;
+  return { src: video, fw: fr.width / s, fh: fr.height / s, fcx: (fr.left + fr.width / 2 - ox) / s, fcy: (fr.top + fr.height / 2 - oy) / s };
+}
+function strip(view, box, height, angle = 0) {
+  const { src: video, fw, fh, fcx, fcy } = view;
   const sw = fw * box.w, sh = fh * box.h;
   const c = document.createElement("canvas");
   c.height = height;
@@ -155,8 +166,8 @@ function strip(video, frame, box, height, angle = 0) {
 
 // How far the card is turned (radians, clockwise): the frame lines at the top of the card, seen in a left and a right
 // window, sit higher on one side – the shift that lines up both row profiles gives the angle.
-function tilt(video, frame) {
-  const c = strip(video, frame, { x: 0.04, y: -0.02, w: 0.92, h: 0.26 }, 220);
+function tilt(view) {
+  const c = strip(view, { x: 0.04, y: -0.02, w: 0.92, h: 0.26 }, 220);
   const W = c.width, H = c.height;
   const px = c.getContext("2d").getImageData(0, 0, W, H).data;
   const profile = (from, to) => {
@@ -284,6 +295,69 @@ function cutBand(c, found, l, r, ta, tb) {
   return band;
 }
 
+/** The name candidates and the set line of the card in ``view``. */
+async function readCard(view) {
+  const angle = tilt(view);
+  const topC = strip(view, TOP_BOX, 240, angle), botC = strip(view, BOTTOM_BOX, 300, angle);
+  const rawTop = [];
+  for (const band of nameBands(topC)) rawTop.push(...await read(band, "7"));
+  const rawBot = await read(lineBand(botC), "6");
+  return { names: nameLines(rawTop), line: parseLine(rawBot.map((l) => l.text).join("\n")) };
+}
+async function identifyRead({ names, line }, longest = false) {
+  // a photo tries the longest read first: a box too big for the card also reads a piece of the name ("Fight")
+  const order = longest ? [...names].sort((a, b) => norm(b).length - norm(a).length) : names;
+  for (const n of order) { const hit = await identify(n, line); if (hit) return { ...hit, read: n }; }
+  return line?.number ? identify("", line).then((hit) => hit && { ...hit, read: "" }) : null;
+}
+// how much of the card's name the read text covers (a box too big for the card reads only a piece: "Fight")
+const coverage = (hit) => Math.max(...[hit.card.name, hit.card.printed_name].filter(Boolean)
+  .map((n) => Math.min(1, norm(hit.read).length / Math.max(1, norm(n.split(" // ")[0]).length))));
+
+// A photo from the phone's own camera app: no frame to line the card up in, so card-sized boxes from big (the card fills
+// the picture) to small are tried around the centre; the first sure hit wins, else the first weak one.
+const PHOTO_SIZES = [0.94, 0.82, 0.7, 0.58, 0.47];
+async function photoPicture(file) {
+  const bmp = await createImageBitmap(file);  // turned upright by its EXIF orientation
+  const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close?.();
+  return c;
+}
+function photoViews(pic) {
+  const W = pic.width, H = pic.height;
+  return PHOTO_SIZES.map((f) => {
+    let fh = H * f, fw = fh * 63 / 88;
+    if (fw > W * 0.96) { fw = W * 0.96 * (f / PHOTO_SIZES[0]); fh = fw * 88 / 63; }
+    return { src: pic, fw, fh, fcx: W / 2, fcy: H / 2 };
+  });
+}
+export async function scanPhoto(file) {
+  const pic = await photoPicture(file);
+  await ocr();
+  let best = null, bestScore = 0;
+  const views = photoViews(pic);
+  for (let i = 0; i < views.length; i++) {
+    const view = views[i];
+    const r = await readCard(view);
+    if (!r.names.length && !r.line?.number) continue;
+    const hit = await identifyRead(r, true);
+    if (!hit) {
+      // text but no card: the card may sit off the centre – the same size a little to the left and right
+      if (!view.shifted) for (const dx of [-0.05, 0.05]) views.splice(i + 1, 0, { ...view, fcx: view.fcx + dx * pic.width, shifted: true });
+      continue;
+    }
+    const long = norm(hit.read).length;
+    // set line and name agree > the whole name read > a piece of it; more text read = more sure
+    const score = (hit.bySet ? 2 : 0) + (hit.sure ? 1 : 0.5) * (0.4 + coverage(hit)) + Math.min(long, 30) / 300;
+    if (score > bestScore) { best = { card: hit.card, line: r.line }; bestScore = score; }
+    if (hit.bySet || (hit.sure && coverage(hit) >= 0.85 && long >= 10)) break;  // as sure as it gets
+  }
+  return best;
+}
+
 // The back cameras a phone lists, each with a short name: an iPhone names its lenses ("Back Ultra Wide Camera",
 // German "Rückseitige Ultraweitwinkelkamera"), an Android phone mostly lists one back camera ("camera2 0, facing back").
 const FRONT = /front|vorder|user|facetime|selfie|avant|frontal/i;
@@ -320,7 +394,9 @@ export function scanner() {
       <div class="cam-bottom">
         <div class="cam-lens-row"><div class="cam-lens" id="cam-lens" role="group" aria-label="Objektiv" hidden></div></div>
         <span class="cam-count" id="cam-count" hidden></span>
+        <button class="btn glass" type="button" id="cam-photo">${icon("camera", "sm")}Foto aufnehmen</button>
         <button class="btn glass" type="button" id="cam-type">${icon("search", "sm")}Name eingeben</button>
+        <input type="file" id="cam-file" accept="image/*" capture="environment" hidden>
       </div>
     </div>`, {
     bare: true, label: "Karte scannen",
@@ -330,6 +406,31 @@ export function scanner() {
       const say = (text, cls = "") => { hint.textContent = text; hint.className = `cam-hint ${cls}`; };
       const pause = (on) => { paused = on; el.querySelector(".cam").classList.toggle("paused", on); };
       $("#cam-type", el).addEventListener("click", () => { pause(true); searchSheet({ onClose: () => pause(false) }); });
+      const found = (card, line) => {
+        pause(true);
+        vibrate(25);
+        last = null;
+        addSheet(card, {
+          lang: card.lang !== "en" ? card.lang : line?.lang || "",
+          onAdded: () => { added++; count(); ignore = card.oracle_id; },
+          onClose: () => { say("Halte die Karte in den Rahmen – der Name oben."); pause(false); },
+        });
+      };
+      // a photo from the phone's own camera app (sharper, its own zoom and macro): read like a frame, once
+      const file = $("#cam-file", el);
+      $("#cam-photo", el).addEventListener("click", () => { pause(true); file.value = ""; file.click(); });
+      file.addEventListener("cancel", () => pause(false));
+      file.addEventListener("change", async () => {
+        const f = file.files?.[0];
+        if (track?.readyState === "ended") open(track.getSettings?.().deviceId).catch(() => {});  // the camera app took it
+        if (!f) return pause(false);
+        say("Lese das Foto …", "reading");
+        let hit = null;
+        try { hit = await scanPhoto(f); } catch { /* no picture or no text recognition */ }
+        if (!running) return;
+        if (hit) found(hit.card, hit.line);
+        else { toast("Auf dem Foto keine Karte erkannt", { sub: "Näher ran und den Namen scharf – oder „Name eingeben“." }); pause(false); }
+      });
       const count = () => { const c = $("#cam-count", el); c.hidden = !added; c.textContent = `${added} hinzugefügt`; };
 
       // the camera, its lenses (an iPhone lists ultra wide, wide and tele as cameras of their own) and its zoom
@@ -376,7 +477,7 @@ export function scanner() {
       try {
         await open();
       } catch {
-        say("Die Kamera ist nicht verfügbar oder nicht erlaubt. Tippe auf „Name eingeben“.", "warn");
+        say("Die Kamera ist hier nicht verfügbar oder nicht erlaubt – nimm ein Foto auf oder gib den Namen ein.", "warn");
         return;
       }
       if (!running) return;
@@ -394,28 +495,11 @@ export function scanner() {
       }
       say("Halte die Karte in den Rahmen – der Name oben.");
 
-      const found = (card, line) => {
-        pause(true);
-        vibrate(25);
-        last = null;
-        addSheet(card, {
-          lang: card.lang !== "en" ? card.lang : line?.lang || "",
-          onAdded: () => { added++; count(); ignore = card.oracle_id; },
-          onClose: () => { say("Halte die Karte in den Rahmen – der Name oben."); pause(false); },
-        });
-      };
       const tick = async () => {
         if (!running) return;
         if (paused || video.readyState < 2 || !video.videoWidth || document.hidden) { timer = setTimeout(tick, 300); return; }
         try {
-          const angle = tilt(video, frame);
-          const topC = strip(video, frame, TOP_BOX, 240, angle), botC = strip(video, frame, BOTTOM_BOX, 300, angle);
-          const rawTop = [];
-          const bands = nameBands(topC);
-          for (const band of bands) rawTop.push(...await read(band, "7"));
-          const rawBot = await read(lineBand(botC), "6");
-          const names = nameLines(rawTop);
-          const line = parseLine(rawBot.map((l) => l.text).join("\n"));
+          const { names, line } = await readCard(videoView(video, frame));
           if (!running || paused) { timer = setTimeout(tick, 300); return; }
           const name = names[0] || "";
           if (!names.length && !line?.number) {
@@ -423,9 +507,7 @@ export function scanner() {
             say("Halte die Karte in den Rahmen – der Name oben.");
           } else {
             say(name ? `Lese „${name}“ …` : "Lese …", "reading");
-            let hit = null;
-            for (const n of names) if ((hit = await identify(n, line))) break;
-            if (!hit && line?.number) hit = await identify("", line);  // only the set line: the same read twice will do
+            const hit = await identifyRead({ names, line });  // only the set line: the same read twice will do
             if (hit && running && !paused && hit.card.oracle_id !== ignore) {
               if (hit.sure || last === hit.card.id) { found(hit.card, line); timer = setTimeout(tick, 300); return; }
               last = hit.card.id;  // a weak match has to come twice in a row
