@@ -56,8 +56,10 @@ CLAIM_FAILS, CLAIM_WINDOW = 20, 600  # at most 20 wrong codes per 10 minutes
 BACKUP_KEEP = 14
 AI_CACHE_DAYS, AI_CACHE_MAX = 180, 5000  # remembered AI card searches (same description + model = no new request)
 APP_DIR = Path(__file__).parent / "app"  # the phone app ("Am Tisch"), served under /app/
-# connect-src lists the image CDN too: the service worker (which gets this header with sw.js) fetches the card images
-APP_CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://*.scryfall.io; "
+OCR_DIR = "tesseract"  # vendor/tesseract: the card scanner's text recognition (~6 MB) – loaded when used, never precached
+# connect-src lists the image CDN too: the service worker (which gets this header with sw.js) fetches the card images;
+# 'wasm-unsafe-eval' lets the card scanner's text recognition (WebAssembly) start – it allows no JavaScript eval
+APP_CSP = ("default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: https://*.scryfall.io; "
            "connect-src 'self' https://api.scryfall.com https://*.scryfall.io; manifest-src 'self'; worker-src 'self' blob:; media-src 'self' blob:; "
            "base-uri 'none'; "
            "form-action 'self'; frame-ancestors 'none'")  # fmt: skip
@@ -216,7 +218,7 @@ def daily_backup(store: SyncStore, folder: Path, keep: int = BACKUP_KEEP) -> Pat
     return made
 
 
-APP_READ = re.compile(r"decks/[^/.][^/]*\.json|decks/\.games/[^/.][^/]*\.json|decks/\.opponents\.json")
+APP_READ = re.compile(r"decks/[^/.][^/]*\.json|decks/\.games/[^/.][^/]*\.json|decks/\.opponents\.json|collection\.json")
 OP_ATTEMPTS = 8
 
 
@@ -225,7 +227,10 @@ def app_snapshot(store: SyncStore) -> dict[str, Any]:
     from . import appdata
 
     docs: dict[str, Any] = {}
-    for path, d in store.live("decks/").items():
+    live = store.live("decks/")
+    if (c := store.get("collection.json")) is not None and not c["deleted"]:
+        live["collection.json"] = c
+    for path, d in live.items():
         if APP_READ.fullmatch(path):
             try:
                 docs[path] = decode("json", d["data"])
@@ -378,7 +383,7 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
     async def app_sw() -> Response:
         files = ["/app/"] + sorted(f"/app/{p.relative_to(APP_DIR).as_posix()}" for p in APP_DIR.rglob("*")
                                    if p.is_file() and p.name not in ("sw.js", "index.html", "LICENSE") and p.suffix != ".txt"
-                                   and p.suffix != ".map" and "__pycache__" not in p.parts)  # fmt: skip
+                                   and p.suffix != ".map" and "__pycache__" not in p.parts and OCR_DIR not in p.parts)  # fmt: skip
         text = (APP_DIR / "sw.js").read_text("utf-8").replace("__VERSION__", await asyncio.to_thread(app_version))
         text = text.replace("__FILES__", json.dumps(files))
         return Response(text, media_type="text/javascript", headers={"Cache-Control": "no-cache"})

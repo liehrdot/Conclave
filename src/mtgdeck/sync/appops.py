@@ -6,12 +6,15 @@ An operation is ``{"id", "type", "payload", "at"}``; ``apply(op, docs)`` takes t
 remembers applied ids, so an operation sent twice (the phone retries after a lost answer) changes nothing.
 
 Types: ``game.add`` · ``game.delete`` · ``opponent.add`` · ``opponent.update`` · ``opponent.note`` ·
-``opponent.note_delete`` · ``opponent.delete`` · ``deck.new`` · ``deck.edit``.
+``opponent.note_delete`` · ``opponent.delete`` · ``deck.new`` · ``deck.edit`` · ``collection.add`` · ``collection.update``.
 
 Decks built on the phone or tablet are saved like ``storage.save`` does it: a new version with a history entry and a
 full snapshot (``decks/.versions/<slug>/vNNNN.json``, returned by ``apply`` next to the deck). Card data never reaches
 the server, so the check (legality, bracket, price) is left to the PC: the deck gets ``needs_revalidation`` and the
 desktop app checks it after its next sync (``service.revalidate_pending``).
+
+Cards scanned or picked on the phone go into ``collection.json`` like ``collection.add`` does it: one entry per printing,
+an entry that matches name, printing, proxy, foil and language only gets more copies (``collection._key``).
 """
 
 from __future__ import annotations
@@ -28,16 +31,24 @@ from ..storage import _metrics, diff, level_text
 from .files import snapshot_path
 
 OPPONENTS = "decks/.opponents.json"
+COLLECTION = "collection.json"
 SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]{0,80}")
 ID_RE = re.compile(r"[A-Za-z0-9_-]{1,40}")
 ISO_RE = re.compile(r"\d{4}-\d\d-\d\dT[\d:.]+(Z|[+-]\d\d:\d\d)?")
 TYPES = ("game.add", "game.delete", "opponent.add", "opponent.update", "opponent.note", "opponent.note_delete", "opponent.delete",
-         "deck.new", "deck.edit")  # fmt: skip
+         "deck.new", "deck.edit", "collection.add", "collection.update")  # fmt: skip
 ROUND_KINDS = ("life", "cmd", "poison", "turn", "note")  # entries in the Runden-Helfer's log (js/round.js)
 ROUND_EVENTS_MAX = 400
 CATEGORIES = ("Ramp", "Draw", "Removal", "Board Wipe", "Counterspell", "Tutor", "Protection", "Synergy", "Win Condition", "Utility", "Land")
 DECK_CARDS_MAX = 250  # distinct cards in one deck (a Commander deck has at most 99)
 EDIT_MAX = 200  # changes in one deck.edit
+COLLECTION_MAX = 50000  # entries in the collection
+LANGS = ("en", "de", "fr", "it", "es", "pt", "ja", "ko", "ru", "zhs", "zht", "ph")
+UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+SET_RE = re.compile(r"[a-z0-9]{2,8}")
+NUMBER_RE = re.compile(r"[\w★†\-]{1,12}")
+PRICE_RE = re.compile(r"\d{1,6}(\.\d{1,2})?")
+IMAGE_PREFIX = "https://cards.scryfall.io/"
 
 
 class OpError(ValueError):
@@ -71,6 +82,8 @@ def paths(op: dict[str, Any]) -> list[str]:
         return [f"decks/{_deck_slug(p.get('deck') or {}, 'slug')}.json"]
     if t == "deck.edit":
         return [f"decks/{_deck_slug(p)}.json"]
+    if t.startswith("collection."):
+        return [COLLECTION]
     return [OPPONENTS]
 
 
@@ -272,6 +285,95 @@ def _deck_edit(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, An
     return _save_version(deck, old, _change_note(added, removed, changed, _text(p.get("note"), 200)), at)
 
 
+def _coll_key(e: dict[str, Any]) -> tuple[Any, ...]:  # like collection._key (that module needs the network stack)
+    return (str(e.get("name") or "").lower(), e.get("scryfall_id") or "", bool(e.get("proxy")), bool(e.get("foil")), e.get("lang") or "en")
+
+
+def _coll_items(doc: Any) -> list[Any]:
+    return list(doc) if isinstance(doc, list) else []
+
+
+def _match_str(value: Any, pattern: re.Pattern[str]) -> str | None:
+    value = str(value).strip() if isinstance(value, (str, int, float)) and not isinstance(value, bool) else ""
+    return value if value and pattern.fullmatch(value) else None
+
+
+def _image(value: Any) -> str | None:
+    return value if isinstance(value, str) and value.startswith(IMAGE_PREFIX) and len(value) < 300 else None
+
+
+def _collection_add(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, Any]:
+    """``entry`` {name, qty, proxy, foil, lang, scryfall_id, set, set_name, collector_number, image, image_back, price_eur,
+    price_usd}: more copies of the matching entry, else a new one. A negative ``qty`` takes copies away again (undo)."""
+    e = p.get("entry")
+    if not isinstance(e, dict):
+        raise OpError("Ungültige Daten")
+    qty = _int(e.get("qty"), -99, 99)
+    if not qty:
+        raise OpError("Ungültige Anzahl")
+    entry = {
+        "name": _card_name(e.get("name")), "qty": qty, "proxy": e.get("proxy") is True, "foil": e.get("foil") is True,
+        "lang": e.get("lang") if e.get("lang") in LANGS else "en", "scryfall_id": _match_str(e.get("scryfall_id"), UUID_RE),
+        "set": _match_str(str(e.get("set") or "").lower(), SET_RE), "set_name": _text(e.get("set_name"), 120) or None,
+        "collector_number": _match_str(e.get("collector_number"), NUMBER_RE), "image": _image(e.get("image")),
+        "image_back": _image(e.get("image_back")), "price_eur": _match_str(e.get("price_eur"), PRICE_RE),
+        "price_usd": _match_str(e.get("price_usd"), PRICE_RE),
+    }  # fmt: skip
+    items = _coll_items(docs.get(COLLECTION))
+    key = _coll_key(entry)
+    hit = next((x for x in items if isinstance(x, dict) and x.get("name") and _coll_key(x) == key), None)
+    if hit is not None:
+        hit["qty"] = min(9999, int(hit.get("qty") or 0) + qty)
+        if hit["qty"] <= 0:
+            items.remove(hit)
+        return {COLLECTION: items}
+    if qty < 0:
+        return {}  # nothing left to take away
+    if len(items) >= COLLECTION_MAX:
+        raise OpError("Die Sammlung ist voll.")
+    ids = {x.get("id") for x in items if isinstance(x, dict)}
+    entry_id = e.get("id") if isinstance(e.get("id"), str) and ID_RE.fullmatch(e["id"]) and e["id"] not in ids else uuid.uuid4().hex[:12]
+    items.append({"id": entry_id, **entry, "note": "", "added": at})
+    return {COLLECTION: items}
+
+
+def _collection_update(p: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
+    """Like ``collection.update``: ``id`` plus ``qty`` (0 deletes), ``proxy``, ``foil``, ``lang``; then entries that now
+    describe the same thing are merged."""
+    items = _coll_items(docs.get(COLLECTION))
+    entry = next((x for x in items if isinstance(x, dict) and x.get("id") == p.get("id")), None)
+    if entry is None:
+        if p.get("qty") == 0:
+            return {}  # gone already
+        raise OpError("Diese Karte ist nicht mehr in deiner Sammlung – am PC geändert?")
+    before = dict(entry)
+    if "qty" in p:
+        qty = _int(p.get("qty"), 0, 9999)
+        if qty is None:
+            raise OpError("Ungültige Anzahl")
+        entry["qty"] = qty
+    for key in ("proxy", "foil"):
+        if key in p:
+            entry[key] = p[key] is True
+    if "lang" in p:
+        entry["lang"] = p["lang"] if p["lang"] in LANGS else "en"
+    if entry == before:
+        return {}
+    out: list[Any] = []
+    seen: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for x in items:
+        if not (isinstance(x, dict) and x.get("name")):
+            out.append(x)
+            continue
+        k = _coll_key(x)
+        if k in seen:
+            seen[k]["qty"] = int(seen[k].get("qty") or 0) + int(x.get("qty") or 0)
+            continue
+        seen[k] = x
+        out.append(x)
+    return {COLLECTION: [x for x in out if not isinstance(x, dict) or not x.get("name") or int(x.get("qty") or 0) > 0]}
+
+
 def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
     """Apply ``op`` to ``docs`` (``{path: value or None}`` for ``paths(op)``); returns ``{path: new value}`` – for the
     deck operations also the new version's snapshot, a path ``paths(op)`` does not list."""
@@ -282,6 +384,10 @@ def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
         return _deck_new(p, docs, at)
     if t == "deck.edit":
         return _deck_edit(p, docs, at)
+    if t == "collection.add":
+        return _collection_add(p, docs, at)
+    if t == "collection.update":
+        return _collection_update(p, docs)
     out: dict[str, Any] = {}
     if t == "game.add":
         g = p.get("game") or {}

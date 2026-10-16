@@ -1,9 +1,10 @@
-// The four tabs and their detail screens. Each screen returns {html, fab, bar, bind}; main.js draws it.
+// The tabs and their detail screens. Each screen returns {html, fab, bar, bind}; main.js draws it.
 
 import { currentDeck, deckBy, failedOps, gamesOf, isDemo, isPending, op, oppBy, oppName, oppSub, pendingCount, serverCall, setPref, shortName, state } from "./data.js";
 import { draftCount, tabletSized } from "./build.js";
 import { roundCard, running, startSheet } from "./round.js";
 import { cardSheet, editOpponentSheet, gameDetailSheet, gameSheet, newDeckSheet, opponentSheet, settingsSheet, switchDeckSheet } from "./forms.js";
+import { addByName } from "./scan.js";
 import * as scry from "./scry.js";
 import { present, toast } from "./ui.js";
 import { $, $$, RESULT_TEXT, ago, artFallback, debounce, esc, icon, mana, pips, plural, recordText, reducedMotion, uid } from "./util.js";
@@ -356,7 +357,8 @@ export function karten() {
 const cardRows = (items) => `<div class="group">${items.map((c) => `<button class="row" type="button" data-card-open="${esc(c.name)}">
     <span class="thumb card-thumb">${art(c.name, "small", "thumb card-thumb")}</span><span class="main"><span class="title">${esc(c.de || c.name)}</span>
     <span class="subtitle">${esc(c.de ? c.name : c.type || c.sub || "")}</span></span>${c.cost ? `<span class="trail cost">${mana(c.cost)}</span>` : ""}</button>`).join("")}</div>`;
-const bindCardRows = (out) => { for (const b of $$("[data-card-open]:not([data-bound])", out)) { b.dataset.bound = "1"; b.addEventListener("click", () => cardSheet(b.dataset.cardOpen)); } scry.hydrate(out); };
+const toCollection = (name) => ({ label: "Zur Sammlung", run: () => addByName(name) });
+const bindCardRows = (out) => { for (const b of $$("[data-card-open]:not([data-bound])", out)) { b.dataset.bound = "1"; b.addEventListener("click", () => cardSheet(b.dataset.cardOpen, toCollection(b.dataset.cardOpen))); } scry.hydrate(out); };
 
 function bindByName(el, recent) {
   const out = $("#card-results", el);

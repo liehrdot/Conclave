@@ -528,3 +528,102 @@ def test_a_deck_built_on_the_tablet_reaches_the_pc_and_gets_checked(tmp_path):
     assert sorted(asyncio.run(service.revalidate_pending())) == ["meren", "meren-2"]
     checked = storage.load("meren-2")
     assert checked["validation"]["commanders"] == ["Meren of Clan Nel Toth"] and "needs_revalidation" not in checked
+
+
+# ---- the collection on the phone (scanner, Sammlung tab) ---------------------------------------
+
+SID = "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021"
+
+
+def _scanned(qty=1, **kw):
+    entry = {"id": "scan0001", "name": "Sol Ring", "qty": qty, "proxy": False, "foil": False, "lang": "en", "scryfall_id": SID,
+             "set": "C21", "set_name": "Commander 2021", "collector_number": "263", "price_eur": "0.86",
+             "image": f"https://cards.scryfall.io/normal/front/4/c/{SID}.jpg", "image_back": "https://evil.example/x.jpg"}  # fmt: skip
+    return {"entry": {**entry, **kw}}
+
+
+def test_collection_add_merges_like_the_desktop_collection():
+    out = appops.apply(_op("collection.add", _scanned(2)), {"collection.json": None})
+    [e] = out["collection.json"]
+    assert e["id"] == "scan0001" and e["qty"] == 2 and e["set"] == "c21" and e["added"] == AT and e["note"] == ""
+    assert e["image"].startswith("https://cards.scryfall.io/") and e["image_back"] is None  # only Scryfall's image CDN
+    more = appops.apply(_op("collection.add", _scanned(1, id="scan0002")), {"collection.json": out["collection.json"]})
+    assert len(more["collection.json"]) == 1 and more["collection.json"][0]["qty"] == 3  # same printing: more copies
+    proxy = appops.apply(_op("collection.add", _scanned(1, id="scan0003", proxy=True)), {"collection.json": more["collection.json"]})
+    assert [x["proxy"] for x in proxy["collection.json"]] == [False, True]
+    back = appops.apply(_op("collection.add", _scanned(-1, proxy=True)), {"collection.json": proxy["collection.json"]})  # undo
+    assert [x["qty"] for x in back["collection.json"]] == [3]
+    assert appops.apply(_op("collection.add", _scanned(-1, foil=True)), {"collection.json": back["collection.json"]}) == {}
+    for bad in (_scanned(0), _scanned(1, name=""), {"entry": "x"}):
+        with pytest.raises(appops.OpError):
+            appops.apply(_op("collection.add", bad), {"collection.json": None})
+
+
+def test_collection_update_changes_flags_and_quantities_and_merges():
+    items = [{"id": "a1", "name": "Sol Ring", "qty": 2, "proxy": False, "foil": False, "lang": "en", "scryfall_id": SID, "note": "vom PC"},
+             {"id": "b2", "name": "Sol Ring", "qty": 1, "proxy": True, "foil": False, "lang": "en", "scryfall_id": SID}]  # fmt: skip
+    out = appops.apply_copy(_op("collection.update", {"id": "b2", "proxy": False}), {"collection.json": items})
+    assert out["collection.json"] == [{**items[0], "qty": 3}]  # now the same as the first entry: one entry
+    out = appops.apply_copy(_op("collection.update", {"id": "a1", "qty": 0}), {"collection.json": items})
+    assert [x["id"] for x in out["collection.json"]] == ["b2"]
+    assert appops.apply_copy(_op("collection.update", {"id": "gone", "qty": 0}), {"collection.json": items}) == {}
+    assert appops.apply_copy(_op("collection.update", {"id": "a1", "qty": 2}), {"collection.json": items}) == {}
+    with pytest.raises(appops.OpError):
+        appops.apply_copy(_op("collection.update", {"id": "gone", "foil": True}), {"collection.json": items})
+
+
+def test_snapshot_has_the_collection_without_notes_and_derivable_images():
+    snap = appdata.snapshot({"collection.json": [
+        {"id": "a1", "name": "Sol Ring", "qty": 2, "proxy": False, "foil": True, "lang": "de", "scryfall_id": SID, "set": "c21",
+         "image": "https://cards.scryfall.io/normal/x.jpg", "note": "privat", "price_eur": "1.20"},
+        {"id": "m1", "name": "Arcane Signet", "qty": 1, "proxy": True, "image": "https://cards.scryfall.io/png/y.png"}, "kaputt"]})  # fmt: skip
+    assert [e["name"] for e in snap["collection"]] == ["Arcane Signet", "Sol Ring"]
+    sol = snap["collection"][1]
+    assert "note" not in sol and "image" not in sol and sol["foil"] and sol["lang"] == "de" and sol["price_eur"] == "1.20"
+    assert snap["collection"][0]["image"].endswith("y.png") and snap["collection"][0]["lang"] == "en"
+    assert appdata.snapshot({})["collection"] == []
+
+
+def test_cards_scanned_on_the_phone_reach_the_pc_collection(tmp_path):
+    from mtgdeck import collection
+    from mtgdeck.sync import Roots, service
+    from mtgdeck.sync.remote import HttpTransport
+
+    app = create_app(tmp_path / "server")
+    client = TestClient(app)
+    pc = Roots.current()
+    service.connect(f"http://testserver/koppeln#{app.state.devices.new_code()['code']}", name="PC", roots=pc, client=client)
+    collection._write([collection._entry("Arcane Signet", qty=1, note="Binder 2")])
+    assert service.run(roots=pc, client=client)["ok"]
+    phone = HttpTransport("http://testserver", client=client).claim(app.state.devices.new_code()["code"], "Handy", "phone")
+    auth = {"Authorization": f"Bearer {phone['token']}"}
+    data = client.get("/api/app/data", headers=auth).json()
+    assert [e["name"] for e in data["collection"]] == ["Arcane Signet"]
+
+    signet = data["collection"][0]["id"]
+    ops = [_op("collection.add", _scanned(2), "opcoll001"), _op("collection.add", _scanned(1, id="scan0002", foil=True, lang="de"), "opcoll002"),
+           _op("collection.update", {"id": signet, "proxy": True}, "opcoll003")]  # fmt: skip
+    res = client.post("/api/app/ops", json={"ops": ops}, headers=auth).json()
+    assert [r["ok"] for r in res["results"]] == [True, True, True], res
+    assert client.post("/api/app/ops", json={"ops": ops[:1]}, headers=auth).json()["results"][0]["ok"]  # resent: no third copy
+    data = client.get("/api/app/data", headers=auth).json()
+    assert sum(e["qty"] for e in data["collection"] if e["name"] == "Sol Ring") == 3
+
+    run = service.run(roots=pc, client=client)
+    assert run["ok"] and "Sammlung" in run["incoming"]
+    owned = collection.load()
+    sol = sorted((e for e in owned if e["name"] == "Sol Ring"), key=lambda e: e["qty"])
+    assert [(e["qty"], e["foil"], e["lang"]) for e in sol] == [(1, True, "de"), (2, False, "en")]
+    signet_entry = next(e for e in owned if e["name"] == "Arcane Signet")
+    assert signet_entry["proxy"] and signet_entry["note"] == "Binder 2"  # the PC's note stays
+    assert collection.owned_counts()["Sol Ring"] == {"real": 3, "proxy": 0}
+
+
+def test_the_card_scanner_loads_its_text_recognition_lazily(tmp_path):
+    client = TestClient(create_app(tmp_path))
+    sw = client.get("/app/sw.js").text
+    assert "/app/js/scan.js" in sw and "/app/vendor/tesseract/" not in sw.split("const FILES = ")[1].split("\n")[0]  # not precached
+    for path in ("/app/vendor/tesseract/worker.min.js", "/app/vendor/tesseract/tesseract-core-simd-lstm.wasm", "/app/vendor/tesseract/eng.traineddata.gz"):
+        assert client.get(path).status_code == 200, path
+    csp = client.get("/app/").headers["content-security-policy"]
+    assert "script-src 'self' 'wasm-unsafe-eval';" in csp and "unsafe-eval'" not in csp.replace("'wasm-unsafe-eval'", "")

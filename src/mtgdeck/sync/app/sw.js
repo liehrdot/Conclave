@@ -6,6 +6,8 @@ const FILES = __FILES__;
 const SHELL = `amtisch-shell-${VERSION}`;
 const IMAGES = "amtisch-images";
 const IMAGES_MAX = 900;
+// the card scanner's text recognition (~6 MB): kept across app versions, loaded the first time the scanner opens
+const OCR = "amtisch-ocr-7.0.0";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => c.addAll(FILES)));
@@ -13,7 +15,9 @@ self.addEventListener("install", (e) => {
 
 self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
-    for (const key of await caches.keys()) if (key.startsWith("amtisch-shell-") && key !== SHELL) await caches.delete(key);
+    for (const key of await caches.keys()) {
+      if ((key.startsWith("amtisch-shell-") && key !== SHELL) || (key.startsWith("amtisch-ocr-") && key !== OCR)) await caches.delete(key);
+    }
     await self.clients.claim();
   })());
 });
@@ -29,6 +33,16 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   if (url.origin === self.location.origin) {
     if (!url.pathname.startsWith("/app/") || url.pathname === "/app/sw.js") return;  // the API is never cached here
+    if (url.pathname.startsWith("/app/vendor/tesseract/")) {
+      e.respondWith(caches.open(OCR).then(async (c) => {
+        const hit = await c.match(req, { ignoreSearch: true });
+        if (hit) return hit;
+        const res = await fetch(req);
+        if (res.ok) c.put(req, res.clone());
+        return res;
+      }));
+      return;
+    }
     if (req.mode === "navigate") {
       e.respondWith(caches.open(SHELL).then(async (c) => (await c.match("/app/")) || fetch(req)));
       return;

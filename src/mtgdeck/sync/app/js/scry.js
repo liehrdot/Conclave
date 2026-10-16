@@ -141,3 +141,57 @@ export async function german(name) {
   persist();
   return de;
 }
+
+// ---- printings (the collection keeps one entry per printing) ----
+// the whole Scryfall card (one printing); also fills the name cache, so images and texts show without another request
+const printingOf = (card) => { if (card?.object === "card") { remember(card); return card; } return null; };
+const quiet = (p) => p.then(printingOf, () => null);
+
+/** One printing by set code and collector number, in ``lang`` when given (null when Scryfall has none). */
+export const printing = (set, number, lang = "") =>
+  quiet(api(`/cards/${encodeURIComponent(set.toLowerCase())}/${encodeURIComponent(number)}${lang && lang !== "en" ? `/${encodeURIComponent(lang)}` : ""}`));
+
+/** Fuzzy name lookup (typos and missing letters are fine; English names), optionally in one set. */
+export const named = (q, set = "") =>
+  quiet(api(`/cards/named?fuzzy=${encodeURIComponent(q)}${set ? `&set=${encodeURIComponent(set.toLowerCase())}` : ""}`));
+
+/** Printings whose printed (e.g. German) name or text matches ``q``, newest first (the caller picks the best name). */
+export async function byPrintedName(q) {
+  try {
+    const d = await api(`/cards/search?q=${encodeURIComponent(q)}&include_multilingual=true&unique=prints&order=released&dir=desc`);
+    return ok(d).slice(0, 60).map(printingOf).filter(Boolean);
+  } catch { return []; }
+}
+
+/** All printings of a card (newest first), for picking the right one; ``lang`` "any" also lists other languages. */
+export async function prints(oracleId, { lang = "" } = {}) {
+  const q = `oracleid:${oracleId}${lang && lang !== "any" ? ` lang:${lang}` : ""} game:paper`;
+  const out = [];
+  let page = 1;
+  while (page && page <= 3) {
+    let d;
+    try { d = await api(`/cards/search?q=${encodeURIComponent(q)}&unique=prints&order=released&dir=desc&page=${page}${lang ? "&include_multilingual=true" : ""}`); }
+    catch { break; }
+    out.push(...ok(d));
+    page = d?.has_more ? page + 1 : 0;
+  }
+  return out;
+}
+
+/** The facts a collection entry keeps about a printing (like ``scryfall.printing`` on the PC). */
+export function entryFacts(card, { foil = false } = {}) {
+  const faces = card.card_faces || [];
+  const uris = card.image_uris || faces[0]?.image_uris || {};
+  const p = card.prices || {};
+  const price = (cur) => (foil ? p[`${cur}_foil`] || p[cur] : p[cur] || p[`${cur}_foil`]) || null;
+  return { name: card.name, scryfall_id: card.id, set: card.set, set_name: card.set_name, collector_number: card.collector_number,
+    image: uris.normal || null, image_back: !card.image_uris && faces[1]?.image_uris?.normal || null,
+    price_eur: price("eur"), price_usd: price("usd") };
+}
+
+/** Artwork of a collection entry: its Scryfall id gives the image (the read model leaves the URL out). */
+export function entryImage(e, size = "small") {
+  const id = e?.scryfall_id;
+  if (id && /^[0-9a-f-]{36}$/.test(id)) return `https://cards.scryfall.io/${size}/front/${id[0]}/${id[1]}/${id}.jpg`;
+  return e?.image || null;
+}

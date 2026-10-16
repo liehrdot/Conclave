@@ -5,13 +5,14 @@ import { boot, onChange, state } from "./data.js";
 import { applyTheme } from "./forms.js";
 import { codeFrom, welcome } from "./pair.js";
 import { builder } from "./build.js";
+import { sammlung } from "./collection.js";
 import { roundScreen } from "./round.js";
 import * as scry from "./scry.js";
 import { deck, decks, gegner, karten, opponent, paint, tisch } from "./screens.js";
 import { clearToast, sheetIsOpen, toast, topbar } from "./ui.js";
 import { $, $$, esc, icon, reducedMotion } from "./util.js";
 
-const TABS = ["tisch", "decks", "gegner", "karten", "runde", "bauen"];  // "runde" = the Runden-Helfer, "bauen" = deck builder: no tabs of their own
+const TABS = ["tisch", "decks", "gegner", "karten", "sammlung", "runde", "bauen"];  // "runde" = the Runden-Helfer, "bauen" = deck builder: no tabs of their own
 const scrolls = {};
 let current = null;  // {key, depth}
 let linkCode = null;  // code from a pairing link
@@ -28,7 +29,7 @@ function screenFor(r) {
   if (r.tab === "gegner" && r.id) return opponent(r.id);
   if (r.tab === "runde") return roundScreen();
   if (r.tab === "bauen") return builder(r.id);
-  return { tisch, decks, gegner, karten }[r.tab]();
+  return { tisch, decks, gegner, karten, sammlung }[r.tab]();
 }
 
 let lastHtml = null;
