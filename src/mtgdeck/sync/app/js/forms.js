@@ -765,7 +765,7 @@ function linkPage({ redraw: again }) {
       $("#copy-code", el).addEventListener("click", () => copy(p.code, "Code"));
       $("#share-link", el).addEventListener("click", async () => {
         if (!navigator.share) return copy(p.link, "Link");
-        try { await navigator.share({ title: "Mit dem Deckbuilder verbinden", text: `Kopplungscode ${p.code}`, url: p.link }); } catch { /* closed */ }
+        try { await navigator.share({ title: "Mit Conclave verbinden", text: `Kopplungscode ${p.code}`, url: p.link }); } catch { /* closed */ }
       });
       $("#new-code", el).addEventListener("click", fresh);
     },
