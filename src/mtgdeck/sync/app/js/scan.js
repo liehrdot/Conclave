@@ -284,6 +284,19 @@ function cutBand(c, found, l, r, ta, tb) {
   return band;
 }
 
+// The back cameras a phone lists, each with a short name: an iPhone names its lenses ("Back Ultra Wide Camera",
+// German "Rückseitige Ultraweitwinkelkamera"), an Android phone mostly lists one back camera ("camera2 0, facing back").
+const FRONT = /front|vorder|user|facetime|selfie|avant|frontal/i;
+function backLenses(devices) {
+  const cams = devices.filter((d) => d.kind === "videoinput" && d.label && !FRONT.test(d.label));
+  const name = (label, i) => (/ultra/i.test(label) ? "0,5×" : /tele/i.test(label) ? "Tele" : /triple|dual/i.test(label) ? "Auto"
+    : /camera2? \d|kamera \d/i.test(label) && cams.length > 1 ? `Kamera ${i + 1}` : "1×");
+  const out = cams.map((d, i) => ({ id: d.deviceId, label: name(d.label, i) }));
+  const order = { "0,5×": 0, "1×": 1, Auto: 2, Tele: 3 };
+  out.sort((a, b) => (order[a.label] ?? 4) - (order[b.label] ?? 4));
+  return out.filter((x, i) => out.findIndex((y) => y.label === x.label) === i);  // one chip per name
+}
+
 // ---------- the scanner ----------
 /** Full-screen camera that adds cards to the collection one after another. */
 export function scanner() {
@@ -305,6 +318,7 @@ export function scanner() {
       </div>
       <p class="cam-hint" id="cam-hint" role="status" aria-live="polite">Kamera startet …</p>
       <div class="cam-bottom">
+        <div class="cam-lens-row"><div class="cam-lens" id="cam-lens" role="group" aria-label="Objektiv" hidden></div></div>
         <span class="cam-count" id="cam-count" hidden></span>
         <button class="btn glass" type="button" id="cam-type">${icon("search", "sm")}Name eingeben</button>
       </div>
@@ -318,27 +332,61 @@ export function scanner() {
       $("#cam-type", el).addEventListener("click", () => { pause(true); searchSheet({ onClose: () => pause(false) }); });
       const count = () => { const c = $("#cam-count", el); c.hidden = !added; c.textContent = `${added} hinzugefügt`; };
 
+      // the camera, its lenses (an iPhone lists ultra wide, wide and tele as cameras of their own) and its zoom
+      const torch = $("#cam-torch", el), lensBox = $("#cam-lens", el);
+      let track = null, lenses = [];
+      const open = async (deviceId) => {
+        stream?.getTracks().forEach((t) => t.stop());
+        // the camera's own picture, never cut to the screen's shape (that looked zoomed in); the frame maths handle any size
+        const video_ = { width: { ideal: 1920 }, height: { ideal: 1080 }, resizeMode: { ideal: "none" } };
+        stream = await navigator.mediaDevices.getUserMedia({ audio: false,
+          video: deviceId ? { ...video_, deviceId: { exact: deviceId } } : { ...video_, facingMode: { ideal: "environment" } } });
+        if (!running) return stop();
+        video.srcObject = stream;
+        await video.play().catch(() => {});
+        track = stream.getVideoTracks()[0];
+        try { track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {}); } catch { /* not supported */ }
+        const caps = track.getCapabilities?.() || {};
+        torch.hidden = !caps.torch;
+        torch.setAttribute("aria-pressed", "false");
+        lensChips(caps);
+      };
+      const lensChips = (caps) => {
+        const current = track.getSettings?.().deviceId;
+        let items = [];
+        if (lenses.length > 1) items = lenses.map((l) => ({ label: l.label, on: l.id === current, run: () => pick(l.id) }));
+        else if (caps.zoom && caps.zoom.max > caps.zoom.min) {
+          const now = track.getSettings?.().zoom ?? caps.zoom.min;
+          const steps = [...new Set([caps.zoom.min, 1, 2, 3].filter((z) => z >= caps.zoom.min && z <= Math.min(caps.zoom.max, 4)))];
+          items = steps.map((z) => ({ label: `${String(Math.round(z * 10) / 10).replace(".", ",")}×`, on: Math.abs(z - now) < 0.05,
+            run: () => track.applyConstraints({ advanced: [{ zoom: z }] }).then(() => lensChips(caps), () => {}) }));
+        }
+        lensBox.hidden = items.length < 2;
+        lensBox.innerHTML = items.map((x, i) => `<button type="button" data-lens="${i}" aria-pressed="${x.on}">${esc(x.label)}</button>`).join("");
+        for (const b of $$("[data-lens]", lensBox)) b.addEventListener("click", () => items[b.dataset.lens].run());
+      };
+      const pick = async (id) => {
+        setPref("scanLens", id);
+        try { await open(id); } catch { await open().catch(() => {}); }
+      };
+      torch.addEventListener("click", () => {
+        const on = torch.getAttribute("aria-pressed") !== "true";
+        track?.applyConstraints({ advanced: [{ torch: on }] }).then(() => torch.setAttribute("aria-pressed", on), () => {});
+      });
       try {
-        const tall = innerHeight >= innerWidth;  // a sharp picture in the phone's orientation: the set line is small print
-        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: "environment" },
-          width: { ideal: tall ? 1080 : 1920 }, height: { ideal: tall ? 1920 : 1080 } } });
+        await open();
       } catch {
         say("Die Kamera ist nicht verfügbar oder nicht erlaubt. Tippe auf „Name eingeben“.", "warn");
         return;
       }
-      if (!running) return stop();
-      video.srcObject = stream;
-      await video.play().catch(() => {});
-      const track = stream.getVideoTracks()[0];
-      try { track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {}); } catch { /* not supported */ }
-      if (track.getCapabilities?.().torch) {
-        const b = $("#cam-torch", el);
-        b.hidden = false;
-        b.addEventListener("click", () => {
-          const on = b.getAttribute("aria-pressed") !== "true";
-          track.applyConstraints({ advanced: [{ torch: on }] }).then(() => b.setAttribute("aria-pressed", on), () => {});
-        });
-      }
+      if (!running) return;
+      // the back cameras by name (only readable once the camera is allowed); the one picked last time comes back
+      try {
+        lenses = backLenses(await navigator.mediaDevices.enumerateDevices());
+        const saved = lenses.find((l) => l.id === state.prefs.scanLens);
+        if (saved && saved.id !== track.getSettings?.().deviceId) await pick(saved.id);
+        else lensChips(track.getCapabilities?.() || {});
+      } catch { /* keep the camera we have */ }
       say("Lade die Texterkennung …");
       try { await ocr(); } catch {
         say("Die Texterkennung lädt nicht – ohne Netz beim ersten Mal? Tippe auf „Name eingeben“.", "warn");
