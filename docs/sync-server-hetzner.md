@@ -70,7 +70,7 @@ Danach den DNS-Eintrag aus Schritt 2 auf die IP-Adresse des Servers setzen.
 
 ```bash
 ssh root@<IP-des-Servers>
-curl -fsSL https://raw.githubusercontent.com/liehrdot/mtgdeckbuilder/HEAD/deploy/sync/install.sh | bash -s -- sync.deine-domain.de
+curl -fsSL https://raw.githubusercontent.com/liehrdot/Conclave/HEAD/deploy/sync/install.sh | bash -s -- sync.deine-domain.de
 ```
 
 Das Skript (`deploy/sync/install.sh`) macht Folgendes:
@@ -152,7 +152,7 @@ fragt dann Scryfall und zeigt die Karten. Farben, Typ und „in Commander erlaub
 - **Timer auf einem älteren Server erneuern** (einmalig, holt Timer und Skript neu):
 
   ```bash
-  cd /opt/mtgdeck-sync && for f in update.sh mtgdeck-sync-update.timer mtgdeck-sync-update.service; do curl -fsSL https://raw.githubusercontent.com/liehrdot/mtgdeckbuilder/HEAD/deploy/sync/$f -o $f; done && chmod +x update.sh && cp mtgdeck-sync-update.* /etc/systemd/system/ && systemctl daemon-reload && systemctl restart mtgdeck-sync-update.timer && systemctl list-timers mtgdeck-sync-update.timer
+  cd /opt/mtgdeck-sync && for f in update.sh mtgdeck-sync-update.timer mtgdeck-sync-update.service; do curl -fsSL https://raw.githubusercontent.com/liehrdot/Conclave/HEAD/deploy/sync/$f -o $f; done && chmod +x update.sh && cp mtgdeck-sync-update.* /etc/systemd/system/ && systemctl daemon-reload && systemctl restart mtgdeck-sync-update.timer && systemctl list-timers mtgdeck-sync-update.timer
   ```
 - **Betriebssystem:** Die Sicherheitsupdates kommen über `unattended-upgrades`. Nach Kernel-Updates gelegentlich
   `reboot`; die Dienste starten von selbst wieder.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Richtet den Sync-Server von Conclave auf einem frischen Ubuntu-/Debian-Server ein (als root):
 #
-#   curl -fsSL https://raw.githubusercontent.com/liehrdot/mtgdeckbuilder/HEAD/deploy/sync/install.sh | bash -s -- sync.deine-domain.de
+#   curl -fsSL https://raw.githubusercontent.com/liehrdot/Conclave/HEAD/deploy/sync/install.sh | bash -s -- sync.deine-domain.de
 #
 # Installiert Docker (falls nötig), legt /opt/mtgdeck-sync an, startet Sync-Server + Caddy (HTTPS),
 # richtet nächtliche Updates ein und zeigt am Ende den Kopplungscode für den ersten PC.
@@ -9,7 +9,7 @@
 set -euo pipefail
 
 DOMAIN="${1:-${SYNC_DOMAIN:-}}"
-RAW="${MTG_SYNC_RAW:-https://raw.githubusercontent.com/liehrdot/mtgdeckbuilder/HEAD/deploy/sync}"
+RAW="${MTG_SYNC_RAW:-https://raw.githubusercontent.com/liehrdot/Conclave/HEAD/deploy/sync}"
 DIR=/opt/mtgdeck-sync
 
 say() { printf '\n== %s\n' "$*"; }
