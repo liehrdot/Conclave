@@ -19,9 +19,11 @@ pub fn is_moxfield(url: &Url) -> bool {
 }
 
 /// Open `url` (a moxfield.com page) in the Moxfield window, or show it there when the window is already open.
+/// Called from navigation handlers, so the work runs on its own thread: building a webview inside an event handler
+/// deadlocks WebView2 on Windows (the window shows up but stays white).
 pub fn open(app: &AppHandle, url: Url) {
     let app = app.clone();
-    let _ = app.clone().run_on_main_thread(move || {
+    std::thread::spawn(move || {
         if let Some(w) = app.get_webview_window(LABEL) {
             let _ = w.navigate(url);
             let _ = w.unminimize();
@@ -62,7 +64,7 @@ fn deliver(app: &AppHandle, url: &Url) {
     // serde_json writes a valid JS literal, so the page's data never becomes code here
     let js = format!("window.conclaveMoxfield && window.conclaveMoxfield({deck})");
     let app = app.clone();
-    let _ = app.clone().run_on_main_thread(move || {
+    std::thread::spawn(move || {
         if let Some(main) = app.get_webview_window("main") {
             let _ = main.eval(&js);
             let _ = main.unminimize();
