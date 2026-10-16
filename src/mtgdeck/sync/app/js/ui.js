@@ -15,6 +15,13 @@ function closeOverlay() {
   else overlays.pop()?.();
 }
 addEventListener("popstate", () => { overlays.pop()?.(); });
+// an overlay that takes the place of an open one (a sheet replacing a sheet, the scanner opened again) keeps its
+// slot and history entry; a second entry would be left behind and swallow the next close or back tap
+function swapOverlay(old, close) {
+  const i = old ? overlays.indexOf(old) : -1;
+  if (i < 0) return openOverlay(close);
+  overlays[i] = close;
+}
 
 // ---------- the visible area: sheets sit on its bottom edge, above the keyboard ----------
 // iOS can make the layout viewport taller than the screen (above all in a Home Screen app), and the keyboard only
@@ -46,9 +53,11 @@ let pages = [];         // stack of render functions inside the sheet
 export const sheetIsOpen = () => dlg().open;
 
 /** Open a sheet. ``render(api)`` returns ``{title, left, right, body, foot, bind(el)}``. */
+let sheetOverlay = null;
 export function openSheet(render, { full = false, onClose = null } = {}) {
   const d = dlg();
-  if (d.open) { finishClose(true); }
+  const replacing = d.open;
+  if (replacing) finishClose(true);
   pages = [render];
   sheetClose = onClose;
   d.className = `sheet${full ? " full" : ""} entering`;
@@ -60,7 +69,9 @@ export function openSheet(render, { full = false, onClose = null } = {}) {
   const enter = () => d.classList.remove("entering");
   requestAnimationFrame(() => requestAnimationFrame(enter));
   setTimeout(enter, 120);  // never left hidden below the screen, even without animation frames
-  openOverlay(() => finishClose());
+  const close = () => { if (sheetOverlay === close) sheetOverlay = null; finishClose(); };
+  if (replacing) swapOverlay(sheetOverlay, close); else openOverlay(close);
+  sheetOverlay = close;
 }
 
 export function closeSheet() { if (dlg().open) closeOverlay(); }
@@ -172,8 +183,11 @@ export function toast(msg, { sub = "", action = null, ms = 4500, ok = false } = 
 // ---------- full screen (Rule 0 to hand across the table) ----------
 let wake = null;
 /** ``bare``: ``html`` fills the whole screen as it is (the card scanner), with its own [data-present-close] button. */
+let presentOverlay = null, presentDone = null;
 export function present(html, { actions = "", bind = null, onClose = null, bare = false, label = "Rule 0" } = {}) {
   const el = $("#present");
+  const replacing = !el.hidden && presentOverlay;
+  if (replacing) { const done = presentDone; presentDone = null; done?.(); }  // the old one stops (camera off) first
   el.innerHTML = bare ? `<div class="present bare" role="dialog" aria-modal="true" aria-label="${esc(label)}">${html}</div>`
     : `<div class="present" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="inner">${html}</div></div>
     <div class="present-actions">${actions}<button class="btn primary" type="button" data-present-close>Schließen</button></div>`;
@@ -181,15 +195,21 @@ export function present(html, { actions = "", bind = null, onClose = null, bare 
   document.documentElement.style.overflow = "hidden";
   el.querySelector("[data-present-close]")?.addEventListener("click", closeOverlay);
   bind?.(el);
-  navigator.wakeLock?.request("screen").then((w) => { wake = w; }, () => {});
-  openOverlay(() => {
+  if (!replacing) navigator.wakeLock?.request("screen").then((w) => { wake = w; }, () => {});
+  presentDone = onClose;
+  const close = () => {
+    if (presentOverlay === close) presentOverlay = null;
     el.hidden = true;
     el.innerHTML = "";
     document.documentElement.style.overflow = "";
     wake?.release?.();
     wake = null;
-    onClose?.();
-  });
+    const done = presentDone;
+    presentDone = null;
+    done?.();
+  };
+  if (replacing) swapOverlay(presentOverlay, close); else openOverlay(close);
+  presentOverlay = close;
 }
 
 // ---------- compact top bar ----------
