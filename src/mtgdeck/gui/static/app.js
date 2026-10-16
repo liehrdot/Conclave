@@ -301,9 +301,23 @@ async function loadImport(body) {
     msg.textContent = "";
     renderImportPreview(importData);
   } catch (err) {
+    const mox = body.url?.match(/moxfield\.com\/decks\/([A-Za-z0-9_-]+)/i);
+    if (mox) return moxfieldFallback(mox[1]);
     msg.className = "small bad";
     msg.textContent = err.message;
   }
+}
+
+// Moxfield blocks programs (Cloudflare, HTTP 403), so a link usually fails: switch to „Liste einfügen“
+// and show the two clicks that get the list out of Moxfield.
+function moxfieldFallback(id) {
+  setImportMode("text");
+  const msg = $("#import-msg");
+  msg.className = "small";
+  msg.innerHTML = `Moxfield lässt keine Programme an seine Decks, darum geht es hier über die Liste:
+    öffne das Deck, wähle „Export“ → „Copy for MTGA“ und füge die Liste oben ein.
+    <a href="https://moxfield.com/decks/${esc(id)}" target="_blank" rel="noopener">Deck in Moxfield öffnen</a>`;
+  $("#import-text").focus();
 }
 
 function renderImportPreview(d) {
