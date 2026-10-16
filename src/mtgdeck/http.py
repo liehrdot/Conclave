@@ -46,6 +46,7 @@ SERVICES = {
     "scryfall": "Scryfall", "edhrec": "EDHREC", "commanderspellbook": "Commander Spellbook",
     "archidekt": "Archidekt", "moxfield": "Moxfield", "mtggoldfish": "MTGGoldfish", "tappedout": "TappedOut",
     "deckstats": "Deckstats", "mtgjson": "MTGJSON", "mpcautofill": "MPC Autofill", "pollinations": "der Bildgenerator",
+    "github": "GitHub",
 }  # fmt: skip
 
 

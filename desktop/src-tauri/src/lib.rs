@@ -150,7 +150,7 @@ pub fn run() {
             backend::start(handle.clone(), backend.clone());
             if !is_selftest {
                 bridge::start(handle.clone(), backend.clone(), autostart_item, updates.clone());
-                updates::start(handle.clone(), updates.clone());
+                updates::start(handle.clone(), updates.clone(), backend.clone());
             }
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.restore_state(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED);

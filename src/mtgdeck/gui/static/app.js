@@ -4410,6 +4410,7 @@ async function refreshDesktop() {
   $("#desktop-version").textContent = d.shell.version || "–";
   $("#desktop-autostart").checked = !!d.shell.autostart;
   $("#desktop-notify").checked = !!d.notify;
+  $("#desktop-preview").checked = !!d.preview;
   renderDesktopUpdate(d.shell.update);
   const u = d.shell.update;
   if (u?.state === "available" && desktopAnnounced !== u.version) {  // once per announced version
@@ -4430,7 +4431,7 @@ function renderDesktopUpdate(u) {
   const text = {
     unknown: "Noch nicht nach Updates gesucht.",
     none: `Auf dem neuesten Stand${at}.`,
-    available: `Version ${u.version} ist da${first ? ` – ${first.slice(0, 140).replace(/[.!]$/, "")}` : ""}.`,
+    available: `${/-/.test(u.version) ? "Vorschau-Version" : "Version"} ${u.version} ist da${first ? ` – ${first.slice(0, 140).replace(/[.!]$/, "")}` : ""}.`,
     downloading: `Lädt Version ${u.version} … ${u.progress ?? 0} %`,
     installing: "Installiert – die App startet gleich neu.",
     error: `Update-Prüfung fehlgeschlagen: ${u.error || "unbekannter Fehler"}`,
@@ -4451,6 +4452,61 @@ $("#desktop-install").addEventListener("click", async () => {
   try {
     await api("/api/desktop/command", { method: "POST", body: { type: "install_update" } });
     toast("Das Update wird geladen – danach startet die App neu.", "info", 8000);
+    clearTimeout(desktopTimer);
+    desktopTimer = setTimeout(refreshDesktop, 3000);
+  } catch (err) { fail(err); }
+});
+// preview builds and switching to any other version (also back to an older one)
+let desktopReleases = [];
+const versionKey = (v) => {  // 0.1.10-preview.3 sorts after 0.1.9 and before 0.1.10
+  const m = /^(\d+)\.(\d+)\.(\d+)(?:-[^.]+\.(\d+))?/.exec(v || "") || [];
+  return [+m[1] || 0, +m[2] || 0, +m[3] || 0, m[4] === undefined ? Infinity : +m[4]];
+};
+const olderThan = (a, b) => { const x = versionKey(a), y = versionKey(b); for (let i = 0; i < 4; i++) if (x[i] !== y[i]) return x[i] < y[i]; return false; };
+async function loadDesktopVersions() {
+  const sel = $("#desktop-versions"), note = $("#desktop-versions-note"), current = desktopShell?.version;
+  note.textContent = "Lädt die Versionen von GitHub …";
+  $("#desktop-switch").disabled = true;
+  try { desktopReleases = (await api("/api/desktop/releases")).releases; } catch (err) { note.textContent = err.message; return; }
+  sel.innerHTML = desktopReleases.map((r) => {
+    const date = r.date ? new Date(r.date).toLocaleDateString("de-DE", { day: "numeric", month: "short" }) : "";
+    const label = `${r.version}${r.preview ? " · Vorschau" : ""}${date ? ` · ${date}` : ""}${r.version === current ? " · läuft gerade" : ""}`;
+    return `<option value="${esc(r.version)}"${r.version === current ? " disabled" : ""}>${esc(label)}</option>`;
+  }).join("");
+  const pick = desktopReleases.find((r) => r.version !== current && olderThan(r.version, current)) || desktopReleases.find((r) => r.version !== current);
+  if (pick) sel.value = pick.version;
+  note.textContent = desktopReleases.length ? "" : "Keine Versionen gefunden.";
+  $("#desktop-switch").disabled = !pick;
+}
+$("#desktop-other").addEventListener("toggle", (e) => { if (e.target.open) loadDesktopVersions(); });
+$("#desktop-versions").addEventListener("change", () => { $("#desktop-switch").disabled = !$("#desktop-versions").value; });
+$("#desktop-preview").addEventListener("change", async (e) => {
+  try {
+    await api("/api/settings", { method: "POST", body: { desktop_preview: e.target.checked } });
+    await api("/api/desktop/command", { method: "POST", body: { type: "check_update" } });
+    toast(e.target.checked ? "Vorschau-Versionen werden ab jetzt angeboten." : "Nur noch freigegebene Versionen. Eine Vorschau bleibt, bis die nächste Version kommt.");
+    if ($("#desktop-other").open) loadDesktopVersions();
+    clearTimeout(desktopTimer);
+    desktopTimer = setTimeout(refreshDesktop, 15000);
+  } catch (err) { fail(err); }
+});
+$("#desktop-switch").addEventListener("click", async () => {
+  const version = $("#desktop-versions").value, current = desktopShell?.version;
+  const r = desktopReleases.find((x) => x.version === version);
+  if (!r) return;
+  const older = olderThan(version, current);
+  const ok = await ask({
+    title: `Zu Version ${version} wechseln?`,
+    text: older
+      ? `Version ${version} ist älter als ${current}. Was danach dazukam, fehlt dort. Vorher wird eine Sicherung deiner Daten angelegt, dann startet die App neu. Neuere Versionen bietet sie dir weiter an.`
+      : `Vorher wird eine Sicherung deiner Daten angelegt, dann startet die App neu.`,
+    ok: "Wechseln",
+  });
+  if (!ok) return;
+  try {
+    await api("/api/backups", { method: "POST" });
+    await api("/api/desktop/command", { method: "POST", body: { type: "install_version", value: version } });
+    toast(`Version ${version} wird geladen – danach startet die App neu.`, "info", 8000);
     clearTimeout(desktopTimer);
     desktopTimer = setTimeout(refreshDesktop, 3000);
   } catch (err) { fail(err); }

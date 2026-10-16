@@ -38,7 +38,7 @@ from ..http import HttpError
 from ..power import TIER_LABELS, PowerProfile
 from ..sync import service as sync_service
 from ..sync.remote import RemoteError
-from . import desktop, terminal
+from . import desktop, releases, terminal
 
 log = logging.getLogger(__name__)
 
@@ -257,8 +257,8 @@ class DesktopPoll(BaseModel):
 
 
 class DesktopCommand(BaseModel):
-    type: Literal["autostart", "open_data", "open_log", "check_update", "install_update"]
-    value: bool | None = None
+    type: Literal["autostart", "open_data", "open_log", "check_update", "install_update", "install_version"]
+    value: bool | str | None = None  # install_version: the version to go to (also an older one)
 
 
 def _ago(ts: Any) -> str:
@@ -301,7 +301,8 @@ def _desktop_tooltip() -> str:
 
 @app.get("/api/desktop")
 async def api_desktop() -> dict[str, Any]:
-    return {"shell": desktop.shell(), "notify": bool(settings_mod.load().get("desktop_notify", True))}
+    cfg = settings_mod.load()
+    return {"shell": desktop.shell(), "notify": bool(cfg.get("desktop_notify", True)), "preview": bool(cfg.get("desktop_preview", False))}
 
 
 @app.post("/api/desktop/poll")
@@ -313,7 +314,29 @@ async def api_desktop_poll(req: DesktopPoll) -> dict[str, Any]:
 async def api_desktop_command(req: DesktopCommand) -> dict[str, Any]:
     if not desktop.present():
         raise HTTPException(409, "Die Desktop-App läuft gerade nicht – diese Einstellung gibt es nur dort.")
+    if req.type == "install_version" and not isinstance(req.value, str):
+        raise HTTPException(422, "Welche Version? Sie fehlt.")
     return desktop.command(req.type, req.value)
+
+
+@app.get("/api/desktop/releases")
+async def api_desktop_releases() -> dict[str, Any]:
+    """The versions the settings page offers to install (also older ones); previews only with the setting on."""
+    preview = bool(settings_mod.load().get("desktop_preview", False))
+    return {"preview": preview, "releases": await releases.available(preview)}
+
+
+@app.get("/api/desktop/feed")
+async def api_desktop_feed(version: str | None = None) -> dict[str, Any]:
+    """For the shell: which latest.json to check (stable, the newest preview, or one picked version)."""
+    try:
+        return await asyncio.wait_for(releases.feed(version), 4)  # the shell waits 5 s for an answer
+    except LookupError as e:
+        raise HTTPException(404, str(e)) from e
+    except (HttpError, asyncio.TimeoutError) as e:
+        if version:
+            raise HTTPException(502, getattr(e, "friendly", "GitHub antwortet gerade nicht.")) from e
+        return {"feed": releases.STABLE_FEED, "preview": False}  # offline: the stable check fails on its own
 
 
 class NewDeckRequest(BaseModel):
@@ -1371,6 +1394,7 @@ class SettingsUpdate(BaseModel):
     descreen: str | None = None
     sync_interval: int | None = Field(default=None, ge=0, le=240)
     desktop_notify: bool | None = None
+    desktop_preview: bool | None = None
     font: Literal["cascadia", "inter"] | None = None
     hover_preview: bool | None = None
 
