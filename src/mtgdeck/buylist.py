@@ -18,7 +18,7 @@ from collections import Counter
 from typing import Any
 from urllib.parse import quote_plus
 
-from . import cardmarket, carddb, collection, scryfall
+from . import cardmarket, carddb, collection, scryfall, storage
 from .cards import resolve
 from .http import HttpError
 
@@ -58,12 +58,23 @@ async def _pick(prints: list[dict[str, Any]], known: dict[int, dict[str, Any]], 
     return unknown
 
 
+def _other_decks(usage: dict[str, list[dict[str, Any]]], slug: str | None) -> list[dict[str, Any]]:
+    """Every other deck (slug, name) for the dialog's comparison, in the order the app lists them."""
+    names = {d["slug"]: d["name"] for ds in usage.values() for d in ds}
+    out = []
+    for meta in storage.list_decks():
+        s = meta.get("slug")
+        if s and s != slug and not meta.get("damaged"):
+            out.append({"slug": s, "name": names.get(s) or meta.get("name") or s})
+    return out
+
+
 async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_proxies: bool = True) -> dict[str, Any]:
     """``use_collection``: copies in the collection only count when no other deck uses them (a card
     sleeved up in another deck still has to be bought). Off = the whole deck goes on the list."""
     need = _need(deck)
     owned = collection.owned_counts() if use_collection else {}
-    usage = collection.decks_by_card() if owned else {}
+    usage = collection.decks_by_card()  # also for comparing with other decks in the dialog
     rows = []
     for name, n in need.items():
         if name in collection.BASIC_LANDS:
@@ -75,7 +86,8 @@ async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_pr
         buy = max(n - free, 0)
         if buy:
             rows.append({"name": name, "qty": buy, "need": n, "real": o["real"], "proxy": o["proxy"],
-                         "in_decks": [d["name"] for d in others] if have else []})  # fmt: skip
+                         "in_decks": [d["name"] for d in others] if have else [],
+                         "decks": [{"slug": d["slug"], "qty": d["qty"]} for d in others]})  # fmt: skip
 
     error = None
     try:
@@ -118,6 +130,7 @@ async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_pr
         "name": deck.get("name"),
         "currency": "eur",
         "use_collection": use_collection,
+        "other_decks": _other_decks(usage, deck.get("slug")),
         "replace_proxies": replace_proxies,
         "collection_size": len(collection.load()),
         "items": rows,

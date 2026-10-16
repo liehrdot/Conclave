@@ -1066,7 +1066,19 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .dc-list.plain li { grid-template-columns: 3ch minmax(0, 1fr) auto; }
 .dc-common { columns: 2 220px; margin: var(--space-2) 0 0; }
 .buylist { width: min(760px, calc(100vw - 32px)); }
+.buylist[open] { display: flex; flex-direction: column; }  /* the list scrolls, the head and the copy button stay in view */
+#buy-body:not([hidden]) { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+.buylist .buy-list { max-height: none; flex: 1 1 auto; min-height: 160px; }
+.buylist .dialog-actions { flex: none; }
 .buy-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); margin: var(--space-2) 0; }
+.buy-compare { border-top: 1px solid var(--border); padding: var(--space-2) 0; }
+.buy-compare > summary { cursor: pointer; font-weight: 650; }
+.buy-compare p { margin: var(--space-2) 0; }
+.buy-compare-decks { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2); max-height: 22vh; overflow: auto; }
+.buy-compare-decks .check { border: 1px solid var(--border); border-radius: var(--radius); padding: 2px 10px; }
+.buy-compare-decks .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.buy-in { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.buy-in .pill { font-size: var(--fs-xs); }
 .buy-checks { display: flex; flex-direction: column; gap: 4px; }
 .buy-max { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
 .buy-max-input { display: inline-flex; align-items: center; gap: 4px; }

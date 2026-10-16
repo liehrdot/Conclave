@@ -4280,9 +4280,32 @@ async function loadBuylist() {
     const r = await api(`/api/decks/${enc(slug)}/buylist?owned=${$("#buy-owned").checked}&proxies=${$("#buy-proxies").checked}`);
     if (currentDeck?.slug !== slug) return;
     buyData = r;
+    renderBuyCompare();
     renderBuylist();
   } catch (err) { $("#buy-summary").textContent = err.message; }
 }
+// compare with 1..N other decks: picked slugs per deck, remembered in this browser
+const buyCompareKey = () => `mtgdeck.buycompare.${currentDeck?.slug}`;
+function buyPicked() {
+  return new Set($$("#buy-compare-decks input:checked").map((b) => b.value));
+}
+function renderBuyCompare() {
+  const r = buyData;
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem(buyCompareKey()) || "[]"); } catch { saved = []; }
+  const count = (slug) => r.items.filter((i) => i.decks.some((d) => d.slug === slug)).length;
+  $("#buy-compare").hidden = !r.other_decks.length;
+  $("#buy-compare-decks").innerHTML = r.other_decks.map((d) => `<label class="check"><input type="checkbox" value="${esc(d.slug)}"
+    ${saved.includes(d.slug) ? "checked" : ""}> <span>${esc(d.name)} <span class="count">(${count(d.slug)})</span></span></label>`).join("");
+  if (saved.some((s) => r.other_decks.some((d) => d.slug === s))) $("#buy-compare").open = true;
+  updateBuyCompareTitle();
+}
+function updateBuyCompareTitle() {
+  const n = buyPicked().size;
+  $("#buy-compare-title").textContent = n ? `Mit ${n} ${n === 1 ? "Deck" : "Decks"} verglichen` : "Mit anderen Decks vergleichen";
+  $("#buy-compare-mode").hidden = !n;
+}
+const buyMode = () => (buyPicked().size ? $("#buy-compare-mode input:checked")?.value || "all" : "all");
 const buyMax = () => { const v = parseFloat(String($("#buy-max").value).replace(",", ".")); return Number.isFinite(v) && v >= 0 ? v : null; };
 function renderBuylist() {
   const r = buyData, max = buyMax();
@@ -4291,8 +4314,14 @@ function renderBuylist() {
   $("#buy-proxies-box").hidden = !r.use_collection;
   $("#buy-body").hidden = !r.items.length;
   const price = (v) => (v ? esc(fmtPrice(v, "eur")) : "–");
+  const picked = buyPicked(), mode = buyMode();
+  const deckName = Object.fromEntries(r.other_decks.map((d) => [d.slug, d.name]));
   $("#buy-list").innerHTML = r.items.map((i, k) => {
+    const inPicked = i.decks.filter((d) => picked.has(d.slug));
+    if ((mode === "in" && !inPicked.length) || (mode === "none" && inPicked.length)) return "";
     const over = max != null && (i.trend || 0) > max;
+    const pills = inPicked.length ? `<span class="buy-in">${inPicked.map((d) =>
+      `<span class="pill">${esc(deckName[d.slug] || d.slug)}${d.qty > 1 ? ` ×${d.qty}` : ""}</span>`).join("")}</span>` : "";
     const owned = [i.real ? `${i.real} echt` : "", i.proxy ? `${i.proxy} Proxy` : ""].filter(Boolean).join(", ");
     const where = i.set_name ? `${esc(i.set_name)}${i.collector_number ? ` #${esc(i.collector_number)}` : ""}`
       : i.source === "scryfall" ? "Preis von Scryfall" : i.source ? "" : "kein Preis gefunden";
@@ -4300,7 +4329,7 @@ function renderBuylist() {
       <span class="qty">${i.qty}×</span>
       <span class="buy-card"><a href="${esc(i.url || i.search_url)}" target="_blank" rel="noopener" class="name">${esc(i.name)}</a>
         <span class="muted small">${where}${owned && r.use_collection ? ` · hast du: ${esc(owned)}` : ""}${i.in_decks?.length && r.use_collection
-          ? `, steckt in ${i.in_decks.slice(0, 2).map((n) => `„${esc(n)}“`).join(", ")}${i.in_decks.length > 2 ? " …" : ""}` : ""}</span></span>
+          ? `, steckt in ${i.in_decks.slice(0, 2).map((n) => `„${esc(n)}“`).join(", ")}${i.in_decks.length > 2 ? " …" : ""}` : ""}</span>${pills}</span>
       <span class="price" title="Billigstes Angebot irgendeiner Ausgabe">${price(i.total_low)}</span>
       <span class="price strong" title="Trendpreis der günstigsten Ausgabe">${price(i.total_trend)}</span></li>`;
   }).join("");
@@ -4324,10 +4353,14 @@ function updateBuylistSelection() {
   const sel = buySelected();
   const copies = sel.reduce((a, i) => a + i.qty, 0);
   const sum = (k) => sel.reduce((a, i) => a + (i[k] || 0), 0);
-  const skipped = r.items.length - sel.length;
+  const shown = $$("#buy-list input[type=checkbox]").length;
+  const skipped = shown - sel.length;
+  const picked = buyPicked();
+  const shared = picked.size ? r.items.filter((i) => i.decks.some((d) => picked.has(d.slug))).length : 0;
   $("#buy-summary").innerHTML = `<b>${copies} ${copies === 1 ? "Karte" : "Karten"}</b> kaufen · ≈ <b>${esc(fmtPrice(sum("total_trend"), "eur"))}</b> (Trend)`
     + ` · ab ${esc(fmtPrice(sum("total_low"), "eur"))}`
     + (skipped ? ` · ${skipped} ${skipped === 1 ? "Karte bleibt" : "Karten bleiben"} Proxy` : "")
+    + (picked.size ? ` · ${shared} von ${r.items.length} ${shared === 1 ? "steckt" : "stecken"} auch in den gewählten Decks` : "")
     + (!r.collection_size ? '<br><span class="muted">Deine Sammlung ist leer, deshalb steht das ganze Deck auf der Liste (ohne Standardländer).</span>'
       : !r.use_collection ? '<br><span class="muted">Ohne Abgleich steht das ganze Deck auf der Liste (ohne Standardländer).</span>'
       : '<br><span class="muted">Karten aus deiner Sammlung fehlen nur, wenn sie schon in einem anderen Deck stecken.</span>');
@@ -4335,6 +4368,12 @@ function updateBuylistSelection() {
   $("#buy-copy").disabled = !copies;
 }
 $("#buy-list").addEventListener("change", updateBuylistSelection);
+$("#buy-compare-decks").addEventListener("change", () => {
+  try { localStorage.setItem(buyCompareKey(), JSON.stringify([...buyPicked()])); } catch { /* only a convenience */ }
+  updateBuyCompareTitle();
+  renderBuylist();
+});
+$("#buy-compare-mode").addEventListener("change", renderBuylist);
 $("#buy-max").addEventListener("input", () => { if (buyData) renderBuylist(); });
 $("#buy-proxies").addEventListener("change", loadBuylist);
 $("#buy-owned").addEventListener("change", loadBuylist);

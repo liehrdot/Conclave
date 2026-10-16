@@ -1392,6 +1392,16 @@
     </div>
     <label class="buy-max"><span>Nur Karten bis</span><span class="buy-max-input"><input type="number" id="buy-max" min="0" step="0.5" inputmode="decimal" placeholder="alle"> €</span></label>
   </div>
+  <details class="buy-compare" id="buy-compare" hidden>
+    <summary id="buy-compare-title">Mit anderen Decks vergleichen</summary>
+    <p class="muted small">Wähl Decks aus: bei jeder Karte steht dann, in welchem davon sie schon steckt.</p>
+    <div class="buy-compare-decks" id="buy-compare-decks"></div>
+    <div class="segmented small" role="radiogroup" aria-label="Welche Karten zeigen?" id="buy-compare-mode" hidden>
+      <label><input type="radio" name="buymode" value="all" checked><span>Alle Karten</span></label>
+      <label><input type="radio" name="buymode" value="in"><span>In gewählten Decks</span></label>
+      <label><input type="radio" name="buymode" value="none"><span>In keinem davon</span></label>
+    </div>
+  </details>
   <div id="buy-body" hidden>
     <div class="buy-head" aria-hidden="true"><span></span><span></span><span>Karte · günstigste Ausgabe</span><span>ab</span><span>Trend</span></div>
     <ul id="buy-list" class="dc-list buy-list"></ul>
