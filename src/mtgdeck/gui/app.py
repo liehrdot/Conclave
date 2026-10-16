@@ -1029,7 +1029,7 @@ async def api_deck(slug: str) -> dict[str, Any]:
         deck = storage.load(slug)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
-    names = deck.get("commanders", []) + [c["name"] for c in deck.get("cards", [])]
+    names = deck.get("commanders", []) + [c["name"] for c in deck.get("cards", [])] + [m["name"] for m in deck.get("maybe") or []]
     try:
         card_data, _, _ = await resolve(names)
     except Exception as exc:  # offline: show the list without images/prices
@@ -1065,11 +1065,18 @@ class AddCard(BaseModel):
     category: str | None = None
 
 
+class MaybeCard(BaseModel):
+    name: str
+    category: str | None = None
+
+
 class EditRequest(BaseModel):
     add: list[AddCard] = []
     remove: list[str] = []
     set_qty: dict[str, int] = {}
     set_category: dict[str, str] = {}
+    maybe_add: list[MaybeCard] = []
+    maybe_remove: list[str] = []
     note: str = ""
 
 
@@ -1079,7 +1086,8 @@ async def api_edit_cards(slug: str, req: EditRequest) -> dict[str, Any]:
     try:
         return await deckedit.edit_deck(
             slug, add=[a.model_dump() for a in req.add], remove=req.remove, set_qty=req.set_qty,
-            set_category=req.set_category, note=req.note,
+            set_category=req.set_category, maybe_add=[m.model_dump() for m in req.maybe_add],
+            maybe_remove=req.maybe_remove, note=req.note,
         )  # fmt: skip
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc

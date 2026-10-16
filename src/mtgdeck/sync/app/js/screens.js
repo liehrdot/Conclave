@@ -210,7 +210,9 @@ function segment(d, seg) {
     return `<p class="hint-small">${total} Karten · Bilder und Texte von Scryfall, danach auch offline.</p>
       <div class="cat-head"><span>Commander</span></div><div class="group cards-group">${d.commanders.map((c) => row(c, 1)).join("")}</div>
       ${order.map((k) => `<div class="cat-head"><span>${esc(CAT_LABELS[k] || k)}</span><span>${groups[k].reduce((n, c) => n + c.qty, 0)}</span></div>
-        <div class="group cards-group">${groups[k].map((c) => row(c.name, c.qty)).join("")}</div>`).join("")}`;
+        <div class="group cards-group">${groups[k].map((c) => row(c.name, c.qty)).join("")}</div>`).join("")}
+      ${d.maybe?.length ? `<div class="cat-head maybe-head"><span>${icon("maybe", "xs")}Vielleicht</span><span>${d.maybe.length} · zählt nicht</span></div>
+        <div class="group cards-group maybe-group">${d.maybe.map((m) => row(m.name, 1, CAT_LABELS[m.category] || m.category)).join("")}</div>` : ""}`;
   }
   const games = gamesOf(d.slug);
   return games.length ? `<div class="group">${games.map((g) => gameRow(g, { showDeck: false })).join("")}</div>`

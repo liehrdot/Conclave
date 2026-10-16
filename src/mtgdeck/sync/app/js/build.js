@@ -2,6 +2,8 @@
 // switch on a phone. Every tap goes into a draft on this device (survives closing the app, works offline); "Speichern"
 // sends the draft as one "deck.edit" operation, so the deck gets one new version, like a saved edit at the PC. The
 // check (legality, bracket, price) runs on the PC after its next sync – card data never goes through the server.
+// The maybe list ("Vielleicht") collects cards the user is unsure about; they never count towards the deck. A card is in
+// the deck or on its maybe list, never both (sync/../maybe.py does the same on the server).
 
 import { deckBy, onChange, op, serverCall, state } from "./data.js";
 import { cardSheet } from "./forms.js";
@@ -11,7 +13,8 @@ import { closeSheet, openSheet, redraw as redrawSheet, toast } from "./ui.js";
 import { $, $$, debounce, esc, icon, load, mana, pips, plural, reducedMotion, save, vibrate } from "./util.js";
 
 const KEY = "amtisch.build";
-const drafts = load(KEY, {});  // slug -> {cards: {name: {qty, category}}} – only the cards touched, with their new state
+// slug -> {cards: {name: {qty, category}}, maybe: {name: {on, category}}} – only the cards touched, with their new state
+const drafts = load(KEY, {});
 const keep = () => save(KEY, drafts);
 const BASICS = new Set(["Plains", "Island", "Swamp", "Mountain", "Forest", "Wastes", "Snow-Covered Plains", "Snow-Covered Island",
   "Snow-Covered Swamp", "Snow-Covered Mountain", "Snow-Covered Forest", "Snow-Covered Wastes"]);
@@ -56,32 +59,96 @@ function merged(d) {
   return Object.values(out);
 }
 
+const savedMaybe = (d) => Object.fromEntries((d.maybe || []).map((m) => [m.name, m]));
+
+/** The maybe list as it will be: saved entries minus what goes into the deck or is taken off, plus the draft's. */
+function maybeList(d) {
+  const draft = drafts[d.slug]?.maybe || {};
+  const inDeck = new Set(merged(d).filter((c) => c.qty > 0).map((c) => c.name));
+  const out = {};
+  for (const m of d.maybe || []) if (draft[m.name]?.on !== false) out[m.name] = { name: m.name, category: m.category || "Synergy", isNew: false };
+  for (const [name, m] of Object.entries(draft)) if (m.on && !out[name]) out[name] = { name, category: m.category, isNew: true, fromDeck: !!current(d)[name] };
+  return Object.values(out).filter((m) => !inDeck.has(m.name)).sort((a, b) => a.name.localeCompare(b.name));
+}
+const isMaybe = (d, name) => maybeList(d).some((m) => m.name === name);
+
 /** What the draft changes compared with the deck from the server (also after the PC changed the deck meanwhile). */
 export function changes(d) {
   const cur = current(d);
   const draft = drafts[d.slug]?.cards || {};
+  const saved = savedMaybe(d);
+  const maybeAdd = Object.entries(drafts[d.slug]?.maybe || {}).filter(([n, m]) => m.on && !saved[n] && !(draft[n]?.qty > 0)).map(([name, m]) => ({ name, category: m.category }));
+  const maybeRemove = Object.entries(drafts[d.slug]?.maybe || {}).filter(([n, m]) => !m.on && saved[n]).map(([n]) => n);
+  const moving = new Set(maybeAdd.map((m) => m.name));  // deck → maybe: the server moves it, no separate removal
   const add = [], setQty = {}, setCat = {};
   for (const [name, c] of Object.entries(draft)) {
     const was = cur[name];
     if (!was) { if (c.qty > 0) add.push({ name, qty: c.qty, category: c.category }); continue; }
-    if (c.qty !== was.qty) setQty[name] = c.qty;
+    if (c.qty !== was.qty && !(c.qty === 0 && moving.has(name))) setQty[name] = c.qty;
     if (c.qty > 0 && c.category !== was.category) setCat[name] = c.category;
   }
-  const count = add.length + Object.keys(setQty).length + Object.keys(setCat).filter((n) => !(n in setQty)).length;
-  return { add, set_qty: setQty, set_category: setCat, count };
+  const count = add.length + Object.keys(setQty).length + Object.keys(setCat).filter((n) => !(n in setQty)).length + maybeAdd.length + maybeRemove.length;
+  return { add, set_qty: setQty, set_category: setCat, maybe_add: maybeAdd, maybe_remove: maybeRemove, count };
 }
 export const draftCount = (d) => (d && drafts[d.slug] ? changes(d).count : 0);
 
 function setCard(d, name, patch) {
   const was = current(d)[name];
   const draft = (drafts[d.slug] ||= { cards: {} });
+  draft.cards ||= {};
   const now = { qty: was?.qty || 0, category: was?.category || guessCategory(name), ...draft.cards[name], ...patch };
   if (was && now.qty === was.qty && now.category === was.category) delete draft.cards[name];
   else if (!was && now.qty <= 0) delete draft.cards[name];
   else draft.cards[name] = now;
-  if (!Object.keys(draft.cards).length) delete drafts[d.slug];
+  if (now.qty > 0 && draft.maybe?.[name]) delete draft.maybe[name];  // into the deck: off the maybe list
+  tidy(d);
   keep();
   changed();
+}
+
+function tidy(d) {
+  const draft = drafts[d.slug];
+  if (!draft) return;
+  if (draft.maybe && !Object.keys(draft.maybe).length) delete draft.maybe;
+  if (!Object.keys(draft.cards || {}).length && !draft.maybe) delete drafts[d.slug];
+}
+
+/** Put a card on the maybe list; a card in the deck moves there (it leaves the deck). */
+function toMaybe(d, name, { quiet = false } = {}) {
+  if (d.commanders.includes(name)) { toast(`${name} ist dein Commander.`); return; }
+  if (isMaybe(d, name)) { if (!quiet) toast(`${name} steht schon auf „Vielleicht“`); return; }
+  const have = qtyOf(d, name);
+  const before = JSON.stringify(drafts[d.slug] || null);
+  const draft = (drafts[d.slug] ||= { cards: {} });
+  const category = merged(d).find((c) => c.name === name)?.category || guessCategory(name);
+  draft.maybe = { ...draft.maybe, [name]: { on: true, category } };
+  if (have) setCard(d, name, { qty: 0 }); else { keep(); changed(); }
+  vibrate(10);
+  if (!quiet) toast(have ? `${name} → Vielleicht` : `${name} auf „Vielleicht“`, { ok: true, ms: 2200, sub: "Zählt nicht zum Deck.",
+    action: { label: "Rückgängig", run: () => { const old = JSON.parse(before); if (old) drafts[d.slug] = old; else delete drafts[d.slug]; keep(); changed(); } } });
+}
+
+/** Take a card off the maybe list (not into the deck). */
+function offMaybe(d, name) {
+  const draft = (drafts[d.slug] ||= { cards: {} });
+  draft.maybe ||= {};
+  if (draft.maybe[name]?.on) delete draft.maybe[name];
+  else if (savedMaybe(d)[name]) draft.maybe[name] = { on: false };
+  tidy(d);
+  keep();
+  changed();
+}
+
+/** From the maybe list into the deck, with the category it had there. */
+function maybeToDeck(d, name) {
+  const m = maybeList(d).find((x) => x.name === name);
+  if (!m) return;
+  const draft = drafts[d.slug];
+  if (draft?.maybe?.[name]?.on) delete draft.maybe[name];
+  if (m.fromDeck) { const was = current(d)[name]; setCard(d, name, { qty: was.qty, category: was.category }); return; }
+  setCard(d, name, { qty: 1, category: m.category });
+  vibrate(10);
+  toast(`${name} ins Deck`, { ok: true, ms: 2200, action: { label: "Rückgängig", run: () => setCard(d, name, { qty: 0 }) } });
 }
 
 const qtyOf = (d, name) => merged(d).find((c) => c.name === name)?.qty || 0;
@@ -102,6 +169,8 @@ function saveDraft(d) {
   if (c.add.length) payload.add = c.add;
   if (Object.keys(c.set_qty).length) payload.set_qty = c.set_qty;
   if (Object.keys(c.set_category).length) payload.set_category = c.set_category;
+  if (c.maybe_add.length) payload.maybe_add = c.maybe_add;
+  if (c.maybe_remove.length) payload.maybe_remove = c.maybe_remove;
   op("deck.edit", payload);
   delete drafts[d.slug];
   keep();
@@ -282,7 +351,8 @@ function tile(d, c) {
   return `<div class="tile${off ? " off" : ""}" data-tile="${esc(c.name)}">
     <button class="tile-img" type="button" data-open="${esc(c.name)}" aria-label="${esc(c.name)} ansehen">${art(c.name, "image", "tile-pic")}<span class="tile-name">${esc(c.name)}</span></button>
     ${off ? `<span class="tile-off">Nicht in deinen Farben</span>`
-      : `<button class="tile-add" type="button" data-add="${esc(c.name)}" aria-label="${esc(c.name)} ins Deck">${icon("plus")}</button>`}
+      : `<button class="tile-maybe" type="button" data-maybe="${esc(c.name)}" aria-label="${esc(c.name)} auf die Vielleicht-Liste">${icon("maybe")}</button>
+         <button class="tile-add" type="button" data-add="${esc(c.name)}" aria-label="${esc(c.name)} ins Deck">${icon("plus")}</button>`}
     <span class="tile-have" aria-hidden="true"></span>
   </div>`;
 }
@@ -311,6 +381,7 @@ function renderResults(d) {
       ${r.cards.length > r.show || r.next ? `<div class="btn-col"><button class="btn" type="button" id="b-more">Mehr zeigen</button></div>` : ""}`
       : `<div class="empty">${icon("search")}<h3>Keine Karte gefunden</h3><p>${r.explain ? "Beschreib es etwas allgemeiner." : "Anders schreiben oder den Filter weglassen."}</p></div>`}`;
   for (const b of $$("[data-add]", out)) b.addEventListener("click", () => addCard(deckBy(d.slug) || d, b.dataset.add));
+  for (const b of $$("[data-maybe]", out)) b.addEventListener("click", () => toMaybe(deckBy(d.slug) || d, b.dataset.maybe));
   for (const b of $$("[data-open]", out)) b.addEventListener("click", () => openCard(d.slug, b.dataset.open));
   $("#b-more", out)?.addEventListener("click", async (e) => {
     e.currentTarget.disabled = true;
@@ -329,10 +400,12 @@ function markTiles(d) {
   d = deckBy(d.slug) || d;
   const have = Object.fromEntries(merged(d).filter((c) => c.qty > 0).map((c) => [c.name, c.qty]));
   for (const c of d.commanders) have[c] = "C";
+  for (const m of maybeList(d)) have[m.name] = "?";
   for (const t of $$("[data-tile]")) {
     const n = have[t.dataset.tile];
-    t.classList.toggle("in", !!n);
-    t.querySelector(".tile-have").innerHTML = n ? `${icon("check", "xs")}${n === "C" ? "Commander" : n > 1 ? `${n}×` : "Im Deck"}` : "";
+    t.classList.toggle("in", !!n && n !== "?");
+    t.classList.toggle("maybe", n === "?");
+    t.querySelector(".tile-have").innerHTML = n === "?" ? `${icon("maybe", "xs")}Vielleicht` : n ? `${icon("check", "xs")}${n === "C" ? "Commander" : n > 1 ? `${n}×` : "Im Deck"}` : "";
   }
 }
 
@@ -346,7 +419,8 @@ function renderDeck(d) {
   if (!box) return;
   const cards = merged(d);
   const live = cards.filter((c) => c.qty > 0);
-  const gone = cards.filter((c) => c.qty === 0 && c.was > 0);
+  const maybe = maybeList(d);
+  const gone = cards.filter((c) => c.qty === 0 && c.was > 0 && !maybe.some((m) => m.name === c.name));
   // basic lands get steppers of their own (Scryfall's search leaves them out), one per colour of the commander
   const basicNames = [...new Set([...[..."WUBRG"].filter((c) => d.colors.includes(c)).map((c) => BASIC_OF[c]), ...live.filter((c) => BASICS.has(c.name)).map((c) => c.name)])];
   if (!basicNames.length) basicNames.push("Wastes");
@@ -382,7 +456,14 @@ function renderDeck(d) {
     ${gone.length ? `<div class="cat-head"><span>Herausgenommen</span><span>${gone.length}</span></div>
       <div class="group cards-group">${gone.map((c) => `<div class="row b-row gone"><span class="thumb card-thumb">${art(c.name, "small", "thumb card-thumb")}</span>
         <span class="main"><span class="title">${esc(c.name)}</span></span>
-        <button class="btn plain small" type="button" data-back="${esc(c.name)}">Zurück</button></div>`).join("")}</div>` : ""}`;
+        <button class="btn plain small" type="button" data-back="${esc(c.name)}">Zurück</button></div>`).join("")}</div>` : ""}
+    <div class="cat-head maybe-head"><span>${icon("maybe", "xs")}Vielleicht</span><span>${maybe.length ? `${maybe.length} · zählt nicht` : ""}</span></div>
+    ${maybe.length ? `<div class="group cards-group maybe-group">${maybe.map((m) => `<div class="row b-row"><button class="b-open" type="button" data-maybe-card="${esc(m.name)}">
+        <span class="thumb card-thumb">${art(m.name, "small", "thumb card-thumb")}</span>
+        <span class="main"><span class="title">${esc(m.name)}</span><span class="subtitle">${m.isNew ? `<span class="b-tag new">${m.fromDeck ? "aus dem Deck" : "neu"}</span> ` : ""}${esc(CAT_LABELS[m.category] || m.category)}${inColors(d, m.name) ? "" : ` · <span class="flag">nicht in deinen Farben</span>`}</span></span></button>
+        <button class="icon-btn b-in" type="button" data-maybe-in="${esc(m.name)}" aria-label="${esc(m.name)} ins Deck">${icon("plus", "sm")}</button>
+        <button class="icon-btn b-minus" type="button" data-maybe-off="${esc(m.name)}" aria-label="${esc(m.name)} von der Vielleicht-Liste nehmen">${icon("x", "sm")}</button></div>`).join("")}</div>`
+      : `<p class="hint-small maybe-empty">Unsicher bei einer Karte? Tipp auf ${icon("maybe", "xs")} – sie kommt auf die Vielleicht-Liste und zählt nicht zum Deck.</p>`}`;
   box.querySelector("[data-meter]").style.width = `${Math.min(100, total)}%`;
   box.querySelector(".b-meter").classList.toggle("over", total > 100);
   for (const b of $$("[data-minus]", box)) b.addEventListener("click", () => { const n = b.dataset.minus; setCard(d, n, { qty: qtyOf(d, n) - 1 }); });
@@ -390,6 +471,9 @@ function renderDeck(d) {
   for (const b of $$("[data-back]", box)) b.addEventListener("click", () => { const c = gone.find((x) => x.name === b.dataset.back); setCard(d, c.name, { qty: c.was, category: c.wasCat }); });
   for (const b of $$("[data-deck-card]", box)) b.addEventListener("click", () => deckCardSheet(d.slug, b.dataset.deckCard));
   for (const b of $$("[data-open-card]", box)) b.addEventListener("click", () => cardSheet(b.dataset.openCard));
+  for (const b of $$("[data-maybe-in]", box)) b.addEventListener("click", () => maybeToDeck(deckBy(d.slug) || d, b.dataset.maybeIn));
+  for (const b of $$("[data-maybe-off]", box)) b.addEventListener("click", () => offMaybe(deckBy(d.slug) || d, b.dataset.maybeOff));
+  for (const b of $$("[data-maybe-card]", box)) b.addEventListener("click", () => openCard(d.slug, b.dataset.maybeCard));
   scry.hydrate(box);
   paint(box);
   const head = `${total}/100`;
@@ -412,12 +496,18 @@ function renderBar(d) {
   $("#b-discard", bar).addEventListener("click", () => discard(deckBy(d.slug) || d));
 }
 
-// a card from the results: look at it (German text), with "Ins Deck" at the bottom
+// a card from the results or the maybe list: look at it (German text), with "Ins Deck" and "Vielleicht" at the bottom
 function openCard(slug, name) {
   const d = deckBy(slug);
   if (!d) return;
   const ok = inColors(d, name) && !d.commanders.includes(name);
-  cardSheet(name, ok ? { label: qtyOf(d, name) && !manyAllowed(name) ? null : "Ins Deck", run: () => { closeSheet(); addCard(deckBy(slug), name); } } : null);
+  const onMaybe = isMaybe(d, name);
+  const inDeck = qtyOf(d, name) && !manyAllowed(name);
+  cardSheet(name, ok ? {
+    label: inDeck ? null : "Ins Deck",
+    run: () => { closeSheet(); if (onMaybe) maybeToDeck(deckBy(slug), name); else addCard(deckBy(slug), name); },
+    alt: onMaybe || qtyOf(d, name) ? null : { label: "Vielleicht", icon: "maybe", run: () => { closeSheet(); toMaybe(deckBy(slug), name); } },
+  } : null);
 }
 
 // a card in the deck: category, quantity, take it out
@@ -439,11 +529,13 @@ function deckCardSheet(slug, name) {
           </div></div>
         <div class="field-label">Kategorie</div>
         <div class="chips" id="b-cats">${CATS.map((k) => `<button class="chip" type="button" data-cat="${esc(k)}" aria-pressed="${c.category === k}">${esc(CAT_LABELS[k])}</button>`).join("")}</div>
-        <div class="btn-col"><button class="btn danger" type="button" id="b-remove">${icon("trash", "sm")}Aus dem Deck nehmen</button></div>`,
+        <div class="btn-col"><button class="btn" type="button" id="b-to-maybe">${icon("maybe", "sm")}Auf die Vielleicht-Liste</button>
+          <button class="btn danger" type="button" id="b-remove">${icon("trash", "sm")}Aus dem Deck nehmen</button></div>`,
       bind(el) {
         for (const b of $$("[data-cat]", el)) b.addEventListener("click", () => { setCard(d, name, { category: b.dataset.cat }); redrawSheet(); });
         for (const b of $$("[data-step]", el)) b.addEventListener("click", () => { setCard(d, name, { qty: Math.max(0, Math.min(99, c.qty + Number(b.dataset.step))) }); redrawSheet(); });
         $("#b-remove", el).addEventListener("click", () => { setCard(d, name, { qty: 0 }); close(); });
+        $("#b-to-maybe", el).addEventListener("click", () => { close(); toMaybe(d, name); });
         $("#b-text", el).addEventListener("click", () => { close(); setTimeout(() => cardSheet(name), 260); });
       },
     };

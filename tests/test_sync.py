@@ -166,6 +166,30 @@ def test_deck_changed_on_both_devices_merges_cards_and_keeps_all_versions(world)
     assert sync(a)["pushed"] == [] and sync(b)["pulled"] == []
 
 
+def test_maybe_lists_changed_on_both_devices_merge_per_card(world):
+    store, a, b, use, sync = world
+    use(a)
+    deck = _deck("Meren", [("Sol Ring", 1), ("Forest", 30)])
+    deck["maybe"] = [{"name": "Rhystic Study", "category": "Draw"}]
+    storage.save(deck)
+    sync(a), sync(b)
+    d = storage.load("meren")
+    d["maybe"].append({"name": "Viscera Seer", "category": "Synergy"})
+    storage.save(d)  # A: one more maybe card
+    use(b)
+    d = storage.load("meren")
+    d["cards"] = [c for c in d["cards"] if c["name"] != "Sol Ring"]
+    d["maybe"] = [{"name": "Sol Ring", "category": "Ramp"}]  # B: Sol Ring moved to the list, Rhystic Study dropped
+    storage.save(d)
+    use(a), sync(a)
+    use(b), sync(b)
+    deck = storage.load("meren")
+    assert [m["name"] for m in deck["maybe"]] == ["Sol Ring", "Viscera Seer"]
+    assert {c["name"] for c in deck["cards"]} == {"Forest"}
+    use(a), sync(a)
+    assert storage.load("meren")["maybe"] == deck["maybe"]
+
+
 def test_deck_only_extras_changed_on_one_side_needs_no_new_version(world):
     store, a, b, use, sync = world
     use(a)

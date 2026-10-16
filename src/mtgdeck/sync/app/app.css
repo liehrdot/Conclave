@@ -335,6 +335,8 @@ dialog.sheet.entering::backdrop, dialog.sheet.closing::backdrop { opacity: 0; }
 .sheet-bar > :last-child { justify-self: end; }
 /* flex-basis auto, not 0%: iPhone WebKit (iOS 26) sizes the dialog from the items' basis, so flex: 1 left only the head */
 .sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 20px 20px; -webkit-overflow-scrolling: touch; }
+.foot-row { display: flex; gap: 10px; }
+.foot-row .btn { flex: 1; }
 .sheet-foot { flex: none; padding: 10px 20px calc(10px + max(env(safe-area-inset-bottom), 8px)); background: linear-gradient(180deg, color-mix(in srgb, var(--bg) 0%, transparent), var(--bg) 30%); }
 body.kb-open .sheet-foot { padding-bottom: 10px; }
 .sheet .page { animation: page-in .32s var(--spring); }
@@ -795,6 +797,17 @@ body.wide .screen { max-width: 1320px; }
   border-radius: var(--r-pill); background: var(--win); color: #fff; font-size: var(--t-cap); font-weight: 700; box-shadow: 0 2px 8px rgb(0 0 0 / .25);
 }
 .tile.in .tile-pic { outline: 3px solid var(--win); outline-offset: -1px; }
+/* "?" = onto the maybe list, left of the "+" */
+.tile-maybe {
+  position: absolute; right: 60px; bottom: 10px; width: 40px; height: 40px; border: 0; border-radius: 50%;
+  display: grid; place-items: center; background: var(--surface); color: var(--accent);
+  box-shadow: 0 3px 10px rgb(0 0 0 / .28); transition: transform .12s var(--ease-out);
+}
+.tile-maybe .icon { width: 22px; height: 22px; }
+.tile-maybe:active { transform: scale(.9); }
+.tile.in .tile-maybe, .tile.maybe .tile-maybe { display: none; }  /* in the deck: "Auf die Vielleicht-Liste" is in its sheet */
+.tile.maybe .tile-pic { outline: 3px dashed var(--accent); outline-offset: -1px; }
+.tile.maybe .tile-have { background: var(--accent); color: var(--on-accent); }
 .tile.off .tile-pic { filter: grayscale(.85); opacity: .5; }
 .tile-off { position: absolute; left: 6px; right: 6px; bottom: 6px; padding: 6px 8px; border-radius: 10px; text-align: center;
   background: rgb(20 20 28 / .72); color: #fff; font-size: var(--t-cap); font-weight: 650; }
@@ -822,6 +835,13 @@ button.row.b-open { padding: 6px 14px; }
 .b-row.gone { padding-left: 14px; gap: 12px; }
 .b-row.gone .title { text-decoration: line-through; color: var(--text-3); }
 .b-row.gone .thumb { opacity: .45; }
+/* the maybe list: never counted, set apart with a dashed edge */
+.maybe-head span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+.maybe-head .icon { color: var(--accent); }
+.group.maybe-group { border: 1.5px dashed var(--sep-strong, var(--sep)); background: transparent; }
+.b-in { color: var(--accent); background: var(--accent-soft); }
+.maybe-empty { padding: 4px 16px 8px; }
+.maybe-empty .icon { width: 14px; height: 14px; vertical-align: -2px; color: var(--accent); }
 .empty.small { padding: 28px 16px; }
 .empty.small .icon { width: 32px; height: 32px; }
 
@@ -860,7 +880,8 @@ body.immersive:not(.has-build-bar) .toasts { bottom: calc(max(env(safe-area-inse
   body.has-build-bar .pane-deck { padding-bottom: 92px; }
   body.wide .toasts { right: calc(38% + 12px); bottom: calc(max(env(safe-area-inset-bottom), 12px) + 12px); }
 }
-@media (min-width: 800px) and (max-width: 1099px) { .tiles { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px 10px; } .tile-add { width: 44px; height: 44px; } }
+@media (min-width: 800px) and (max-width: 1099px) { .tiles { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px 10px; } .tile-add { width: 44px; height: 44px; }
+  .tile-maybe { width: 36px; height: 36px; right: 56px; } }
 @media (min-width: 800px) { body.wide .toasts { right: calc(max(38%, 452px) + 12px); } }
 .build-bar-inner b { white-space: nowrap; }
 @media (max-width: 799px) { .b-sum { background: none; } }

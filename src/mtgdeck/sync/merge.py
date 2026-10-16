@@ -135,15 +135,15 @@ def merge_lines(base: str | Any, local: str, remote: str) -> str:
 
 # --- decks --------------------------------------------------------------------------------------
 
-DECK_SPECIAL = {"cards", "history", "version", "created", "updated", "validation", "slug", "last_job", "needs_revalidation"}
+DECK_SPECIAL = {"cards", "maybe", "history", "version", "created", "updated", "validation", "slug", "last_job", "needs_revalidation"}
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def _cards_map(deck: Any) -> dict[str, Any]:
-    return {c["name"]: c for c in (deck or {}).get("cards", [])} if isinstance(deck, dict) else {}
+def _cards_map(deck: Any, key: str = "cards") -> dict[str, Any]:
+    return {c["name"]: c for c in (deck or {}).get(key) or []} if isinstance(deck, dict) else {}
 
 
 def _content(deck: dict[str, Any]) -> str:
@@ -167,10 +167,14 @@ def merge_deck(base: Any, local: dict[str, Any], remote: dict[str, Any], log: Lo
     base_version = int(b.get("version") or 0)
     # cards: per card name; everything else except bookkeeping: generic
     cards = merge_json(_cards_map(base) or MISSING, _cards_map(local), _cards_map(remote), log, "cards")
+    maybe = merge_json(_cards_map(base, "maybe") if b else MISSING, _cards_map(local, "maybe"), _cards_map(remote, "maybe"), log, "maybe")
     rest = merge_json({k: v for k, v in b.items() if k not in DECK_SPECIAL} if b else MISSING,
                       {k: v for k, v in local.items() if k not in DECK_SPECIAL},
                       {k: v for k, v in remote.items() if k not in DECK_SPECIAL}, log)  # fmt: skip
     merged = {**rest, "slug": remote.get("slug") or local.get("slug"), "cards": list(cards.values())}
+    maybe = {n: m for n, m in maybe.items() if n not in cards}  # a card is in the deck or on its maybe list, not both
+    if maybe:
+        merged["maybe"] = sorted(maybe.values(), key=lambda m: m["name"])
 
     remote_history = list(remote.get("history") or [])
     remote_max = max([int(remote.get("version") or 0), *(int(h.get("version") or 0) for h in remote_history)])

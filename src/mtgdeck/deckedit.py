@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import blacklist, carddb, scryfall, storage
+from . import blacklist, carddb, maybe as maybe_list, scryfall, storage
 from .cards import resolve
 from .deck import ROLE_TAGS, card_roles, primary_type
 from .power import PowerProfile
@@ -65,18 +65,23 @@ async def edit_deck(
     remove: list[str] | None = None,
     set_qty: dict[str, int] | None = None,
     set_category: dict[str, str] | None = None,
+    maybe_add: list[dict[str, Any]] | None = None,
+    maybe_remove: list[str] | None = None,
     note: str = "",
 ) -> dict[str, Any]:
     """Apply changes to a saved deck, re-validate and save it as a new version.
 
     ``add``: ``[{"name", "qty"=1, "category"=None}]`` (quantities add up), ``remove``: names (all
     copies), ``set_qty``: name -> quantity (0 removes), ``set_category``: name -> category.
+    ``maybe_add``: ``[{"name", "category"=None}]`` onto the maybe list (a deck card moves there), ``maybe_remove``:
+    names off it (see ``maybe.change``); cards added to the deck leave the list by themselves.
     Raises ``ValueError`` for unknown card names or when nothing changes. If the deck was saved
     meanwhile (another window, a sync), the change is applied again to the newer version.
     """
     for attempt in range(3):
         try:
-            return await _edit_once(slug, add=add, remove=remove, set_qty=set_qty, set_category=set_category, note=note)
+            return await _edit_once(slug, add=add, remove=remove, set_qty=set_qty, set_category=set_category,
+                                    maybe_add=maybe_add, maybe_remove=maybe_remove, note=note)  # fmt: skip
         except storage.ConflictError:
             if attempt == 2:
                 raise
@@ -84,7 +89,8 @@ async def edit_deck(
 
 
 async def _edit_once(slug: str, *, add: list[dict[str, Any]] | None, remove: list[str] | None,
-                     set_qty: dict[str, int] | None, set_category: dict[str, str] | None, note: str) -> dict[str, Any]:  # fmt: skip
+                     set_qty: dict[str, int] | None, set_category: dict[str, str] | None,
+                     maybe_add: list[dict[str, Any]] | None, maybe_remove: list[str] | None, note: str) -> dict[str, Any]:  # fmt: skip
     deck = storage.load(slug)
     start_version = deck.get("version")
     cards: dict[str, dict[str, Any]] = {c["name"]: dict(c) for c in deck.get("cards", [])}
@@ -94,8 +100,11 @@ async def _edit_once(slug: str, *, add: list[dict[str, Any]] | None, remove: lis
     changed: list[str] = []
 
     add = [a for a in (add or []) if (a.get("name") or "").strip()]
-    if add:
-        data, renames, missing = await resolve([a["name"] for a in add])
+    maybe_add = [a for a in (maybe_add or []) if (a.get("name") or "").strip()]
+    data: dict[str, Any] = {}
+    renames: dict[str, str] = {}
+    if add or maybe_add:
+        data, renames, missing = await resolve([a["name"] for a in add + maybe_add])
         if missing:
             raise ValueError(f"Karte nicht gefunden: {', '.join(missing)}")
         for a in add:
@@ -129,8 +138,17 @@ async def _edit_once(slug: str, *, add: list[dict[str, Any]] | None, remove: lis
             cards[name]["category"] = category
             changed.append(f"{name} → {category}")
 
-    if not (added or removed or changed):
+    maybe = maybe_list.entries(deck)
+    before = dict(maybe)
+    maybe_note = maybe_list.change(
+        cards, maybe, commanders=commanders, remove=list(maybe_remove or []),
+        add=[{"name": renames.get(a["name"].strip(), a["name"].strip()), "category": a.get("category")} for a in maybe_add],
+        guess=lambda n: guess_category(data.get(n, {})),
+    )  # fmt: skip
+    changed += ["; ".join(maybe_note)] if maybe_note else []
+    if not (added or removed or changed or maybe != before):
         raise ValueError("Keine Änderung.")
+    maybe_list.store(deck, maybe)
     deck["cards"] = sorted(cards.values(), key=lambda c: c["name"])
     result = await revalidate(deck)
     change_note = deck["change_note"] = _note(added, removed, changed, note)
