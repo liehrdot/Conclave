@@ -175,7 +175,7 @@ async function route() {
     lastView = key;
   }
   document.title = (r.view === "deck" && currentDeck ? currentDeck.name
-    : { new: "Neues Deck", collection: "Meine Sammlung", orders: "Sammelbestellungen", glossary: "Glossar", opponents: "Gegnerdecks", tables: "Tischregeln", blacklist: "Blacklist", settings: "Einstellungen" }[r.view]) + " · Commander Deckbuilder";
+    : { new: "Neues Deck", collection: "Meine Sammlung", orders: "Sammelbestellungen", glossary: "Glossar", opponents: "Gegnerdecks", tables: "Tischregeln", blacklist: "Blacklist", settings: "Einstellungen" }[r.view]) + " · Conclave";
 }
 window.addEventListener("hashchange", route);
 

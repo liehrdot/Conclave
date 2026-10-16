@@ -1,10 +1,10 @@
-# One-click launcher for the MTG Commander Deckbuilder GUI.
+# One-click launcher for the Conclave GUI.
 # First run: installs uv (if missing) and the dependencies.
 # Every run: syncs dependencies (fast no-op when nothing changed), starts the GUI, opens the browser.
 
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $PSScriptRoot
-$Host.UI.RawUI.WindowTitle = 'MTG Deckbuilder'
+$Host.UI.RawUI.WindowTitle = 'Conclave'
 
 $port    = if ($env:MTG_GUI_PORT) { [int]$env:MTG_GUI_PORT } else { 8765 }
 $url     = "http://127.0.0.1:$port"

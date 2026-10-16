@@ -48,7 +48,7 @@ pub fn start(app: AppHandle, backend: Backend, autostart_item: CheckMenuItem<Wry
                     let _ = app
                         .notification()
                         .builder()
-                        .title(n["title"].as_str().unwrap_or(backend::APP_FOLDER))
+                        .title(n["title"].as_str().unwrap_or(backend::APP_NAME))
                         .body(n["body"].as_str().unwrap_or(""))
                         .show();
                 }

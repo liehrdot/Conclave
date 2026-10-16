@@ -23,7 +23,7 @@ function parse() {
 
 function screenFor(r) {
   if (state.mode === "none") return welcome(linkCode);
-  if (!state.snap) return { html: `<div class="empty">${icon("cloud")}<h3>Lade deine Daten …</h3><p>Einen Moment – beim ersten Mal braucht es Netz.</p></div>`, bar: { title: "Am Tisch" } };
+  if (!state.snap) return { html: `<div class="empty">${icon("cloud")}<h3>Lade deine Daten …</h3><p>Einen Moment – beim ersten Mal braucht es Netz.</p></div>`, bar: { title: "Conclave" } };
   if (r.tab === "decks" && r.id) return deck(r.id, r.seg || "rule0");
   if (r.tab === "gegner" && r.id) return opponent(r.id);
   if (r.tab === "runde") return roundScreen();
@@ -65,7 +65,7 @@ function draw({ keepScroll = false } = {}) {
     paint(main);
   }
   topbar({ ...s.bar, watch: s.bar?.watch ? main.querySelector(s.bar.watch) : null });
-  document.title = `${s.bar?.title && r.tab !== "tisch" && state.mode !== "none" ? `${s.bar.title} · ` : ""}Am Tisch`;
+  document.title = `${s.bar?.title && r.tab !== "tisch" && state.mode !== "none" ? `${s.bar.title} · ` : ""}Conclave`;
   if (!keepScroll) scrollTo(0, scrolls[key] || 0);
   current = { key, depth: r.id ? 1 : 0 };
 }
@@ -147,7 +147,7 @@ function serviceWorker() {
   navigator.serviceWorker.register("/app/sw.js", { scope: "/app/" }).then((reg) => {
     const offer = (worker) => {
       if (!navigator.serviceWorker.controller) return;  // first install: nothing to replace
-      toast("Neue Version von „Am Tisch“", { sub: "Deine Eingaben bleiben erhalten.", ms: 15000, action: { label: "Neu laden", run: () => worker.postMessage("skip-waiting") } });
+      toast("Neue Version von Conclave", { sub: "Deine Eingaben bleiben erhalten.", ms: 15000, action: { label: "Neu laden", run: () => worker.postMessage("skip-waiting") } });
     };
     if (reg.waiting) offer(reg.waiting);
     reg.addEventListener("updatefound", () => {

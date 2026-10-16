@@ -69,7 +69,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<CheckMenuItem<tauri::Wry>> {
     let autostart_item = autostart.clone();
     TrayIconBuilder::with_id("main")
         .icon(app.default_window_icon().cloned().expect("app icon"))
-        .tooltip("MTG Deckbuilder")
+        .tooltip(backend::APP_NAME)
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(move |app, event| match event.id.as_ref() {
@@ -173,7 +173,7 @@ pub fn run() {
                         .app_handle()
                         .notification()
                         .builder()
-                        .title("MTG Deckbuilder läuft weiter")
+                        .title(format!("{} läuft weiter", backend::APP_NAME))
                         .body("Im Infobereich (neben der Uhr) findest du die App wieder. Beenden: Rechtsklick → Beenden.")
                         .show();
                 }

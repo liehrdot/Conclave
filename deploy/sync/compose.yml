@@ -1,4 +1,4 @@
-# MTG-Deckbuilder Sync-Server: "sync" (der Server) und "caddy" (HTTPS mit Let's-Encrypt-Zertifikat).
+# Conclave Sync-Server: "sync" (der Server) und "caddy" (HTTPS mit Let's-Encrypt-Zertifikat).
 # Einrichtung und Betrieb: docs/sync-server-hetzner.md · Domain steht in .env (SYNC_DOMAIN=sync.deine-domain.de)
 services:
   sync:

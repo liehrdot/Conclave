@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MTG Deckbuilder",
+  "productName": "Conclave",
   "version": "0.1.9",
   "identifier": "app.mtgdeck.desktop",
   "build": {
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "MTG Deckbuilder",
+        "title": "Conclave",
         "url": "index.html",
         "width": 1280,
         "height": 860,

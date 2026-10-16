@@ -18,6 +18,8 @@ use std::time::{Duration, Instant};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
+pub const APP_NAME: &str = "Conclave";
+/// The data folder keeps the app's old name, so the decks of existing installs stay where they are.
 pub const APP_FOLDER: &str = "MTG Deckbuilder";
 const BACKOFF: [u64; 5] = [1, 2, 5, 5, 5];
 const HEALTHY_AFTER: Duration = Duration::from_secs(300);
@@ -53,7 +55,7 @@ pub fn dirs(app: &AppHandle) -> Dirs {
         app.path().data_dir().map(|d| d.join(APP_FOLDER)).unwrap_or_else(|_| PathBuf::from("."))
     });
     // The cache (card database, images) must not live inside the install folder – a per-user NSIS install goes to
-    // %LOCALAPPDATA%\MTG Deckbuilder – so it sits under the app identifier; a cache from the first versions moves once.
+    // %LOCALAPPDATA%\Conclave – so it sits under the app identifier; a cache from the first versions moves once.
     let cache = app.path().app_cache_dir().map(|d| d.join("cache")).unwrap_or_else(|_| data.join("cache"));
     if !cache.exists() {
         if let Ok(old) = app.path().cache_dir().map(|d| d.join(APP_FOLDER).join("cache")) {

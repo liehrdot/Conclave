@@ -18,7 +18,7 @@ def test_without_a_shell_nothing_is_shown_or_queued():
 def test_shell_poll_reports_state_and_fetches_notices_and_commands_once():
     client = TestClient(gui.app)
     r = client.post("/api/desktop/poll", json={"since": 0, "visible": False, "autostart": True, "version": "0.1.0"}).json()
-    assert r["notices"] == [] and r["commands"] == [] and r["tooltip"] == "MTG Deckbuilder"
+    assert r["notices"] == [] and r["commands"] == [] and r["tooltip"] == "Conclave"
     shell = client.get("/api/desktop").json()["shell"]
     assert shell["version"] == "0.1.0" and shell["autostart"] is True and shell["visible"] is False
     n = desktop.notify("Deck fertig", "„Meren“ ist gespeichert.")
@@ -52,11 +52,11 @@ def test_notices_follow_the_setting_and_the_tooltip_shows_the_state(monkeypatch)
         tip = client.post("/api/desktop/poll", json={}).json()["tooltip"].split("\n")
     finally:
         gui.JOBS.pop("t1", None)
-    assert tip == ["MTG Deckbuilder", "Ein Auftrag läuft", "Sync: vor 2 Min."]
+    assert tip == ["Conclave", "Ein Auftrag läuft", "Sync: vor 2 Min."]
 
 
 def _release(tag, *, pre=False, draft=False, feed=True, date="2026-10-16T08:00:00Z"):
-    assets = [{"name": "MTG.Deckbuilder_x64-setup.exe", "browser_download_url": releases.DOWNLOAD + tag + "/setup.exe"}]
+    assets = [{"name": "Conclave_x64-setup.exe", "browser_download_url": releases.DOWNLOAD + tag + "/setup.exe"}]
     if feed:
         assets.append({"name": "latest.json", "browser_download_url": releases.DOWNLOAD + tag + "/latest.json"})
     return {"tag_name": tag, "prerelease": pre, "draft": draft, "published_at": date, "body": "", "assets": assets}

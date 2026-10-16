@@ -78,7 +78,7 @@ jobs:
           projectPath: desktop
           tagName: ${{ env.TAG }}
           releaseCommitish: ${{ github.sha }}
-          releaseName: "Vorschau ${{ env.VERSION }}"
+          releaseName: "Conclave Vorschau ${{ env.VERSION }}"
           releaseBody: "Vorschau-Version vom Stand ${{ github.sha }} – nicht als Version freigegeben. Eine installierte App bietet sie nur mit Einstellungen → Desktop-App → „Vorschau-Versionen anzeigen“ an."
           releaseDraft: true
           prerelease: true
