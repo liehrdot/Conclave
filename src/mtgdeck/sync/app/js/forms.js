@@ -637,7 +637,7 @@ export function settingsSheet() {
         <div class="segmented" id="theme">${[["system", "System"], ["light", "Hell"], ["dark", "Dunkel"]].map(([k, l]) => `<button type="button" data-theme="${k}" aria-pressed="${theme === k}">${l}</button>`).join("")}</div>
         <div class="field-label">Verbindung</div>
         ${isDemo() ? demo : live}
-        <p class="hint-small center">Am Tisch · Begleiter zum Commander Deckbuilder</p>`,
+        <p class="hint-small center">Conclave · für den Spieltisch</p>`,
       bind(el) {
         for (const b of $$("[data-theme]", el)) b.addEventListener("click", () => { setPref("theme", b.dataset.theme); applyTheme(); redraw(); });
         $("#demo-reset", el)?.addEventListener("click", () => { resetDemo(); save(KEY_DRAFT, null); toast("Beispieleinträge gelöscht"); redraw(); });

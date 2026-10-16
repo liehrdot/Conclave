@@ -1,4 +1,7 @@
-# MTG Commander Deckbuilder
+# Conclave
+
+Commander-Deckbuilder (früher „MTG Deckbuilder“).
+
 
 Ein Werkzeug, um Commander-Decks selbst zu bauen und zu pflegen: Decks per Link, Liste oder als
 Starterdeck importieren oder selbst zusammenstellen, gegen Bracket-Regeln, Budget, Blacklist und
@@ -207,7 +210,7 @@ ein Befehl auf dem Server.
   es neu geprüft. Haben beide Geräte dasselbe Feld unterschiedlich geändert, gilt die Fassung vom Server, und die
   andere steht unter „Konflikte“.
 - **Sicherheit:** nur HTTPS; Geräte-Schlüssel liegen auf dem Server nur als Hash; Geräte lassen sich einzeln abmelden.
-- **Handy-App „Am Tisch“** ([Plan](docs/plan-handy-app.md)): Partien und Gegnerdecks am Tisch in Sekunden
+- **Handy-App „Conclave“** (Tisch-Ansicht „Am Tisch“) ([Plan](docs/plan-handy-app.md)): Partien und Gegnerdecks am Tisch in Sekunden
   eintragen, Rule 0 zeigen, Karten auf Deutsch nachschlagen – auch offline. Sie liegt auf deinem Sync-Server unter
   `https://<dein-sync-server>/app/` und braucht keinen App-Store.
   - **Koppeln:** Am PC *Einstellungen → Sync zwischen Geräten → Weiteres Gerät koppeln* klicken und den QR-Code mit
@@ -231,7 +234,7 @@ ein Befehl auf dem Server.
 ## Desktop-App (Windows)
 
 Dieselbe Oberfläche als eigenes Programm – ohne Python oder uv installieren zu müssen. Fertige Versionen
-liegen unter [Releases](https://github.com/liehrdot/mtgdeckbuilder/releases) (`MTG Deckbuilder_<Version>_x64-setup.exe`,
+liegen unter [Releases](https://github.com/liehrdot/mtgdeckbuilder/releases) (`Conclave_<Version>_x64-setup.exe`,
 pro Benutzer, ohne Adminrechte); jeder Push baut außerdem einen Test-Installer als Artefakt `mtgdeck-desktop-windows-setup`
 des Workflows „Desktop“.
 
@@ -240,7 +243,8 @@ des Workflows „Desktop“.
   Port mit zufälligem Token und zeigt es im Fenster. Stirbt das Backend, startet die Hülle es neu; klappt das
   fünfmal nicht, zeigt die Startseite das Protokoll und bietet einen neuen Versuch an.
 - **Daten:** `%APPDATA%\MTG Deckbuilder` (Decks, Sammlung, Blacklist, Tischregeln, Sicherungen, Sync-Zustand),
-  Cache in `%LOCALAPPDATA%\app.mtgdeck.desktop\cache` (das Programm selbst liegt in `%LOCALAPPDATA%\MTG Deckbuilder`),
+  Cache in `%LOCALAPPDATA%\app.mtgdeck.desktop\cache` (das Programm selbst liegt in `%LOCALAPPDATA%\Conclave`; der Datenordner behält den alten Namen,
+  und der erste Conclave-Installer entfernt das alte Programm „MTG Deckbuilder“ samt Startmenü-Eintrag),
   Protokoll `%APPDATA%\MTG Deckbuilder\logs\backend.log`.
   Bestehende Daten aus einem Projektordner kommen per Sync (siehe oben) oder über Einstellungen → Sicherung
   hochladen in die App.

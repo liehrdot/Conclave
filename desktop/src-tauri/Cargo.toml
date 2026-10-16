@@ -1,7 +1,7 @@
 [package]
 name = "mtgdeck-desktop"
 version = "0.1.9"
-description = "MTG Deckbuilder – Commander-Decks selbst bauen (Desktop-Hülle um das Python-Backend)"
+description = "Conclave – Commander-Decks selbst bauen (Desktop-Hülle um das Python-Backend)"
 authors = ["liehrdot"]
 edition = "2021"
 rust-version = "1.77.2"

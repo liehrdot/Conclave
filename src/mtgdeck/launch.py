@@ -20,7 +20,7 @@ import sys
 
 
 def _parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="mtg-gui", description="Commander-Deckbuilder: lokale Oberfläche")
+    p = argparse.ArgumentParser(prog="mtg-gui", description="Conclave: lokale Oberfläche")
     p.add_argument("command", nargs="?", choices=["serve"], default="serve", help="serve (Standard)")
     p.add_argument("--data", metavar="ORDNER", help="Datenordner (Decks, Sammlung, Einstellungen …); Standard: Projektordner bzw. %%APPDATA%%")
     p.add_argument("--cache", metavar="ORDNER", help="Ordner für Kartendatenbank und HTTP-Cache")

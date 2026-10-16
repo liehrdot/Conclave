@@ -104,7 +104,7 @@ class HttpTransport:
         except ValueError:
             data = {}
         if not isinstance(data, dict) or data.get("service") != "mtgdeck-sync":
-            raise RemoteError("Unter dieser Adresse läuft kein Sync-Server des MTG-Deckbuilders.")
+            raise RemoteError("Unter dieser Adresse läuft kein Sync-Server von Conclave.")
         return data
 
     def changes(self, since: int) -> dict[str, Any]:

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Richtet den Sync-Server des MTG-Deckbuilders auf einem frischen Ubuntu-/Debian-Server ein (als root):
+# Richtet den Sync-Server von Conclave auf einem frischen Ubuntu-/Debian-Server ein (als root):
 #
 #   curl -fsSL https://raw.githubusercontent.com/liehrdot/mtgdeckbuilder/HEAD/deploy/sync/install.sh | bash -s -- sync.deine-domain.de
 #

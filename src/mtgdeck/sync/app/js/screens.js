@@ -110,7 +110,7 @@ function installHint() {
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
   if (!ios && !window.installPrompt) return "";
   return `<div class="install-hint" id="install-hint"><img src="/app/icons/icon-192.png" alt="" width="40" height="40">
-    <div class="main"><b>Als App auf den Home-Bildschirm</b><span>${ios ? "Teilen → „Zum Home-Bildschirm“. Dann startet „Am Tisch“ wie eine App und deine Einträge bleiben sicher." : "Startet wie eine App und funktioniert auch ohne Netz."}</span>
+    <div class="main"><b>Als App auf den Home-Bildschirm</b><span>${ios ? "Teilen → „Zum Home-Bildschirm“. Dann startet „Conclave“ wie eine App und deine Einträge bleiben sicher." : "Startet wie eine App und funktioniert auch ohne Netz."}</span>
       ${ios ? "" : `<button class="btn tint" type="button" id="install-now">Installieren</button>`}</div>
     <button class="icon-btn x" type="button" aria-label="Hinweis schließen">${icon("x", "sm")}</button></div>`;
 }

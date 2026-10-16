@@ -17,7 +17,7 @@ export function welcome(code = null) {
   if (code) return confirmLink(code);
   const html = `<div class="welcome">
       <img class="app-icon" src="/app/icons/icon-192.png" alt="" width="88" height="88">
-      <h1>Am Tisch</h1>
+      <h1>Conclave</h1>
       <p class="lead">Partien und Gegnerdecks am Spieltisch festhalten – verbunden mit deinem Deckbuilder am PC.</p>
       ${state.revoked ? `<p class="notice">${icon("shield", "sm")}<span>Dieses Handy wurde abgemeldet. Mit einem neuen Code verbindest du es wieder – was noch nicht gesendet war, geht dann mit.</span></p>` : ""}
       <div class="welcome-actions">
@@ -28,7 +28,7 @@ export function welcome(code = null) {
       <button class="btn plain" type="button" id="demo">Erst mal mit Beispieldaten ansehen</button>
     </div>`;
   return {
-    html, bar: { title: "Am Tisch" },
+    html, bar: { title: "Conclave" },
     bind(el) {
       $("#scan", el).addEventListener("click", scan);
       $("#enter", el).addEventListener("click", () => codeSheet());
@@ -41,11 +41,11 @@ function installSteps(code) {
   const html = `<div class="welcome">
       <img class="app-icon" src="/app/icons/icon-192.png" alt="" width="72" height="72">
       <h1>Fast geschafft</h1>
-      <p class="lead">Leg „Am Tisch“ auf deinen Home-Bildschirm. Dann startet es wie eine App, und deine Einträge bleiben sicher gespeichert.</p>
+      <p class="lead">Leg „Conclave“ auf deinen Home-Bildschirm. Dann startet es wie eine App, und deine Einträge bleiben sicher gespeichert.</p>
       <ol class="steps">
         <li><span class="step-icon">${icon("share")}</span><span>Unten in Safari auf <b>Teilen</b> tippen – siehst du es nicht, zuerst auf <b>•••</b>.</span></li>
         <li><span class="step-icon">${icon("plus")}</span><span><b>Zum Home-Bildschirm</b> wählen und <b>Hinzufügen</b>.</span></li>
-        <li><span class="step-icon"><img src="/app/icons/icon-192.png" alt="" width="26" height="26"></span><span><b>Am Tisch</b> öffnen, <b>Code eingeben</b> tippen und diesen Code einfügen:</span></li>
+        <li><span class="step-icon"><img src="/app/icons/icon-192.png" alt="" width="26" height="26"></span><span><b>Conclave</b> öffnen, <b>Code eingeben</b> tippen und diesen Code einfügen:</span></li>
       </ol>
       <div class="code-box"><span class="code">${esc(code)}</span><button class="btn tint" type="button" id="copy">${icon("copy", "sm")}Kopieren</button></div>
       <p class="hint-small center">Der Code gilt 15 Minuten. Abgelaufen? Am PC einfach einen neuen erzeugen.</p>

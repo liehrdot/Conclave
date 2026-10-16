@@ -133,7 +133,7 @@ desktop/                      Tauri-2-Projekt (Rust-Hülle, rund 450 Zeilen)
   Cookie. Stirbt das Backend, startet die Hülle es nach 1, 2, 5, 5, 5 s neu; danach zeigt die Startseite das Ende
   des Protokolls und „Nochmal versuchen“. Ein langer gesunder Lauf setzt den Zähler zurück.
 - **Daten:** `--data` = `%APPDATA%\MTG Deckbuilder` (Decks, Sammlung, Einstellungen, Sync-Zustand), Cache
-  `%LOCALAPPDATA%\app.mtgdeck.desktop\cache` (nicht im Programmordner `%LOCALAPPDATA%\MTG Deckbuilder`, den der
+  `%LOCALAPPDATA%\app.mtgdeck.desktop\cache` (nicht im Programmordner `%LOCALAPPDATA%\Conclave`, den der
   Installer pro Benutzer anlegt), Protokoll `<data>\logs\backend.log` (plus der vorige Lauf als
   `backend.1.log`). Vorhandene Daten kommen per Sync oder über „Sicherung hochladen“ in die App; `MTG_HOME`
   in der Umgebung überstimmt den Ordner.
@@ -211,7 +211,7 @@ selbst“ ist damit der nächste Schritt auf einem echten Windows.
    neue öffentliche Schlüssel kommt nach `plugins.updater.pubkey`, das Secret wird ersetzt – bereits installierte
    Apps nehmen das nächste Update dann nicht mehr von selbst an und werden einmal per Installer aktualisiert.
 2. Pro Version: `uv run python scripts/bump_version.py 0.2.0`, committen, `git tag v0.2.0`, `git push && git push --tags`.
-3. Der Workflow „Release“ läuft etwa 12 Minuten und legt das Release mit `MTG Deckbuilder_0.2.0_x64-setup.exe`,
+3. Der Workflow „Release“ läuft etwa 12 Minuten und legt das Release mit `Conclave_0.2.0_x64-setup.exe`,
    `.sig` und `latest.json` an. Installierte Apps melden die Version beim nächsten Start oder spätestens am nächsten
    Tag; Einstellungen → Desktop-App → „Nach Updates suchen“ geht sofort.
 
