@@ -79,6 +79,16 @@ def compact(card: dict[str, Any], *, with_text: bool = True) -> dict[str, Any]:
     return out
 
 
+async def by_cardmarket_id(cid: int) -> dict[str, Any] | None:
+    """The printing behind a Cardmarket product id (``None`` if Scryfall does not know it)."""
+    try:
+        return await get_json(f"{BASE}/cards/cardmarket/{int(cid)}", ttl=30 * 24 * 3600)
+    except HttpError as exc:
+        if exc.status == 404:
+            return None
+        raise
+
+
 async def search(query: str, *, order: str = "edhrec", unique: str = "cards", max_results: int = 40) -> dict[str, Any]:
     """Full-text Scryfall search (https://scryfall.com/docs/syntax). Returns raw card objects."""
     cards: list[dict[str, Any]] = []
