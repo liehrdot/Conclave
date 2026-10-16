@@ -390,7 +390,7 @@ body.sheet-open .toasts { bottom: calc(max(env(safe-area-inset-bottom), 12px) + 
 
 /* ---------- empty states, skeletons ---------- */
 .empty { text-align: center; padding: 36px 24px; color: var(--text-2); }
-.empty .icon { width: 44px; height: 44px; color: var(--text-3); margin: 0 auto 10px; stroke-width: 1.6; }
+.empty > .icon { width: 44px; height: 44px; color: var(--text-3); margin: 0 auto 10px; stroke-width: 1.6; }
 .empty h3 { color: var(--text); font-size: var(--t-body); margin-bottom: 4px; }
 .empty p { font-size: var(--t-sub); max-width: 32ch; margin: 0 auto; }
 
@@ -862,7 +862,7 @@ button.row.b-open { padding: 6px 14px; }
 .maybe-empty { padding: 4px 16px 8px; }
 .maybe-empty .icon { width: 14px; height: 14px; vertical-align: -2px; color: var(--accent-text); }
 .empty.small { padding: 28px 16px; }
-.empty.small .icon { width: 32px; height: 32px; }
+.empty.small > .icon { width: 32px; height: 32px; }
 
 /* the draft: floating save bar (right under the deck pane on an iPad) */
 .build-bar { position: fixed; z-index: 30; left: 12px; right: 12px; bottom: max(env(safe-area-inset-bottom), 12px); display: flex; justify-content: center; pointer-events: none; }
@@ -945,8 +945,8 @@ body.immersive:not(.has-build-bar) .toasts { bottom: calc(max(env(safe-area-inse
 .cam { position: absolute; inset: 0; color: #fff; }
 .cam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cam-frame {
-  position: absolute; left: 50%; top: 47%; translate: -50% -50%;
-  width: min(82vw, calc(62svh * 63 / 88), 420px); aspect-ratio: 63 / 88; border-radius: 4.75% / 3.4%;
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+  width: min(82vw, calc(58svh * 63 / 88), 420px); aspect-ratio: 63 / 88; border-radius: 4.75% / 3.4%;
   box-shadow: 0 0 0 100vmax rgb(0 0 0 / .52); outline: 2px solid rgb(255 255 255 / .9); outline-offset: 0;
   transition: outline-color .2s;
 }
@@ -962,7 +962,7 @@ body.immersive:not(.has-build-bar) .toasts { bottom: calc(max(env(safe-area-inse
 .cam-top::after { content: ""; width: 44px; }
 .cam-top:has(#cam-torch:not([hidden]))::after { display: none; }
 .cam-hint {
-  position: absolute; left: 50%; translate: -50% 0; top: calc(47% + min(41vw * 88 / 63, 31svh, 293px) + 14px);
+  position: absolute; left: 50%; translate: -50% 0; top: calc(var(--top) + 68px);  /* under the top bar: the bottom holds the lenses */
   max-width: calc(100% - 32px); width: max-content; margin: 0; padding: 8px 14px; border-radius: var(--r-pill);
   background: rgb(20 20 28 / .55); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   font-size: var(--t-sub); font-weight: 600; text-align: center; line-height: 1.35;
@@ -970,10 +970,19 @@ body.immersive:not(.has-build-bar) .toasts { bottom: calc(max(env(safe-area-inse
 .cam-hint.reading { color: #d9ffde; }
 .cam-hint.done { color: var(--accent); }
 .cam-hint.warn { color: #ffd8a8; border-radius: var(--r-row); }
+/* the lens / zoom choice, like the phone's own camera: small round glass buttons above the bottom bar */
+.cam-lens { flex: 0 0 auto; display: flex; gap: 4px; padding: 4px; border-radius: var(--r-pill); background: rgb(20 20 28 / .45);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.cam-lens-row { flex-basis: 100%; display: flex; justify-content: center; }
+.cam-lens-row:has(> [hidden]) { display: none; }
+.cam-lens button { appearance: none; border: 0; background: transparent; font-family: inherit; cursor: pointer; min-width: 44px; height: 44px; padding: 0 10px; border-radius: var(--r-pill); color: #fff; font-weight: 700; font-size: var(--t-foot); }
+.cam-lens button[aria-pressed="true"] { background: rgb(255 255 255 / .92); color: #111; }
+body.camera:has(.toasts .toast) .cam-lens { visibility: hidden; }
 .cam-bottom { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
   padding: 12px 16px calc(max(env(safe-area-inset-bottom), 12px) + 6px); }
 .btn.glass { background: rgb(20 20 28 / .5); color: #fff; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .cam-count { padding: 8px 14px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--t-sub); }
 body.camera .toasts { z-index: 120; bottom: calc(max(env(safe-area-inset-bottom), 12px) + 76px); }
+body.camera:has(.cam-lens:not([hidden])) .toasts { bottom: calc(max(env(safe-area-inset-bottom), 12px) + 136px); }
 body.camera:has(.toasts .toast) .cam-hint { visibility: hidden; }  /* the toast sits where the hint is */
 .segmented button:disabled { opacity: .38; }
