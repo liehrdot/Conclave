@@ -210,7 +210,12 @@ fn run_once(app: &AppHandle, backend: &Backend, d: &Dirs, generation: u64) -> Re
     let mut log_w = log;
     for line in BufReader::new(stdout).lines() {
         let Ok(line) = line else { break };
-        let _ = writeln!(log_w, "{line}");
+        // the log gets shared for support: keep the access token out of it
+        let shown = match line.find("token=") {
+            Some(i) => format!("{}token=…", &line[..i]),
+            None => line.clone(),
+        };
+        let _ = writeln!(log_w, "{shown}");
         if let Some(url) = line.strip_prefix("MTGDECK_URL=") {
             let url = url.trim().to_string();
             wait_reachable(&url, Duration::from_secs(20));

@@ -95,10 +95,10 @@ def _path(deck_slug: str) -> Path:
 
 
 def _write_current(deck: dict[str, Any]) -> dict[str, str]:
-    json_path = DECKS_DIR / f"{deck['slug']}.json"
+    json_path = _path(deck["slug"])
     write_json(json_path, deck)
     entries = [DeckEntry(c["name"], int(c.get("qty", 1))) for c in deck.get("cards", [])]
-    txt_path = DECKS_DIR / f"{deck['slug']}.txt"
+    txt_path = json_path.with_suffix(".txt")
     atomic_write_text(txt_path, to_text(deck.get("commanders", []), entries))
     return {"json": str(json_path), "text": str(txt_path), "slug": deck["slug"], "version": deck.get("version")}
 
@@ -117,6 +117,8 @@ def save(deck: dict[str, Any], *, expect_version: int | None = None) -> dict[str
     """
     DECKS_DIR.mkdir(parents=True, exist_ok=True)
     deck_slug = deck.get("slug") or slug(deck["name"])
+    if slug(deck_slug) != deck_slug:  # e.g. "../x" from a synced file: never write outside decks/
+        raise ValueError(f"Ungültiger Deck-Name: {deck_slug!r}")
     deck["slug"] = deck_slug
     with locked(_path(deck_slug)):
         return _save_locked(deck, deck_slug, expect_version)

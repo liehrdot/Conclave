@@ -66,7 +66,9 @@ fn feed(backend: &Backend, version: Option<&str>) -> Result<Option<(Url, bool)>,
     };
     let data: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
     let Some(feed) = data["feed"].as_str() else { return Ok(None) };
-    if !feed.to_ascii_lowercase().starts_with(RELEASES) {
+    // a plain prefix check is not enough: "../" (or its %2e spelling) would leave this repo's releases
+    let plain = !feed.contains("..") && !feed.contains('%') && !feed.contains('\\') && !feed.contains('?') && !feed.contains('#');
+    if !plain || !feed.to_ascii_lowercase().starts_with(RELEASES) {
         return Err(format!("unerwartete Update-Adresse {feed}"));
     }
     Ok(Some((Url::parse(feed).map_err(|e| e.to_string())?, data["preview"].as_bool().unwrap_or(false))))

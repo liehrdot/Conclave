@@ -51,6 +51,40 @@ def test_paths_that_sync_and_paths_that_do_not():
         assert kind_of(nope) is None, nope
 
 
+def test_paths_from_other_devices_cannot_leave_the_data_folder(tmp_path):
+    for evil in ("decks/..\\..\\x.json", "decks/C:\\x.json", "decks/C:x.json", "decks/x\x00.json", "decks/x .json",
+                 "proxies/..\\../uploads/0123456789abcdef.jpg", "decks/.versions/a\\..\\..\\b/v0001.json",
+                 "decks/Meren.json", "decks/\u00e4.json", "/decks/x.json", "decks//x.json"):  # fmt: skip
+        assert kind_of(evil) is None, evil
+    roots = Roots.under(tmp_path)
+    with pytest.raises(ValueError):
+        roots.physical("decks/../../x.json")
+
+
+def test_a_synced_deck_cannot_name_another_file_as_its_slug(world, tmp_path):
+    from mtgdeck.sync import files
+
+    store, a, b, use, sync = world
+    use(a)
+    evil = {**_deck("Meren", [("Sol Ring", 1)]), "slug": "../../mtgdeck.settings", "needs_revalidation": True}
+    files.write_local(a, "decks/meren.json", "deck", evil)
+    assert _read(a, "decks/meren.json")["slug"] == "meren"
+    assert not (tmp_path / "mtgdeck.settings.json").exists()
+    with pytest.raises(ValueError):
+        storage.save({**_deck("Meren", [("Sol Ring", 1)]), "slug": "../mtgdeck.settings"})
+    assert not (a.decks.parent / "mtgdeck.settings.json").exists()
+
+
+def test_a_synced_print_selection_cannot_point_outside_the_proxies_folder(world, tmp_path):
+    store, a, b, use, sync = world
+    use(a)
+    secret = tmp_path / "secret.png"
+    secret.write_bytes(b"x")
+    assert proxy._local_path(str(secret)) is None
+    assert proxy._local_path("../../secret.png") is None
+    assert proxy._local_path("meren/uploads/0123456789abcdef.jpg") == a.proxies / "meren/uploads/0123456789abcdef.jpg"
+
+
 def test_first_sync_copies_everything_to_the_second_device(world):
     store, a, b, use, sync = world
     use(a)

@@ -8,8 +8,6 @@
   "permissions": [
     "core:default",
     "window-state:default",
-    "notification:default",
-    "autostart:default",
-    "updater:default"
+    "notification:default"
   ]
 }

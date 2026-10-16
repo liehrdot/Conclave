@@ -10,6 +10,9 @@ on:
     paths: ["src/**", "desktop/**", "pyproject.toml", "uv.lock", ".github/workflows/desktop.yml"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   desktop-windows:
     runs-on: windows-latest

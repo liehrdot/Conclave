@@ -22,11 +22,12 @@ concurrency:
 jobs:
   preview-windows:
     runs-on: windows-latest
+    environment: release  # the signing key lives in this environment: only master and v* tags may use it
     timeout-minutes: 60
     env:
       KEEP: "5"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Preview version
         shell: pwsh
         run: |
@@ -39,7 +40,7 @@ jobs:
           "VERSION=$preview" >> $env:GITHUB_ENV
           "TAG=preview-$preview" >> $env:GITHUB_ENV
           Write-Host "preview $preview"
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           python-version: "3.12"
       - name: Install
@@ -61,21 +62,22 @@ jobs:
           $health = Invoke-RestMethod "$($url.Split('?')[0])api/health"
           Stop-Process -Id $p.Id -Force
           if (-not $health.ok -or -not $health.frozen) { throw "health: $($health | ConvertTo-Json)" }
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           workspaces: desktop/src-tauri
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Build, sign and upload into a draft prerelease
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: desktop
+          tauriScript: npx --yes @tauri-apps/cli@2.12.3
           tagName: ${{ env.TAG }}
           releaseCommitish: ${{ github.sha }}
           releaseName: "Conclave Vorschau ${{ env.VERSION }}"

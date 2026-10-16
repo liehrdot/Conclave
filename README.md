@@ -7,7 +7,9 @@
 
 <p align="center">
   <a href="https://github.com/liehrdot/Conclave/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/liehrdot/Conclave?label=Windows%20app&color=4ae05a&labelColor=111"></a>
-  <a href="https://github.com/liehrdot/Conclave/actions/workflows/tests.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/liehrdot/Conclave/tests.yml?branch=master&label=tests&color=4ae05a&labelColor=111"></a>
+  <a href="https://github.com/liehrdot/Conclave/actions/workflows/tests.yml"><img alt="Tests" src="https://img.shields.io/github/actions/workflow/status/liehrdot/Conclave/tests.yml?branch=master&label=tests&labelColor=111"></a>
+  <a href="https://github.com/liehrdot/Conclave/actions/workflows/codeql.yml"><img alt="CodeQL" src="https://img.shields.io/github/actions/workflow/status/liehrdot/Conclave/codeql.yml?branch=master&label=CodeQL&labelColor=111"></a>
+  <a href="SECURITY.md"><img alt="Security review" src="https://img.shields.io/badge/security%20review-2026--10--16-4ae05a?labelColor=111"></a>
   <img alt="Made with vibe coding" src="https://img.shields.io/badge/made%20with-vibe%20coding-4ae05a?labelColor=111">
 </p>
 
