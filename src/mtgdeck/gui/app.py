@@ -1179,14 +1179,14 @@ async def api_ownership(slug: str) -> dict[str, Any]:
 
 
 @app.get("/api/decks/{slug}/buylist")
-async def api_buylist(slug: str, proxies: bool = True) -> dict[str, Any]:
-    """Einkaufsliste: the cards still to buy (proxies included unless ``proxies=false``), priced at
-    Cardmarket's cheapest printing."""
+async def api_buylist(slug: str, owned: bool = True, proxies: bool = True) -> dict[str, Any]:
+    """Einkaufsliste: the cards still to buy (``owned=false``: the whole deck, no collection check; proxies included
+    unless ``proxies=false``), priced at Cardmarket's cheapest printing."""
     try:
         deck = storage.load(slug)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
-    return await buylist.build(deck, replace_proxies=proxies)
+    return await buylist.build(deck, use_collection=owned, replace_proxies=proxies)
 
 
 # --- my collection -------------------------------------------------------------------------------

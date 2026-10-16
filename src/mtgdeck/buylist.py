@@ -1,7 +1,8 @@
 """Einkaufsliste: what it costs to own a deck for real, at the cheapest printing of every card.
 
-``build(deck)`` takes the deck's cards minus the real copies in the collection (proxies count as
-missing unless ``replace_proxies=False``; basic lands are left out) and prices each card with
+``build(deck)`` takes the deck's cards minus the real copies in the collection that no other deck
+uses (proxies count as missing unless ``replace_proxies=False``; ``use_collection=False`` lists the
+whole deck; basic lands are left out) and prices each card with
 Cardmarket's daily price guide (``cardmarket.py``): the playable printing with the lowest trend and
 its cheapest listing as ``low``. Set names and the playable check (no oversized, gold-bordered or
 memorabilia printings) come from the local card DB, else Scryfall.
@@ -57,18 +58,24 @@ async def _pick(prints: list[dict[str, Any]], known: dict[int, dict[str, Any]], 
     return unknown
 
 
-async def build(deck: dict[str, Any], *, replace_proxies: bool = True) -> dict[str, Any]:
+async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_proxies: bool = True) -> dict[str, Any]:
+    """``use_collection``: copies in the collection only count when no other deck uses them (a card
+    sleeved up in another deck still has to be bought). Off = the whole deck goes on the list."""
     need = _need(deck)
-    owned = collection.owned_counts()
+    owned = collection.owned_counts() if use_collection else {}
+    usage = collection.decks_by_card() if owned else {}
     rows = []
     for name, n in need.items():
         if name in collection.BASIC_LANDS:
             continue
         o = owned.get(name, {"real": 0, "proxy": 0})
+        others = [d for d in usage.get(name, []) if d["slug"] != deck.get("slug")]
         have = o["real"] + (0 if replace_proxies else o["proxy"])
-        buy = max(n - have, 0)
+        free = max(have - sum(d["qty"] for d in others), 0)
+        buy = max(n - free, 0)
         if buy:
-            rows.append({"name": name, "qty": buy, "need": n, "real": min(o["real"], n), "proxy": min(o["proxy"], n)})
+            rows.append({"name": name, "qty": buy, "need": n, "real": o["real"], "proxy": o["proxy"],
+                         "in_decks": [d["name"] for d in others] if have else []})  # fmt: skip
 
     error = None
     try:
@@ -110,6 +117,7 @@ async def build(deck: dict[str, Any], *, replace_proxies: bool = True) -> dict[s
         "slug": deck.get("slug"),
         "name": deck.get("name"),
         "currency": "eur",
+        "use_collection": use_collection,
         "replace_proxies": replace_proxies,
         "collection_size": len(collection.load()),
         "items": rows,

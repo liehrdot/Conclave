@@ -1386,7 +1386,10 @@
   </div>
   <p id="buy-summary" class="dc-summary" aria-live="polite"></p>
   <div class="buy-bar" id="buy-bar" hidden>
-    <label class="check" id="buy-proxies-box"><input type="checkbox" id="buy-proxies" checked> <span>Proxies durch echte Karten ersetzen</span></label>
+    <div class="buy-checks" id="buy-checks">
+      <label class="check"><input type="checkbox" id="buy-owned" checked> <span>Mit Sammlung abgleichen</span></label>
+      <label class="check" id="buy-proxies-box"><input type="checkbox" id="buy-proxies" checked> <span>Proxies durch echte Karten ersetzen</span></label>
+    </div>
     <label class="buy-max"><span>Nur Karten bis</span><span class="buy-max-input"><input type="number" id="buy-max" min="0" step="0.5" inputmode="decimal" placeholder="alle"> €</span></label>
   </div>
   <div id="buy-body" hidden>

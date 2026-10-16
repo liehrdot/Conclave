@@ -66,3 +66,16 @@ async def test_buylist_route():
     r = client.get("/api/decks/kauf/buylist").json()
     assert r["name"] == "Kauf" and r["cards"] > 0 and all(i["name"] not in collection.BASIC_LANDS for i in r["items"])
     assert client.get("/api/decks/nope/buylist").status_code == 404
+
+
+async def test_buylist_counts_only_collection_cards_no_other_deck_uses():
+    await collection.add([{"name": "Sol Ring"}, {"name": "Cultivate"}, {"name": "Filler 0", "qty": 2}])
+    await save_deck(name="Anderes", commanders=["Meren of Clan Nel Toth"], bracket=2,
+                    cards=[{"name": l.split(" ", 1)[1], "qty": int(l.split(" ", 1)[0])} for l in deck_lines()])  # fmt: skip
+    deck = {**DECK, "cards": DECK["cards"] + [{"name": "Filler 0", "qty": 1}]}
+    items = {i["name"]: i for i in (await buylist.build(deck))["items"]}
+    assert items["Sol Ring"]["in_decks"] == ["Anderes"]  # the one copy is sleeved up in "Anderes"
+    assert "Filler 0" not in items  # 2 copies: one for "Anderes", one free for this deck
+    whole = await buylist.build(deck, use_collection=False)
+    assert {i["name"] for i in whole["items"]} == {"Meren of Clan Nel Toth", "Sol Ring", "Cultivate", "Filler 0"}
+    assert whole["use_collection"] is False

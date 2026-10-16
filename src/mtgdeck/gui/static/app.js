@@ -4263,7 +4263,7 @@ async function loadBuylist() {
   $("#buy-summary").textContent = "Hole die Preise von Cardmarket …";
   $("#buy-body").hidden = true;
   try {
-    const r = await api(`/api/decks/${enc(slug)}/buylist?proxies=${$("#buy-proxies").checked}`);
+    const r = await api(`/api/decks/${enc(slug)}/buylist?owned=${$("#buy-owned").checked}&proxies=${$("#buy-proxies").checked}`);
     if (currentDeck?.slug !== slug) return;
     buyData = r;
     renderBuylist();
@@ -4273,7 +4273,8 @@ const buyMax = () => { const v = parseFloat(String($("#buy-max").value).replace(
 function renderBuylist() {
   const r = buyData, max = buyMax();
   $("#buy-bar").hidden = false;
-  $("#buy-proxies-box").hidden = !r.collection_size;
+  $("#buy-checks").hidden = !r.collection_size;
+  $("#buy-proxies-box").hidden = !r.use_collection;
   $("#buy-body").hidden = !r.items.length;
   const price = (v) => (v ? esc(fmtPrice(v, "eur")) : "–");
   $("#buy-list").innerHTML = r.items.map((i, k) => {
@@ -4284,7 +4285,8 @@ function renderBuylist() {
     return `<li class="${over ? "have" : ""}"><input type="checkbox" data-k="${k}" ${over ? "" : "checked"} aria-label="${esc(i.name)} kaufen">
       <span class="qty">${i.qty}×</span>
       <span class="buy-card"><a href="${esc(i.url || i.search_url)}" target="_blank" rel="noopener" class="name">${esc(i.name)}</a>
-        <span class="muted small">${where}${owned ? ` · hast du: ${esc(owned)}` : ""}</span></span>
+        <span class="muted small">${where}${owned && r.use_collection ? ` · hast du: ${esc(owned)}` : ""}${i.in_decks?.length && r.use_collection
+          ? `, steckt in ${i.in_decks.slice(0, 2).map((n) => `„${esc(n)}“`).join(", ")}${i.in_decks.length > 2 ? " …" : ""}` : ""}</span></span>
       <span class="price" title="Billigstes Angebot irgendeiner Ausgabe">${price(i.total_low)}</span>
       <span class="price strong" title="Trendpreis der günstigsten Ausgabe">${price(i.total_trend)}</span></li>`;
   }).join("");
@@ -4312,13 +4314,16 @@ function updateBuylistSelection() {
   $("#buy-summary").innerHTML = `<b>${copies} ${copies === 1 ? "Karte" : "Karten"}</b> kaufen · ≈ <b>${esc(fmtPrice(sum("total_trend"), "eur"))}</b> (Trend)`
     + ` · ab ${esc(fmtPrice(sum("total_low"), "eur"))}`
     + (skipped ? ` · ${skipped} ${skipped === 1 ? "Karte bleibt" : "Karten bleiben"} Proxy` : "")
-    + (r.collection_size ? "" : '<br><span class="muted">Deine Sammlung ist leer, deshalb steht das ganze Deck auf der Liste (ohne Standardländer).</span>');
+    + (!r.collection_size ? '<br><span class="muted">Deine Sammlung ist leer, deshalb steht das ganze Deck auf der Liste (ohne Standardländer).</span>'
+      : !r.use_collection ? '<br><span class="muted">Ohne Abgleich steht das ganze Deck auf der Liste (ohne Standardländer).</span>'
+      : '<br><span class="muted">Karten aus deiner Sammlung fehlen nur, wenn sie schon in einem anderen Deck stecken.</span>');
   $("#buy-copy span").textContent = copies ? `${copies} ${copies === 1 ? "Karte" : "Karten"} für Cardmarket kopieren` : "Für Cardmarket kopieren";
   $("#buy-copy").disabled = !copies;
 }
 $("#buy-list").addEventListener("change", updateBuylistSelection);
 $("#buy-max").addEventListener("input", () => { if (buyData) renderBuylist(); });
 $("#buy-proxies").addEventListener("change", loadBuylist);
+$("#buy-owned").addEventListener("change", loadBuylist);
 $("#buy-close").addEventListener("click", () => $("#buylist").close());
 $("#buy-copy").addEventListener("click", async () => {
   const text = buySelected().map((i) => `${i.qty} ${i.name}`).join("\n");

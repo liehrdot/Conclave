@@ -1067,6 +1067,7 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .dc-common { columns: 2 220px; margin: var(--space-2) 0 0; }
 .buylist { width: min(760px, calc(100vw - 32px)); }
 .buy-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); margin: var(--space-2) 0; }
+.buy-checks { display: flex; flex-direction: column; gap: 4px; }
 .buy-max { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
 .buy-max-input { display: inline-flex; align-items: center; gap: 4px; }
 .buy-max input { width: 9ch; }
