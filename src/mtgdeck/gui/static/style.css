@@ -404,15 +404,20 @@ details.more[open] > summary { margin-bottom: var(--space-3); }
 #card-total.bad { color: var(--bad); font-weight: 700; }
 .add-card { display: grid; grid-template-columns: minmax(0, 1fr) 70px 170px auto; gap: var(--space-2); margin-bottom: var(--space-4); padding: var(--space-3); background: var(--surface-2); border-radius: var(--radius); }
 .add-card-btns { display: flex; gap: var(--space-2); }
-/* the maybe list ("Vielleicht"): last in the card list, across all columns, never counted */
-.cards .maybe-group { column-span: all; margin-top: var(--space-4); padding: var(--space-3) var(--space-4) var(--space-2); border: 1px dashed var(--border-strong); border-radius: var(--radius); background: var(--surface-2); }
+/* the maybe list ("Vielleicht"): last in the card list, across all columns, never counted; green like the app's accent */
+.cards .maybe-group { --maybe-line: color-mix(in srgb, var(--accent) 55%, transparent); column-span: all; margin-top: var(--space-4); padding: var(--space-3) var(--space-4) var(--space-2); border: 1px solid var(--maybe-line); border-left: 3px solid var(--accent); border-radius: var(--radius); background: color-mix(in srgb, var(--accent-soft) 45%, var(--surface)); }
 .cards.editing .maybe-group, .cards:not(.grid) .maybe-group { columns: 2 300px; column-gap: var(--space-5); }
-.cards .maybe-group h3 { column-span: all; display: flex; align-items: center; gap: 6px; }
-.cards .maybe-group h3 .icon { width: 16px; height: 16px; color: var(--accent); }
+.cards .maybe-group h3 { column-span: all; display: flex; align-items: center; gap: 6px; color: var(--accent-text); border-bottom-color: var(--maybe-line); }
+.cards .maybe-group h3 .icon { width: 16px; height: 16px; color: var(--accent-text); }
+.cards .maybe-group h3 .count { color: var(--accent-text); }
 .maybe-note { margin-left: auto; font-weight: 400; font-size: var(--fs-xs); color: var(--muted); text-transform: none; letter-spacing: 0; }
 .maybe-cat { color: var(--muted); font-size: var(--fs-xs); white-space: nowrap; }
 .maybe-cat.bad { color: var(--bad); }
 .maybe-group .card { break-inside: avoid; }
+.maybe-group .mini.to-deck { color: var(--accent-text); }
+.maybe-group .mini.to-deck:hover { background: var(--accent-soft); border-color: var(--maybe-line); color: var(--accent-text); }
+.mini[data-act="maybe"]:hover { color: var(--accent-text); border-color: var(--accent); }
+#add-card-maybe .icon { color: var(--accent-text); }
 .maybe-empty { column-span: all; margin: 0 0 var(--space-2); color: var(--muted); font-size: var(--fs-sm); }
 .maybe-empty .icon { width: 15px; height: 15px; vertical-align: -3px; }
 .mini.to-deck { gap: 3px; display: inline-flex; font-size: var(--fs-xs); }
@@ -1098,7 +1103,7 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .drop-overlay.two { grid-template-columns: 1fr 1fr; gap: var(--space-5); }
 .drop-overlay.two .drop-box { justify-self: center; width: min(100%, 380px); border-color: var(--border-strong); transform: scale(.96); transition: transform .1s, border-color .1s; }
 .drop-overlay.two .drop-box:not(.active) > * { opacity: .6; }
-.drop-overlay.two .drop-box.active { opacity: 1; transform: none; border-style: solid; box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-lg); }
+.drop-overlay.two .drop-box.active { opacity: 1; transform: none; border-style: solid; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-lg); }
 .drop-tip { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius); background: var(--accent-soft); color: var(--on-accent-soft); }
 .drop-tip .icon { flex: none; width: 16px; height: 16px; margin-top: 2px; }
 .card.just-dropped { animation: just-dropped 1.6s ease-out; }
