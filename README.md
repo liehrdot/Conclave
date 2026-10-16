@@ -58,8 +58,8 @@ Ein Bracket ist breit – deshalb gibt es pro Deck ein **Power-Profil**:
   Bracket 3) aus Game Changern, Tutoren, Fast Mana, Free Spells, Combos, Kurve und Interaktion –
   transparent mit Einzelposten. Weicht das Deck deutlich von der Ziel-Stufe ab, gibt es eine Warnung.
 
-In der GUI: Deck-Tab „Anpassen“ → „Ziel-Stärke“ mit Skala (aktuell vs. Ziel), ▲/▼ „Stärker/Schwächer“,
-Ziel-Bracket, Feinstufe, Hausregeln und Stil. „Ziel speichern“ legt das Ziel im Deck ab; die Deck-Prüfung misst
+In der GUI: im Deck-Check unter „Karten“ die **Ziel-Stärke** mit Skala (aktuell vs. Ziel), ▲/▼ „Stärker/Schwächer“,
+Ziel-Bracket, und unter „Feiner einstellen“ Feinstufe, Hausregeln und Stil. „Ziel speichern“ legt das Ziel im Deck ab; die Deck-Prüfung misst
 deine Karten daran – tauschen tust du sie selbst unter „Karten“ → „Bearbeiten“.
 
 ## Versionen: Verlauf, Diff, Wiederherstellen, Kopieren
@@ -156,7 +156,7 @@ werden überall mit beiden Seiten behandelt:
   direkt aus „Partie festhalten“. Die Seite zeigt die Bilanz aller deiner Decks gegen das Gegnerdeck, verlinkt
   die typischen Karten des Commanders auf EDHREC. Gespeichert in `decks/.opponents.json`.
 - **Tischregeln:** benannte Regelsätze für eine Runde („Freitagsrunde“, „Laden-Abend“). Anders als die
-  Blacklist gelten sie nur für Decks, die sie gewählt haben – im Deck unter „Anpassen“; das Deck merkt sich
+  Blacklist gelten sie nur für Decks, die sie gewählt haben – im Deck-Check unter „Karten“; das Deck merkt sich
   seine Tischregel. Ein Regelsatz kann enthalten: höchstes Bracket, max. Game Changer, max. Tutoren, Deckbudget
   (zählt auch für Proxy-Decks), „keine Proxies“, verbotene Begriffe wie bei der Blacklist (True Duals,
   Stax, 2-Karten-Combos, teurer als 10 € …), einzelne verbotene Karten und freie Absprachen (als
@@ -176,7 +176,7 @@ werden überall mit beiden Seiten behandelt:
   Ist der PC mit einem Sync-Server verbunden, wird der Stand der Sicherung mit dem der anderen Geräte zusammengeführt;
   dort wird dabei nichts gelöscht.
 - **Papierkorb:** Gelöschte Decks landen samt Versionen und Partien im Papierkorb (`decks/.trash/`).
-  Direkt nach dem Löschen gibt es „Rückgängig“, später *Einstellungen → Papierkorb* (zurückholen oder endgültig löschen).
+  Direkt nach dem Löschen gibt es „Rückgängig“, später im Papierkorb unter der Deckliste (zurückholen oder endgültig löschen).
 - **Sicheres Speichern:** Alle Dateien werden atomar geschrieben (erst eine temporäre Datei, dann ausgetauscht) und
   beim Ändern gesperrt – auch wenn zwei Vorgänge (z. B. GUI und Sync) gleichzeitig speichern. Ist eine Datei
   doch einmal beschädigt, wird sie nie als „leer“ behandelt und überschrieben: Die App legt eine Kopie
@@ -271,7 +271,7 @@ uv run mtg-gui              # → http://127.0.0.1:8765
 Aufbau (bewusst schlicht: eine Hauptaktion pro Seite, Selteneres eingeklappt):
 
 - **Seitenleiste:** „+ Neues Deck“, deine Decks (ab 8 Decks mit Filter; ein roter Punkt markiert nicht
-  legale), unten Meine Sammlung und Sammelbestellungen sowie zwei Gruppen: **Meine Runde** (Gegnerdecks, Tischregeln, Blacklist)
+  legale), darunter der Papierkorb, sobald etwas drin liegt, unten Meine Sammlung und Sammelbestellungen sowie zwei Gruppen: **Meine Runde** (Gegnerdecks, Tischregeln, Blacklist)
   und **Hilfe** (Glossar, Einstellungen). Läuft ein Auftrag (z. B. Kartendatenbank laden),
   zeigt ein Hinweis mit Spinner oben in der Leiste, woran die App gerade arbeitet – ein Klick führt zurück. Auf dem Handy klappt die Leiste
   hinter ☰ weg.
@@ -292,14 +292,19 @@ Aufbau (bewusst schlicht: eine Hauptaktion pro Seite, Selteneres eingeklappt):
   Protokoll steckt unter „Details“. Ein Auftrag endet immer sichtbar – auch wenn sein letzter Schritt scheitert oder
   die App inzwischen neu gestartet wurde („Die Verbindung zum Auftrag ist weg …“); kein Lade-Kreisel dreht ewig. Ist
   Scryfall, EDHREC & Co. nicht erreichbar, steht da, welcher Dienst und was zu tun ist (statt „Internal Server Error“).
-- **Deck-Ansicht** mit Kopfzeile (Commander, Stufe, legal/nicht legal, Preis, Version) und sieben Tabs –
+- **Deck-Ansicht** mit Kopfzeile (Commander, Stufe, legal/nicht legal, Preis, Version) und fünf Tabs –
   die Adresse merkt sich den Tab, der Zurück-Button des Browsers funktioniert:
   - **Karten:** gruppiert nach Kategorie, Typ, Manawert, Farbe oder Besitz, sortiert nach Name, Manawert
-    oder Preis, als Liste (Bild beim Hovern) oder Bildraster; daneben der **Deck-Check** (Prüfung und
-    Ampel-Bereiche in einem Kasten), Statistik,
+    oder Preis, als Liste (Bild beim Hovern) oder Bildraster; daneben der **Deck-Check** (Prüfung,
+    Ziel-Stärke, Tischregel und Ampel-Bereiche in einem Kasten), Statistik,
     Sammlungs-Abgleich und „Tokens & Marker“. Klick auf eine Karte zeigt sie groß – bei doppelseitigen Karten
     beide Seiten – mit dem **Kartentext auf Deutsch** (gedruckter Text der neuesten deutschen Ausgabe,
     umschaltbar auf den englischen Oracle-Text), Manasymbolen und markierten Schlüsselwörtern samt Erklärung.
+    **Ziel und Tischregel** sitzen im Deck-Check: Skala, Ziel-Bracket, „Ziel speichern“, die Tischregel.
+    Feinstufe und Hausregeln stecken unter „Feiner einstellen“. Die Prüfung misst die Karten am Ziel,
+    tauschen tust du sie unter „Bearbeiten“. **Rule 0** ist dort ein Knopf: der Text für die Runde
+    (Stufe, Spielweise, Tempo, Game Changer, Combos, Tutoren, Extra-Züge, Massen-Landzerstörung, Proxys,
+    Hausregeln – automatisch aus der Prüfung) groß zum Zeigen, mit Kopieren und Drucken auf eine Seite.
     **Deck-Check (Ampel):** Länder (Richtwert abhängig von Kurve und Ramp), Ramp, Kartenzug, Removal, Board
     Wipes, Manakurve und Siegbedingungen – je grün/gelb/rot mit „Warum wichtig?“. „Karten vorschlagen“ zeigt
     beliebte Karten dieser Rolle in deinen Farben (aus EDHREC- und Scryfall-Daten) und merkt sie im
@@ -307,16 +312,10 @@ Aufbau (bewusst schlicht: eine Hauptaktion pro Seite, Selteneres eingeklappt):
     **Bearbeiten:** Karten hinzufügen, Anzahl ±, entfernen, Kategorie ändern und über ⇄
     „Ähnliche Karten“ (gleiche Rolle, passende Farben) tauschen – gespeichert wird alles zusammen als neue,
     geprüfte Version.
-  - **Rule 0:** der **Rule-0-Text** für die Runde (Stufe, Spielweise, Tempo, Game Changer, Combos,
-    Tutoren, Extra-Züge, Massen-Landzerstörung, Proxys, Hausregeln – automatisch aus der Prüfung; kopieren oder
-    „Am Tisch zeigen“ im Vollbild). „Drucken / als PDF“ ergibt eine Seite zum Mitnehmen.
   - **Testen:** Starthand ziehen, London-Mulligan (der erste ist in Commander frei), Zug für Zug nachziehen,
     auf dem Play oder Draw; dazu exakte Wahrscheinlichkeiten: Länder in der Starthand, Landdrops bis Zug 5,
     Ramp bis Zug 2, Kartenzug bis Zug 3, Interaktion bis Zug 4.
-  - **Anpassen:** oben die Tischregel, darunter die **Ziel-Stärke** (siehe
-    [Power-Feinabstimmung](#power-feinabstimmung-ziel-stärke)): Ziel-Bracket, Feinstufe und Hausregeln wählen,
-    „Ziel speichern“ – die Prüfung misst die Karten daran, tauschen tust du sie selbst.
-  - **Partien:** nach dem Spiel festhalten – Ergebnis, Gegner-Commander, letzter Zug, was schiefging
+  - **Partien:** die Bilanz und die gespielten Partien stehen zuerst. „Partie festhalten“ ist zugeklappt, sobald schon Partien da sind – Ergebnis, Gegner-Commander, letzter Zug, was schiefging
     (Schnellwahl wie „zu wenige Länder“, „kein Weg zu gewinnen“), beste Karte, Notiz. Die Bilanz zeigt
     Siegquote, Ø Zug, häufigste Probleme, Ergebnis pro Version, beste Karten und Gegner.
     Partien aus dem Runden-Helfer des Handys haben „Runde ansehen“: Lebenskurve, Commander-Schaden und was in
@@ -330,9 +329,9 @@ Aufbau (bewusst schlicht: eine Hauptaktion pro Seite, Selteneres eingeklappt):
     welche gemeinsam sind – vorausgewählt ist das Deck, von dem es kopiert wurde, sonst das mit den meisten
     gemeinsamen Karten. Mit Sammlung lässt sich „Nur was mir fehlt“ wählen; einzelne Karten abwählen, die
     Auswahl als Liste kopieren oder direkt **in eine Sammelbestellung** packen – ideal nach einem Umbau als neues Deck.
-  - **Drucken:** oben Bildquelle, Kartenstärke, „Tokens mitdrucken“ und „Nur fehlende Karten“, darunter die
-    Schritte 1 Druckdateien vorbereiten · 2 PDF · 3 MakePlayingCards · 4 gedruckte Karten in die Sammlung
-    übernehmen. „Bilder prüfen und tauschen“ ist darunter eingeklappt (öffnet sich von selbst, wenn Bilder fehlen).
+  - **Drucken:** zuerst die Kurzfassung, „Nur fehlende Karten“, „Tokens mitdrucken“, dann die Schritte
+    Druckdateien vorbereiten und PDF. Unter „Weitere Optionen“: Bildquelle, Kartenstärke, Foil,
+    Hochskalierung, MakePlayingCards und „in die Sammlung übernehmen“. „Bilder prüfen und tauschen“ ist darunter eingeklappt (öffnet sich von selbst, wenn Bilder fehlen).
     Mit „Tokens mitdrucken“ erscheint eine Liste aller Tokens, Embleme und Marker des Decks – jeweils mit
     Artwork (Klick wählt ein anderes) und eigener Anzahl (−/+ oder eintippen, 0 = nicht drucken), z. B.
     10 Humans, 5 Treasures, 1 Monarch. „Standard je N“ gilt für Tokens ohne eigene Anzahl; Embleme und Marker

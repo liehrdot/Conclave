@@ -1363,6 +1363,8 @@ class SettingsUpdate(BaseModel):
     descreen: str | None = None
     sync_interval: int | None = Field(default=None, ge=0, le=240)
     desktop_notify: bool | None = None
+    font: Literal["cascadia", "inter"] | None = None
+    hover_preview: bool | None = None
 
 
 def _settings_view(cfg: dict[str, Any]) -> dict[str, Any]:

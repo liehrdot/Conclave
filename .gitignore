@@ -23,3 +23,6 @@ proxies/
 sync-data/
 tablerules.json
 tools/*
+
+# file locks from jsonstore.locked()
+.*.lock

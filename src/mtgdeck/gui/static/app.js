@@ -126,14 +126,23 @@ let brackets = [];
 let currentDeck = null;
 let deckIndex = [];
 const VIEWS = ["new", "deck", "collection", "orders", "glossary", "opponents", "tables", "blacklist", "settings"];
-const TABS = ["karten", "anleitung", "testen", "anpassen", "partien", "verlauf", "drucken"];
+const TABS = ["karten", "testen", "partien", "verlauf", "drucken"];
 let lastView = null;
 
 function parseHash() {
-  const parts = location.hash.replace(/^#\/?/, "").split("/").map((p) => { try { return decodeURIComponent(p); } catch { return p; } });
+  const raw = location.hash.replace(/^#\/?/, "");
+  const parts = raw.split("/").map((p) => { try { return decodeURIComponent(p); } catch { return p; } });
   const view = VIEWS.includes(parts[0]) ? parts[0] : "new";
-  return { view, slug: parts[1] || null, tab: parts[2] || null };
+  return { view, slug: parts[1] || null, tab: parts[2] || null, bare: raw === "" };
 }
+
+function homeHash() {
+  const slug = store.get("lastdeck");
+  if (slug && deckIndex.some((d) => d.slug === slug)) return `#/deck/${enc(slug)}`;
+  if (deckIndex[0]) return `#/deck/${enc(deckIndex[0].slug)}`;
+  return "#/new";
+}
+for (const a of $$("a.brand")) a.addEventListener("click", (e) => { e.preventDefault(); go(homeHash()); });
 
 function go(hash) {
   if (location.hash === hash) route();
@@ -142,13 +151,15 @@ function go(hash) {
 
 async function route() {
   const r = parseHash();
-  if (r.view === "deck" && !r.slug) return go("#/new");
+  preview.hidden = true;
+  if (r.bare) return go(homeHash());
+  if (r.view === "deck" && !r.slug) return go(homeHash());
   if (r.view === "deck" && (!currentDeck || currentDeck.slug !== r.slug)) {
     if (!(await openDeck(r.slug))) return;
   }
   for (const v of $$(".view")) v.hidden = v.dataset.view !== r.view;
   if (r.view === "deck") selectTab(r.tab || "karten", false);
-  if (r.view === "settings") { refreshDbStatus(); refreshBackups(); refreshTrash(); refreshSync({ quiet: true }); refreshDesktop(); }
+  if (r.view === "settings") { refreshDbStatus(); refreshBackups(); refreshSync({ quiet: true }); refreshDesktop(); }
   if (r.view === "collection") loadCollection();
   if (r.view === "glossary") showGlossary(r.slug);
   if (r.view === "orders") showOrders(r.slug);
@@ -177,6 +188,8 @@ function markNav(r = parseHash()) {
     if (a.dataset.nav === r.view) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
   }
+  if (r.view === "new") $("#nav-new").setAttribute("aria-current", "page");
+  else $("#nav-new").removeAttribute("aria-current");
 }
 
 // mobile: the sidebar becomes a drawer
@@ -198,6 +211,7 @@ async function refreshDeckList() {
   $("#deck-count").textContent = deckIndex.length || "";
   $("#deck-filter").hidden = deckIndex.length < 8;
   renderDeckList();
+  await refreshTrash();
 }
 
 function renderDeckList() {
@@ -205,8 +219,8 @@ function renderDeckList() {
   const list = deckIndex.filter((d) => !q || `${d.name} ${d.commanders.join(" ")}`.toLowerCase().includes(q));
   $("#deck-list").innerHTML = list.length ? list.map((d) => `<li>
       <a href="#/deck/${enc(d.slug)}" data-slug="${esc(d.slug)}">
-        <span class="name">${d.valid === false ? '<span class="dot bad" title="nicht legal"></span><span class="sr-only">nicht legal:</span>' : ""}<span>${esc(d.name)}</span></span>
-        <span class="meta">${esc(d.commanders.join(" + "))} · ${esc(d.level || `Bracket ${d.bracket ?? "?"}`)}${d.proxy ? " · Proxy" : ""}</span>
+        <span class="name">${d.valid === false ? '<span class="dot bad" title="nicht legal"></span><span class="sr-only">nicht legal:</span>' : ""}<span class="label">${esc(d.name)}</span></span>
+        ${d.updated ? `<span class="meta">${esc(fmtDate(d.updated))}</span>` : ""}
       </a></li>`).join("")
     : `<li class="empty-inline">${deckIndex.length ? "Kein Treffer." : "Noch keine Decks – starte mit „Neues Deck“."}</li>`;
   markNav();
@@ -582,6 +596,7 @@ async function openDeck(slug) {
     $("#add-card-form").hidden = true;
   }
   currentDeck = d;
+  store.set("lastdeck", d.slug);
   if (ownership && ownership.slug !== d.slug) ownership = null;
   printLoadedFor = null;
   rule0For = null;
@@ -605,38 +620,83 @@ async function openDeck(slug) {
   return true;
 }
 
-function renderDeckHead(d) {
+function deckFacts(d) {
   const v = d.validation || {};
   const cur = (d.currency || "eur").toUpperCase();
-  $("#deck-name").textContent = d.name;
+  const bits = [];
+  if (d.proxy) bits.push("Proxy");
+  else if (v.price_total != null) bits.push(`${fmtPrice(v.price_total, cur)}${d.budget ? ` / ${fmtPrice(d.budget, cur)}` : ""}`);
+  if (d.version) bits.push(`v${d.version}`);
+  if (d.power_profile?.style) bits.push(d.power_profile.style);
+  return bits.filter(Boolean).join(" · ");
+}
+
+// One sentence for the head, the check and the sticky line. Table-rule card names stay at the select.
+function deckVerdict(d) {
+  const v = d?.validation;
+  if (!v) return { text: "Noch nicht geprüft", cls: "" };
+  const br = v.bracket || {};
+  const goal = br.target_text || levelText(d.bracket ?? "?", d.power_profile?.tier);
+  let text, cls = "";
+  if (v.legal === false) { text = "Nicht legal"; cls = "bad"; }
+  else if (br.compliant === false) { text = "Legal, Ziel verfehlt"; cls = "warn"; }
+  else text = `Legal, passt zu ${goal}`;
+  const table = v.table_rule;
+  if (table && table.compliant === false && table.name) {
+    text += ` · Tischregel „${table.name}“ verletzt`;
+    cls = "bad";
+  }
+  return { text, cls };
+}
+
+// Legal and on bracket: a green check and the bracket number. Otherwise the verdict sentence stays.
+function deckFits(d) {
+  const v = d?.validation;
+  if (!v || v.legal !== true || d.bracket == null) return false;
+  if ((v.bracket || {}).compliant === false) return false;
+  const table = v.table_rule;
+  return !(table && table.compliant === false);
+}
+
+function deckMark(bracket) {
+  const label = `Legal, Bracket ${bracket}`;
+  return `<span class="deck-mark" title="${esc(label)}">${icon("check")}<span class="num">${esc(bracket)}</span><span class="sr-only">${esc(label)}</span></span>`;
+}
+
+function renderDeckHead(d) {
+  const fits = deckFits(d);
+  $("#deck-name").innerHTML = `${esc(d.name)}${fits ? deckMark(d.bracket) : ""}`;
   const thumb = d.card_data?.[d.commanders[0]]?.image;
   $("#deck-thumb").hidden = !thumb;
   if (thumb) $("#deck-thumb").src = thumb;
-  const pills = [
-    `<span class="pill">${esc(d.commanders.join(" + "))}</span>`,
-    `<span class="pill accent">${esc(levelText(d.bracket ?? "?", d.power_profile?.tier))}</span>`,
-  ];
-  if (v.legal === true) pills.push(`<span class="pill ok">${icon("check")}legal</span>`);
-  if (v.legal === false) pills.push(`<span class="pill bad">${icon("alert")}nicht legal</span>`);
-  if (d.proxy) pills.push('<span class="pill">Proxy-Deck</span>');
-  else if (v.price_total != null) pills.push(`<span class="pill">${esc(fmtPrice(v.price_total, cur))}${d.budget ? ` / ${esc(fmtPrice(d.budget, cur))}` : ""}</span>`);
-  if (d.power_profile?.style) pills.push(`<span class="pill">Stil: ${esc(d.power_profile.style)}</span>`);
-  if (d.table_rule_info) {
-    const t = v.table_rule || {};
-    pills.push(`<a class="pill ${t.compliant === false ? "bad" : ""}" href="#/deck/${enc(d.slug)}/anpassen" title="Tischregel">${icon("table")}${esc(d.table_rule_info.name)}</a>`);
-  }
-  pills.push(`<span class="muted small">${d.version ? `v${d.version} · ` : ""}${esc(fmtDate(d.updated))}</span>`);
-  $("#deck-meta").innerHTML = pills.join("");
-  $("#deck-desc").textContent = d.description || "";
-  $("#deck-desc").hidden = !d.description;
+  $("#deck-commanders").textContent = d.commanders.join(" + ");
+  $("#deck-facts").textContent = deckFacts(d);
+  const verdict = deckVerdict(d);
+  const line = $("#deck-verdict");
+  line.hidden = fits;
+  line.textContent = fits ? "" : verdict.text;
+  line.className = `verdict${verdict.cls ? ` ${verdict.cls}` : ""}`;
+  const desc = (d.description || "").startsWith("Vorgefertigtes Commander-Deck") ? "" : (d.description || "");
+  $("#deck-desc").textContent = desc;
+  $("#deck-desc").hidden = !desc;
   const against = d.built_against_info || [];
   $("#deck-against").hidden = !against.length;
   $("#deck-against").innerHTML = against.length ? `${icon("swords")} Gebaut gegen ${against.map((o) => `<a href="#/opponents/${enc(o.id)}">${esc(o.title)}</a>`).join(", ")}` : "";
   $("#export-txt").href = `/api/decks/${enc(d.slug)}/export/text`;
+  renderDeckStatus(d);
 }
+
+function renderDeckStatus(d) {
+  const verdict = deckVerdict(d);
+  $("#deck-status-text").textContent = `${verdict.text} · Zum Deck-Check`;
+  $("#deck-status").classList.toggle("bad", verdict.cls === "bad");
+  $("#deck-status").classList.toggle("warn", verdict.cls === "warn");
+}
+$("#deck-status").addEventListener("click", () => $("#check-panel").scrollIntoView({ behavior: "smooth", block: "start" }));
 
 // tabs (WAI-ARIA APG pattern: arrow keys move between tabs)
 function selectTab(tab, updateHash = true, focus = false) {
+  const legacy = tab === "anpassen" ? "target" : tab === "anleitung" ? "rule0" : null;
   if (!TABS.includes(tab)) tab = "karten";
   for (const t of $$("#deck-tabs [role=tab]")) {
     const on = t.dataset.tab === tab;
@@ -645,13 +705,14 @@ function selectTab(tab, updateHash = true, focus = false) {
     if (on && focus) t.focus();
   }
   for (const p of $$("#view-deck [role=tabpanel]")) p.hidden = p.id !== `panel-${tab}`;
-  if (updateHash && currentDeck) history.replaceState(null, "", `#/deck/${enc(currentDeck.slug)}/${tab}`);
-  if (tab === "anleitung" && currentDeck && rule0For !== currentDeck.slug) loadRule0();
+  if ((updateHash || legacy) && currentDeck) history.replaceState(null, "", `#/deck/${enc(currentDeck.slug)}/${tab}`);
   if (tab === "drucken") mountPrintStudio("#panel-drucken");
   if (tab === "drucken" && currentDeck && printLoadedFor !== currentDeck.slug) {
     printLoadedFor = currentDeck.slug;
     loadPlan();
   }
+  if (legacy === "target") requestAnimationFrame(() => $("#deck-target").scrollIntoView({ behavior: "smooth", block: "start" }));
+  if (legacy === "rule0") openRule0();
 }
 $("#deck-tabs").addEventListener("click", (e) => {
   const t = e.target.closest("[role=tab]");
@@ -679,18 +740,17 @@ function renderValidation(v) {
   const box = $("#validation");
   if (!v) { box.innerHTML = '<p class="muted">Noch nicht geprüft – „⋯ → Neu prüfen“.</p>'; return; }
   const br = v.bracket || {};
-  const goal = br.target_text || `Bracket ${br.target}`;
-  const status = [
-    v.legal ? `<span class="pill ok">${icon("check")}legal</span>` : `<span class="pill bad">${icon("alert")}nicht legal</span>`,
-    br.compliant ? `<span class="pill ok">passt zu ${esc(goal)}</span>` : `<span class="pill warn">${esc(goal)} verletzt</span>`,
-  ];
-  const issues = [...(v.errors || []).map((t) => ["bad", t]), ...(br.violations || []).map((t) => ["warn", t]), ...(v.warnings || []).map((t) => ["warn", t])];
+  const table = v.table_rule || {};
+  const skip = new Set([...(table.violations || []), ...(table.warnings || [])]);
+  const issues = [...(v.errors || []).map((t) => ["bad", t]), ...(br.violations || []).map((t) => ["warn", t]), ...(v.warnings || []).map((t) => ["warn", t])]
+    .filter(([, t]) => !skip.has(t));
   const li = ([cls, t]) => `<li class="${cls}">${esc(t)}</li>`;
   const shown = issues.slice(0, 4), rest = issues.slice(4);
   const list = (items) => (items.length ? `<ul class="issues">${items.map(li).join("")}</ul>` : "");
   const kv = (label, items) => `<dt>${label}</dt><dd>${esc(items.length ? items.join(", ") : "–")}</dd>`;
+  const verdict = deckVerdict(currentDeck);
   box.innerHTML = `
-    <div class="status-line">${status.join("")}</div>
+    <p class="verdict${verdict.cls ? ` ${verdict.cls}` : ""}">${esc(verdict.text)}</p>
     ${br.estimated ? `<p class="muted small">Commander Spellbook schätzt Bracket ${esc(br.estimated)}.</p>` : ""}
     ${list(shown)}
     ${rest.length ? `<details class="more"><summary>${rest.length} weitere Hinweise</summary>${list(rest)}</details>` : ""}
@@ -882,6 +942,7 @@ $("#edit-discard").addEventListener("click", () => setEditing(false));
 function updateEditBar(total) {
   const n = editChanges();
   $("#edit-bar").hidden = !edit || !n;
+  syncSaveButtons();
   if (!edit || !n) return;
   const parts = [];
   if (edit.add.size) parts.push(`${edit.add.size} neu`);
@@ -1118,7 +1179,11 @@ $("#on-draw").addEventListener("change", () => { renderHand(); if (currentDeck) 
 $("#hand").addEventListener("click", (e) => {
   const b = e.target.closest(".hand-card");
   if (!b || !hand) return;
-  if (!hand.bottom) { showCardView(b.dataset.name, hand.hand[Number(b.dataset.i)].cd); return; }
+  if (!hand.bottom) {
+    const i = Number(b.dataset.i);
+    showCardView(b.dataset.name, hand.hand[i].cd, hand.hand.map((c) => ({ name: c.name, cd: c.cd })), i);
+    return;
+  }
   hand.lib.push(...hand.hand.splice(Number(b.dataset.i), 1));
   hand.bottom -= 1;
   renderHand();
@@ -1188,7 +1253,10 @@ async function loadTokens(d) {
 }
 $("#token-list").addEventListener("click", (e) => {
   const li = e.target.closest("li[data-name]");
-  if (li) showCardView(li.dataset.name, { image: li.dataset.img, token: true, type_line: li.dataset.type, id: li.dataset.id });
+  if (!li) return;
+  const items = [...$("#token-list").querySelectorAll("li[data-name]")];
+  const tokenCd = (el) => ({ image: el.dataset.img, token: true, type_line: el.dataset.type, id: el.dataset.id });
+  showCardView(li.dataset.name, tokenCd(li), items.map((el) => ({ name: el.dataset.name, cd: tokenCd(el) })), items.indexOf(li));
 });
 
 // ---------- replacement suggestions ----------
@@ -1199,17 +1267,23 @@ function renderHealth(d) {
   const h = d.health;
   $("#health-panel").hidden = !h;
   if (!h) return;
-  $("#health-summary").textContent = h.summary;
-  $("#health-list").innerHTML = h.items.map((it) => `<li><details data-key="${esc(it.key)}">
+  const row = (it) => `<li><details data-key="${esc(it.key)}">
       <summary><span class="light ${esc(it.status)}" role="img" aria-label="${STATUS_TEXT[it.status]}"></span>
         <span class="h-label">${esc(it.label)}</span><span class="h-val">${esc(fmtNum(it.value))} · Ziel ${esc(it.target)}</span></summary>
       <div class="h-body"><p>${esc(it.text)}</p><p class="why"><strong>Warum wichtig?</strong> ${esc(it.why)}</p>
         ${it.cards.length ? `<p class="why">Erkannt: ${it.cards.slice(0, 12).map(esc).join(", ")}${it.cards.length > 12 ? " …" : ""}</p>` : ""}
         ${it.fix ? `<div class="btn-group">
           ${it.fix.role ? `<button type="button" class="btn small" data-role="${esc(it.fix.role)}" data-label="${esc(it.label)}">Karten vorschlagen</button>` : ""}
-        </div>` : ""}</div></details></li>`).join("");
+        </div>` : ""}</div></details></li>`;
+  const open = h.items.filter((it) => it.status !== "green" && it.key !== "table_rule");
+  const n = open.length;
+  $("#health-summary").textContent = n
+    ? `${n} ${n === 1 ? "Bereich braucht" : "Bereiche brauchen"} Aufmerksamkeit.`
+    : "Alles im grünen Bereich.";
+  $("#health-list").innerHTML = open.map(row).join("");
+  $("#health-all-list").innerHTML = h.items.map(row).join("");
 }
-$("#health-list").addEventListener("click", (e) => {
+$("#health-panel").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.dataset.role) openRoleCandidates(b.dataset.role, b.dataset.label);
@@ -1418,9 +1492,15 @@ $("#describe-setup").addEventListener("submit", async (e) => {
 $("#describe-open").addEventListener("click", openDescribe);
 $("#describe-close").addEventListener("click", () => $("#describe").close());
 
-// hover preview of card images (list view, hand, swaps)
+// hover preview of card images (list view, hand, swaps); off via Einstellungen → Darstellung
 const preview = $("#preview");
+let hoverPreview = true;
+function applyHoverPreview(on) {
+  hoverPreview = on !== false;
+  if (!hoverPreview) preview.hidden = true;
+}
 document.addEventListener("mouseover", (e) => {
+  if (!hoverPreview) return;
   const el = e.target.closest(".card[data-img]");
   if (!el || !el.dataset.img || el.closest(".cards.grid")) return;
   const [front, back] = preview.querySelectorAll("img");
@@ -1455,8 +1535,10 @@ function openCardFromEvent(e) {
     return;
   }
   if (edit && !act) return;  // clicks on the row background in edit mode
-  const cd = currentDeck.card_data?.[name] || edit?.add.get(name)?.data || {};
-  showCardView(name, cd);
+  const cdOf = (n) => currentDeck.card_data?.[n] || edit?.add.get(n)?.data || {};
+  const rows = [...$("#cards").querySelectorAll(".card[data-name]:not(.removed)")];
+  const row = e.target.closest(".card[data-name]");
+  showCardView(name, cdOf(name), rows.map((el) => ({ name: el.dataset.name, cd: cdOf(el.dataset.name) })), rows.indexOf(row));
 }
 $("#cards").addEventListener("click", openCardFromEvent);
 $("#cards").addEventListener("keydown", (e) => {
@@ -1464,19 +1546,47 @@ $("#cards").addEventListener("keydown", (e) => {
 });
 
 let cardViewCard = null;  // { name, cd } of the open card view
-function showCardView(name, cd) {
+let cardViewList = null;  // [{name, cd}] frozen when the view opened
+let cardViewIndex = -1;
+
+function showCardView(name, cd, list, index) {
   cardViewCard = { name, cd: cd || {} };
+  cardViewList = list || null;
+  cardViewIndex = list ? index : -1;
   const faces = name.split(" // ");
-  const imgs = [[cd.image, faces[0]], ...(cd.image_back ? [[cd.image_back, faces[1] || "Rückseite"]] : [])];
+  const imgs = [[cd.image, faces[0]], ...(cd.image_back ? [[cd.image_back, faces[1] || "Rückseite"]] : [])].filter(([u]) => u);
   $("#card-view-title").textContent = name + (cd.image_back ? " – doppelseitig" : "");
-  $("#card-view-faces").innerHTML = imgs.filter(([u]) => u).map(([u, label], i) =>
-    `<figure><img src="${esc(u.replace("/normal/", "/large/"))}" alt="${esc(label)}"><figcaption>${i ? "Rückseite" : "Vorderseite"}: ${esc(label)}</figcaption></figure>`).join("")
+  $("#card-view-faces").innerHTML = imgs.map(([u, label]) =>
+    `<figure><img src="${esc(u.replace("/normal/", "/large/"))}" alt="${esc(label)}">${imgs.length > 1 ? `<figcaption>${esc(label)}</figcaption>` : ""}</figure>`).join("")
     || '<p class="muted">Kein Bild verfügbar.</p>';
   $("#card-view-link").href = cd.scryfall_uri || `https://scryfall.com/search?q=${enc('!"' + name + '"')}`;
+  const prev = cardViewList && cardViewIndex > 0 ? cardViewList[cardViewIndex - 1] : null;
+  const next = cardViewList && cardViewIndex < cardViewList.length - 1 ? cardViewList[cardViewIndex + 1] : null;
+  $("#card-view-prev").hidden = !prev;
+  $("#card-view-next").hidden = !next;
+  $("#card-view-prev").setAttribute("aria-label", prev ? `Vorherige: ${prev.name}` : "Vorherige Karte");
+  $("#card-view-next").setAttribute("aria-label", next ? `Nächste: ${next.name}` : "Nächste Karte");
   preview.hidden = true;
-  $("#card-view").showModal();
+  const dlg = $("#card-view");
+  if (!dlg.open) dlg.showModal();
   loadCardText(name);
 }
+function stepCardView(dir) {
+  if (!cardViewList) return;
+  const i = cardViewIndex + dir;
+  if (i < 0 || i >= cardViewList.length) return;
+  const item = cardViewList[i];
+  showCardView(item.name, item.cd, cardViewList, i);
+}
+$("#card-view-prev").addEventListener("click", () => stepCardView(-1));
+$("#card-view-next").addEventListener("click", () => stepCardView(1));
+$("#card-view").addEventListener("keydown", (e) => {
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if (e.target.closest(".segmented")) return;
+  e.preventDefault();
+  stepCardView(e.key === "ArrowLeft" ? -1 : 1);
+});
 $("#card-view-close").addEventListener("click", () => $("#card-view").close());
 $("#card-view-order").addEventListener("click", () => {
   if (!cardViewCard) return;
@@ -1502,6 +1612,8 @@ async function loadCardText(name) {
   box.hidden = false;
   $("#card-view-rules").innerHTML = '<p class="muted small">Kartentext wird geladen …</p>';
   $("#card-view-terms").hidden = true;
+  $("#card-view-note").hidden = true;
+  $("#card-view-note").textContent = "";
   let data = cardTexts.get(name);
   if (!data) {
     try { data = await api(`/api/cards/text?name=${enc(name)}&lang=de`); cardTexts.set(name, data); }
@@ -1550,9 +1662,11 @@ function renderCardText(data) {
       <div class="type">${esc(f.type_line)}</div>
       ${f.text.split("\n").filter(Boolean).map((line) => `<p>${rulesHtml(line, data.terms)}</p>`).join("") || '<p class="muted small">Kein Regeltext.</p>'}
     </div>`).join("")
-    + (data.pt && faces.length === 1 ? `<p class="pt">${esc(data.pt)}</p>` : "")
-    + (cardLang === "de" && !data.printed ? '<p class="note">Keine deutsche Ausgabe gefunden – das ist der englische Originaltext.</p>' : "")
-    + (german ? `<p class="note">Gedruckter Text${data.printed.set_name ? " aus " + esc(data.printed.set_name) : ""}. Maßgeblich ist der aktuelle englische Oracle-Text.</p>` : "");
+    + (data.pt && faces.length === 1 ? `<p class="pt">${esc(data.pt)}</p>` : "");
+  const note = $("#card-view-note");
+  if (cardLang !== "de") { note.hidden = true; note.textContent = ""; }
+  else if (!data.printed) { note.hidden = false; note.textContent = "Keine deutsche Ausgabe – englischer Oracle-Text."; }
+  else { note.hidden = false; note.textContent = `Drucktext${data.printed.set_name ? " aus " + data.printed.set_name : ""}. Maßgeblich ist der englische Oracle-Text.`; }
   $("#card-view-terms").hidden = !data.terms.length;
   $("#card-view-terms-list").innerHTML = data.terms.map((t) =>
     `<dt data-term="${esc(t.term)}">${esc(t.de || t.term)}${t.de ? ` <span class="de">(${esc(t.term)})</span>` : ""}</dt><dd data-term="${esc(t.term)}">${esc(t.text)}</dd>`).join("");
@@ -1609,7 +1723,7 @@ $("#validate-btn").addEventListener("click", async () => {
 $("#delete-btn").addEventListener("click", async () => {
   if (!currentDeck) return;
   const ok = await ask({ title: `„${currentDeck.name}“ löschen?`, ok: "In den Papierkorb", danger: true,
-    text: "Das Deck kommt mit allen Versionen und Partien in den Papierkorb (Einstellungen → Papierkorb). Bis du ihn leerst, kannst du es zurückholen." });
+    text: "Das Deck kommt mit allen Versionen und Partien in den Papierkorb unter den Decks. Bis du ihn leerst, kannst du es zurückholen." });
   if (!ok) return;
   const name = currentDeck.name;
   let r;
@@ -1621,7 +1735,7 @@ $("#delete-btn").addEventListener("click", async () => {
 });
 
 // ============================================================================================
-// tab "Anpassen": table rule + the power the deck aims for
+// deck check: table rule + the power the deck aims for
 // ============================================================================================
 function retuneTarget() {
   const form = $("#retune-form");
@@ -1645,6 +1759,37 @@ $("#step-up").addEventListener("click", () => stepTarget(+1));
 $("#step-down").addEventListener("click", () => stepTarget(-1));
 $("#retune-form").addEventListener("change", () => renderPower(currentDeck));
 
+function profileSnapshot(p) {
+  p = p || {};
+  const num = (v) => (v === null || v === undefined || v === "" ? null : Number(v));
+  return {
+    tier: p.tier || null,
+    max_game_changers: num(p.max_game_changers),
+    max_tutors: num(p.max_tutors),
+    allow_two_card_combos: p.allow_two_card_combos === false ? false : null,
+    allow_extra_turns: p.allow_extra_turns === false ? false : null,
+    allow_mass_land_denial: p.allow_mass_land_denial === false ? false : null,
+    style: (p.style || "").trim(),
+  };
+}
+
+function targetDirty(d) {
+  if (!d || !$("#retune-form").querySelector('[name="rbracket"]')) return false;
+  const bracket = Number($("#retune-form").querySelector('[name="rbracket"]:checked')?.value || d.bracket || 3);
+  if (bracket !== (d.bracket || 3)) return true;
+  const form = profileSnapshot(readProfile($("#retune-form .profile-fields")) || {});
+  return JSON.stringify(form) !== JSON.stringify(profileSnapshot(d.power_profile));
+}
+
+function syncSaveButtons() {
+  const dirty = targetDirty(currentDeck);
+  const edits = !!(edit && editChanges());
+  const retune = $("#retune-btn");
+  retune.hidden = !dirty;
+  retune.classList.toggle("primary", dirty && !edits);
+  $("#edit-save").classList.toggle("primary", edits);
+}
+
 function renderPower(d) {
   if (!d) return;
   const power = d.validation?.bracket?.power;
@@ -1653,15 +1798,16 @@ function renderPower(d) {
   const pos = (v) => `${((Math.min(Math.max(v, 1), 5.99) - 1) / 5) * 100}%`;
   $("#power-scale").innerHTML = `<div class="track"></div>
     ${[2, 3, 4, 5].map((b) => `<span class="sep" style="left:${pos(b)}"></span>`).join("")}
-    ${[1, 2, 3, 4, 5].map((b) => `<span class="tick" style="left:${pos(b + 0.5)}">Bracket ${b}</span>`).join("")}
+    ${[1, 2, 3, 4, 5].map((b) => `<span class="tick" style="left:${pos(b + 0.5)}" title="Bracket ${b}">${b}</span>`).join("")}
     ${power ? `<div class="mark now" style="left:${pos(power.value)}" title="Aktuell ${power.value}"></div>` : ""}
     <div class="mark goal" style="left:${pos(goal)}" title="Ziel"></div>`;
-  const changed = bracket !== d.bracket || (tier || null) !== (d.power_profile?.tier || null);
+  const changed = targetDirty(d);
   $("#power-text").innerHTML = (power
     ? `<span class="legend-bar"></span> Aktuell: <b>${esc(fmtPower(power.value))}</b> · ${esc(power.text)}
        <details class="more"><summary>Wie kommt der Wert zustande?</summary>${esc(power.components.map((c) => `${c.reason} ${c.points > 0 ? "+" : ""}${c.points}`).join(", "))}${power.floor_from_rules ? ` – durch die Regeln mindestens Bracket ${power.floor_from_rules}` : ""}</details>`
     : "Noch keine Power-Einschätzung – „⋯ → Neu prüfen“.<br>")
     + `<span class="legend-dot"></span> Ziel: <b>${esc(levelText(bracket, tier))}</b>${changed ? " – mit „Ziel speichern“ übernehmen" : ""}`;
+  syncSaveButtons();
 }
 
 $("#retune-form").addEventListener("submit", async (e) => {
@@ -1678,13 +1824,13 @@ $("#retune-form").addEventListener("submit", async (e) => {
     currentDeck = null;
     await refreshDeckList();
     await route();
-    toast(`Ziel gespeichert: ${levelText(bracket, profile?.tier)}. Die Prüfung unter „Karten“ zeigt, was noch nicht passt.`);
+    toast(`Ziel gespeichert: ${levelText(bracket, profile?.tier)}.`);
   } catch (err) { fail(err); }
   finally { btn.disabled = false; }
 });
 
 // ============================================================================================
-// tab "Anleitung" (shown as „Rule 0“): the Rule-0 text from the deck check, printable as one sheet
+// Rule 0: one dialog from the deck check, printable as a single sheet
 // ============================================================================================
 let rule0For = null;
 let rule0 = null;
@@ -1697,22 +1843,39 @@ async function loadRule0() {
     const r = await api(`/api/decks/${enc(slug)}/rule0`);
     if (currentDeck?.slug !== slug) return;
     rule0 = r;
-    $("#rule0-rows").innerHTML = rule0Rows(r.rows);
-  } catch (err) { rule0For = null; $("#rule0-rows").innerHTML = `<p class="empty-inline">${esc(err.message)}</p>`; }
+    $("#rule0-full-title").textContent = r.title;
+    $("#rule0-full-rows").innerHTML = rule0Rows(r.rows);
+    renderSheetTitle(currentDeck);
+  } catch (err) {
+    rule0For = null;
+    rule0 = null;
+    $("#rule0-full-rows").innerHTML = `<p class="empty-inline">${esc(err.message)}</p>`;
+  }
 }
+async function openRule0() {
+  if (!currentDeck) return;
+  const dlg = $("#rule0-full");
+  if (!dlg.open) dlg.showModal();
+  if (rule0For !== currentDeck.slug || !rule0) {
+    $("#rule0-full-title").textContent = "Rule 0";
+    $("#rule0-full-rows").innerHTML = `<p class="empty-inline">Lade …</p>`;
+    await loadRule0();
+  }
+}
+$("#rule0-open").addEventListener("click", () => openRule0());
 $("#rule0-copy").addEventListener("click", async () => {
   if (!rule0) return;
   try { await navigator.clipboard.writeText(rule0.text); toast("Rule-0-Text kopiert."); }
   catch { toast("Kopieren nicht möglich – markiere den Text von Hand.", "error"); }
 });
-$("#rule0-show").addEventListener("click", () => {
+function printRule0() {
   if (!rule0) return;
-  $("#rule0-full-title").textContent = rule0.title;
-  $("#rule0-full-rows").innerHTML = rule0Rows(rule0.rows);
-  $("#rule0-full").showModal();
-});
+  document.body.classList.add("print-rule0");
+  window.print();
+}
+window.addEventListener("afterprint", () => document.body.classList.remove("print-rule0"));
+$("#rule0-print").addEventListener("click", printRule0);
 $("#rule0-full-close").addEventListener("click", () => $("#rule0-full").close());
-$("#sheet-print").addEventListener("click", () => window.print());
 
 function renderSheetTitle(d) { $("#sheet-title").textContent = `${d.name} · ${d.commanders.join(" + ")}`; }
 
@@ -1734,6 +1897,11 @@ async function loadGames(d) {
 function renderGames(slug, data) {
   const first = !gameData;
   gameData = { slug, ...data };
+  const formBox = $("#game-form-box");
+  if (formBox.dataset.slug !== slug) {
+    formBox.dataset.slug = slug;
+    formBox.open = !data.games.length;
+  }
   if (first || !$("#game-issues").children.length) {
     $("#game-issues").innerHTML = Object.entries(data.issue_labels).map(([k, label]) =>
       `<label><input type="checkbox" name="issues" value="${esc(k)}"><span>${esc(label)}</span></label>`).join("");
@@ -1924,7 +2092,7 @@ function pctx() {
 function mountPrintStudio(slot) {
   const studio = $("#print-studio");
   if (studio.parentElement !== $(slot)) $(slot).appendChild(studio);
-  $("#print-form .token-opt").hidden = !!pctx()?.order;  // orders list their tokens explicitly
+  for (const el of $$("#print-form .token-opt")) el.hidden = !!pctx()?.order;  // orders list their tokens explicitly
 }
 let prepared = { faces: {} };
 const printOpts = () => {
@@ -1933,7 +2101,13 @@ const printOpts = () => {
     only_missing: !f.only_missing.closest("[hidden]") && f.only_missing.checked,
     tokens: f.tokens.checked ? Math.min(20, Math.max(1, Number(f.token_copies.value) || 1)) : 0 };
 };
-$("#print-form").addEventListener("submit", (e) => { e.preventDefault(); loadPlan(); });
+$("#print-form").addEventListener("submit", (e) => e.preventDefault());
+$("#print-form").addEventListener("change", (e) => {
+  const name = e.target.name;
+  if (!["source", "stock", "foil", "upscale", "only_missing", "tokens", "token_copies"].includes(name)) return;
+  if (name === "token_copies" && !$("#print-form").elements.tokens.checked) return;
+  loadPlan();
+});
 const planQuery = () => { const o = printOpts(); return new URLSearchParams({ source: o.source, only_missing: o.only_missing, tokens: o.tokens }).toString(); };
 
 async function loadPlan() {
@@ -2073,8 +2247,6 @@ $("#print-token-list").addEventListener("change", (e) => {
   const li = e.target.closest("li[data-i]");
   if (li && e.target.matches("input")) setTokenQty(li, e.target.value === "" ? 0 : e.target.value, 0);
 });
-$("#print-form").elements.tokens.addEventListener("change", () => loadPlan());
-$("#print-form").elements.token_copies.addEventListener("change", () => { if ($("#print-form").elements.tokens.checked) loadPlan(); });
 
 function renderPlanSummary() {
   const p = printPlan;
@@ -2858,6 +3030,7 @@ async function showOpponents(id) {
   await refreshOpponents();
   if (!id) {
     currentOpp = null;
+    $("#opp-new-box").open = !oppIndex.length;
     $("#opp-empty").hidden = !!oppIndex.length;
     $("#opp-list").innerHTML = oppIndex.map((o) => `<a class="panel order-row opp-row" href="#/opponents/${enc(o.id)}">
         ${o.image ? `<img src="${esc(o.image)}" alt="" loading="lazy">` : ""}
@@ -2866,8 +3039,10 @@ async function showOpponents(id) {
         <span class="muted small">${o.record.last ? esc(fmtDate(o.record.last)) : ""}</span></a>`).join("");
     return;
   }
+  const prev = currentOpp?.id;
   try { currentOpp = await api(`/api/opponents/${enc(id)}`); } catch (err) { fail(err); go("#/opponents"); return; }
   renderOpponent();
+  if (prev !== id) $("#opp-form").hidden = true;
 }
 
 function renderOpponent() {
@@ -2897,6 +3072,7 @@ function renderOpponent() {
     : `<div class="kpis"><div><b>${r.games}</b><span>Partien</span></div><div><b>${r.wins}–${r.losses}${r.draws ? "–" + r.draws : ""}</b><span>Siege–Niederlagen</span></div></div>
        ${r.per_deck.length > 1 ? `<p class="game-stats-more">${r.per_deck.map((p) => `${esc(p.name)} ${p.wins}–${p.losses}`).join(" · ")}</p>` : ""}`;
   const labels = { win: "Sieg", loss: "Niederlage", draw: "Unentschieden" };
+  $("#opp-games-panel").hidden = !r.history.length;
   $("#opp-games").innerHTML = r.history.map((g) => `<li>
       <div class="when"><span class="res ${esc(g.result)}">${esc(labels[g.result] || g.result)}</span><br><span class="meta">${esc(fmtDate(g.played))}</span></div>
       <div>mit <a href="#/deck/${enc(g.deck_slug)}/partien">${esc(g.deck)}</a>${g.turn ? ` · Zug ${esc(g.turn)}` : ""}${g.note ? `<br><span class="meta">${esc(g.note)}</span>` : ""}</div><span></span></li>`).join("");
@@ -2929,6 +3105,7 @@ $("#opp-form").addEventListener("submit", async (e) => {
 });
 $("#opp-edit").addEventListener("click", () => {
   const form = $("#opp-form");
+  form.hidden = false;
   form.scrollIntoView({ behavior: "smooth", block: "start" });
   form.elements.label.focus({ preventScroll: true });
 });
@@ -2983,14 +3160,21 @@ function renderDeckTable(d) {
     return;
   }
   const bad = t.violations || [];
-  box.innerHTML = `<p class="${bad.length ? "bad-text" : "ok-text"}">${icon(bad.length ? "alert" : "check")}
-      ${bad.length ? `${bad.length} ${bad.length === 1 ? "Verstoß" : "Verstöße"} gegen „${esc(t.name)}“` : `Passt zu „${esc(t.name)}“`}</p>
-    ${bad.length ? `<ul class="tr-violations">${bad.map((v) => `<li>${esc(v.split(": ").slice(1).join(": ") || v)}</li>`).join("")}</ul>` : ""}
-    ${(t.warnings || []).map((w) => `<p class="muted small">${esc(w)}</p>`).join("")}
-    <p class="muted small">${esc((t.summary || []).join(" · "))}</p>
+  const summary = (t.summary || []).join(" · ");
+  const warnings = (t.warnings || []).map((w) => `<p class="muted small">${esc(w)}</p>`).join("");
+  const link = `<a class="link small" href="#/tables/${enc(id)}">Tischregel bearbeiten</a>`;
+  if (!bad.length) {
+    box.innerHTML = `${summary ? `<p class="muted small">${esc(summary)}</p>` : ""}${warnings}<p class="small">${link}</p>`;
+    return;
+  }
+  box.innerHTML = `<p class="bad-text">${icon("alert")}
+      ${bad.length} ${bad.length === 1 ? "Verstoß" : "Verstöße"} gegen „${esc(t.name)}“</p>
+    <ul class="tr-violations">${bad.map((v) => `<li>${esc(v.split(": ").slice(1).join(": ") || v)}</li>`).join("")}</ul>
+    ${warnings}
+    ${summary ? `<p class="muted small">${esc(summary)}</p>` : ""}
     <div class="btn-row">
-      ${bad.length ? `<button type="button" class="btn" id="deck-table-fix">${icon("edit")}Karten bearbeiten</button>` : ""}
-      <a class="link small" href="#/tables/${enc(id)}">Tischregel bearbeiten</a>
+      <button type="button" class="btn" id="deck-table-fix">${icon("edit")}Karten bearbeiten</button>
+      ${link}
     </div>`;
 }
 $("#deck-table").addEventListener("change", async (e) => {
@@ -3146,7 +3330,7 @@ $("#tr-check").addEventListener("click", async () => {
     const rows = await api(`/api/tablerules/${enc(currentTable.id)}/decks`);
     $("#tr-decks").innerHTML = rows.length ? rows.map((r) => `<li>
         <span class="pill ${r.ok ? "ok" : "bad"}">${icon(r.ok ? "check" : "alert")}${r.ok ? "passt" : `${r.errors.length} ${r.errors.length === 1 ? "Verstoß" : "Verstöße"}`}</span>
-        <div><a href="#/deck/${enc(r.slug)}/anpassen">${esc(r.name)}</a>${r.uses ? ' <span class="muted small">· nutzt diese Tischregel</span>' : ""}
+        <div><a href="#/deck/${enc(r.slug)}/karten">${esc(r.name)}</a>${r.uses ? ' <span class="muted small">· nutzt diese Tischregel</span>' : ""}
           <span class="muted small">· ${esc(r.commanders.join(" + "))} · Bracket ${esc(r.bracket ?? "?")}</span>
           ${r.errors.length ? `<ul class="tr-violations">${r.errors.map((v) => `<li>${esc(v.split(": ").slice(1).join(": ") || v)}</li>`).join("")}</ul>` : ""}
           ${r.warnings.map((w) => `<p class="muted small">${esc(w.split(": ").slice(1).join(": ") || w)}</p>`).join("")}
@@ -3208,7 +3392,6 @@ async function restoreBackup(name, info = null) {
     currentDeck = null;
     await Promise.all([refreshDeckList(), refreshTableRules(), refreshOpponents(), refreshBlacklist(), refreshCollectionSummary()]);
     await refreshBackups();
-    await refreshTrash();
     toast(`Wiederhergestellt: ${r.decks} Decks. Der vorherige Stand liegt als Sicherung bereit.`);
   } catch (err) { fail(err); }
 }
@@ -3216,21 +3399,19 @@ async function restoreBackup(name, info = null) {
 async function refreshTrash() {
   let items;
   try { items = await api("/api/trash"); } catch (err) { fail(err); return; }
-  $("#trash-none").hidden = items.length > 0;
-  $("#trash-empty").hidden = !items.length;
+  $("#nav-trash").hidden = !items.length;
+  $("#trash-count").textContent = items.length || "";
   $("#trash-list").innerHTML = items.map((t) => `<li>
-      <div class="grow"><strong>${esc(t.name)}</strong> <span class="muted small">· ${esc((t.commanders || []).join(" + "))}
-        · gelöscht ${esc(fmtDate(t.deleted))}</span></div>
-      <div class="actions">
+      <span class="name">${esc(t.name)}</span>
+      <span class="actions">
         <button type="button" class="btn small" data-trash-restore="${esc(t.id)}">Zurückholen</button>
         <button type="button" class="btn ghost small" data-trash-purge="${esc(t.id)}" aria-label="${esc(t.name)} endgültig löschen">Endgültig löschen …</button>
-      </div></li>`).join("");
+      </span></li>`).join("");
 }
 async function restoreFromTrash(id) {
   try {
     const r = await api(`/api/trash/${enc(id)}/restore`, { method: "POST" });
     await refreshDeckList();
-    if (parseHash().view === "settings") refreshTrash();
     toast(`„${r.name}“ ist wieder da.`);
     go(`#/deck/${enc(r.slug)}`);
   } catch (err) { fail(err); }
@@ -3479,8 +3660,17 @@ document.addEventListener("visibilitychange", () => {
 // settings: proxy printing, AI upscaling, local card DB
 // ============================================================================================
 let appSettings = {};
+function applyFont(font) {
+  document.documentElement.dataset.font = font === "inter" ? "inter" : "cascadia";
+}
 async function loadSettings() {
   appSettings = await api("/api/settings");
+  applyFont(appSettings.font);
+  applyHoverPreview(appSettings.hover_preview);
+  const fontChoice = $("#font-choice");
+  if (fontChoice) fontChoice.value = appSettings.font === "inter" ? "inter" : "cascadia";
+  const hoverChoice = $("#hover-preview");
+  if (hoverChoice) hoverChoice.checked = hoverPreview;
   const f = $("#settings-form").elements;
   const MODEL_HINTS = { "realesrgan-x4plus": " (empfohlen)", "realesrgan-x4plus-anime": " (für Zeichnungen, glättet stärker)" };
   f.upscale_model.innerHTML = appSettings.upscale_models.map((m) => `<option value="${esc(m)}">${esc(m + (MODEL_HINTS[m] || ""))}</option>`).join("")
@@ -3499,10 +3689,42 @@ async function loadSettings() {
   $("#print-form").elements.foil.checked = !!appSettings.foil;
   $("#pdf-paper").value = appSettings.paper || "A4";
 }
+let hoverSave = 0;
+$("#hover-preview").addEventListener("change", async (e) => {
+  const on = e.target.checked;
+  const seq = ++hoverSave;
+  applyHoverPreview(on);
+  try {
+    const saved = await api("/api/settings", { method: "POST", body: { hover_preview: on } });
+    if (seq !== hoverSave) return; // a newer toggle or the settings form already saved
+    appSettings = saved;
+    applyHoverPreview(appSettings.hover_preview);
+    e.target.checked = hoverPreview;
+  } catch (err) {
+    if (seq !== hoverSave) return;
+    applyHoverPreview(appSettings.hover_preview);
+    e.target.checked = hoverPreview;
+    fail(err);
+  }
+});
+$("#font-choice").addEventListener("change", async (e) => {
+  const font = e.target.value === "inter" ? "inter" : "cascadia";
+  applyFont(font);
+  try {
+    appSettings = await api("/api/settings", { method: "POST", body: { font } });
+    applyFont(appSettings.font);
+  } catch (err) {
+    applyFont(appSettings.font);
+    e.target.value = appSettings.font === "inter" ? "inter" : "cascadia";
+    fail(err);
+  }
+});
 $("#settings-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const body = Object.fromEntries(new FormData(e.target));
   body.upscale = e.target.elements.upscale.checked;
+  body.hover_preview = $("#hover-preview").checked; // outside the form; unchecked boxes are omitted from FormData
+  hoverSave++;
   try {
     await api("/api/settings", { method: "POST", body });
     await loadSettings();
@@ -3869,8 +4091,14 @@ $("#dc-added").addEventListener("change", updateDcSelection);
 $("#deck-compare").addEventListener("click", (e) => {
   const b = e.target.closest("button.name");
   if (!b) return;
-  const i = [...(dcData?.added || []), ...(dcData?.removed || [])].find((x) => x.name === b.dataset.name) || {};
-  showCardView(b.dataset.name, { image: i.image, image_back: i.image_back });
+  const col = b.closest("#dc-added, #dc-removed");
+  const pool = col?.id === "dc-removed" ? (dcData?.removed || []) : (dcData?.added || []);
+  const buttons = col ? [...col.querySelectorAll("button.name")] : [b];
+  const list = buttons.map((btn) => {
+    const hit = pool.find((x) => x.name === btn.dataset.name) || {};
+    return { name: btn.dataset.name, cd: { image: hit.image, image_back: hit.image_back } };
+  });
+  showCardView(b.dataset.name, list[buttons.indexOf(b)].cd, list, buttons.indexOf(b));
 });
 $("#dc-close").addEventListener("click", () => $("#deck-compare").close());
 $("#dc-copy").addEventListener("click", async () => {
@@ -3977,12 +4205,14 @@ function paletteItems() {
   ];
   if (currentDeck && parseHash().view === "deck") {
     const d = currentDeck;
-    const tabNames = { karten: "Karten", anleitung: "Rule 0", testen: "Testhand & Wahrscheinlichkeiten", anpassen: "Tischregel & Ziel-Stärke", partien: "Partien & Bilanz", verlauf: "Verlauf", drucken: "Drucken" };
+    const tabNames = { karten: "Karten", testen: "Testhand & Wahrscheinlichkeiten", partien: "Partien & Bilanz", verlauf: "Verlauf", drucken: "Drucken" };
     for (const [tab, label] of Object.entries(tabNames)) items.push({ label, hint: d.name, run: () => selectTab(tab) });
     items.push({ label: "Karten bearbeiten", hint: d.name, run: () => { selectTab("karten"); if (!edit) setEditing(true); } });
+    items.push({ label: "Rule 0", hint: d.name, run: () => { selectTab("karten"); openRule0(); } });
+    items.push({ label: "Ziel und Tischregel", hint: d.name, run: () => { selectTab("karten"); $("#deck-target").scrollIntoView({ behavior: "smooth", block: "start" }); } });
     items.push({ label: "Liste kopieren", hint: d.name, run: () => $("#copy-btn").click() });
     items.push({ label: "Mit anderem Deck vergleichen", hint: d.name, run: () => openDeckCompare() });
-    items.push({ label: "Partie festhalten", hint: d.name, run: () => { selectTab("partien"); $("#game-form input[name=result]").focus(); } });
+    items.push({ label: "Partie festhalten", hint: d.name, run: () => { selectTab("partien"); $("#game-form-box").open = true; $("#game-form input[name=result]").focus(); } });
   }
   for (const d of deckIndex) items.push({ label: d.name, hint: `Deck · ${d.commanders.join(" + ")} · ${d.level || ""}`, run: () => go(`#/deck/${enc(d.slug)}`) });
   for (const o of orderIndex) items.push({ label: o.name, hint: `Sammelbestellung · ${o.counts.slots} Druckplätze`, run: () => go(`#/orders/${enc(o.id)}`) });

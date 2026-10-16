@@ -32,7 +32,7 @@ async def test_gui_routes():
     client = TestClient(app)
     assert len(client.get("/api/brackets").json()) == 5
     decks = client.get("/api/decks").json()
-    assert decks[0]["slug"] == "gui-deck" and decks[0]["valid"] is True
+    assert decks[0]["slug"] == "gui-deck" and decks[0]["valid"] is True and decks[0]["fits"] is True
     d = client.get("/api/decks/gui-deck").json()
     assert d["card_data"]["Sol Ring"]["image"].split("?")[0].endswith("Sol Ring.jpg")
     assert "18 Forest" in d["export_text"]
@@ -43,6 +43,26 @@ async def test_gui_routes():
     assert client.get("/api/trash").json()[0]["name"] == "Gui Deck"
     assert client.post(f"/api/trash/{trash_id}/restore").json()["slug"] == "gui-deck"
     assert client.get("/api/decks/gui-deck").status_code == 200
+
+
+def test_ui_font_setting():
+    client = TestClient(app)
+    assert client.get("/api/settings").json()["font"] == "cascadia"
+    assert client.post("/api/settings", json={"font": "inter"}).json()["font"] == "inter"
+    assert client.get("/api/settings").json()["font"] == "inter"
+    assert client.post("/api/settings", json={"font": "comic"}).status_code == 422
+
+
+def test_hover_preview_setting():
+    client = TestClient(app)
+    assert client.get("/api/settings").json()["hover_preview"] is True
+    assert client.post("/api/settings", json={"hover_preview": False}).json()["hover_preview"] is False
+    assert client.get("/api/settings").json()["hover_preview"] is False
+    # the settings form posts the other fields and must keep an explicit false
+    saved = client.post("/api/settings", json={"autofill_path": "", "descreen": "normal", "upscale": False}).json()
+    assert saved["hover_preview"] is False
+    assert client.post("/api/settings", json={"hover_preview": False, "upscale": False}).json()["hover_preview"] is False
+    assert client.post("/api/settings", json={"hover_preview": True}).json()["hover_preview"] is True
 
 
 def test_deck_view_has_back_faces():

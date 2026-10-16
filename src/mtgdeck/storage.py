@@ -331,6 +331,17 @@ def purge_deleted(trash_id: str | None = None) -> int:
     return len(targets)
 
 
+def _deck_fits(deck: dict[str, Any]) -> bool:
+    """Legal and inside its bracket, and inside its table rule when one is set."""
+    v = deck.get("validation") or {}
+    if v.get("legal") is not True or deck.get("bracket") is None:
+        return False
+    if (v.get("bracket") or {}).get("compliant") is False:
+        return False
+    table = v.get("table_rule") or {}
+    return not (deck.get("table_rule") and table.get("compliant") is False)
+
+
 def list_decks() -> list[dict[str, Any]]:
     if not DECKS_DIR.exists():
         return []
@@ -341,7 +352,7 @@ def list_decks() -> list[dict[str, Any]]:
             d = json.loads(path.read_text("utf-8"))
         except (ValueError, OSError):  # damaged: listed so it does not silently vanish; opening it keeps a copy
             out.append({"slug": path.stem, "name": f"{path.stem} (beschädigt)", "commanders": [], "damaged": True,
-                        "level": "", "updated": None, "version": None, "valid": False})  # fmt: skip
+                        "level": "", "updated": None, "version": None, "valid": False, "fits": False})  # fmt: skip
             continue
         out.append(
             {
@@ -355,6 +366,7 @@ def list_decks() -> list[dict[str, Any]]:
                 "updated": d.get("updated"),
                 "version": d.get("version"),
                 "valid": (d.get("validation") or {}).get("legal"),
+                "fits": _deck_fits(d),
                 "table_rule": d.get("table_rule"),
                 "needs_revalidation": bool(d.get("needs_revalidation")),  # merged by the sync, check pending
             }

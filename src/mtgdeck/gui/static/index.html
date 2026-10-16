@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Commander Deckbuilder</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect x=%273%27 y=%271%27 width=%2710%27 height=%2714%27 rx=%272%27 fill=%27%236d4bd8%27/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%234ae05a'/%3E%3Cpath d='M390 128H249.2a128 128 0 0 0 0 256H390v-76H249.2a52 52 0 0 1 0-104H390z' fill='%23000'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/static/vendor/xterm/xterm.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -24,6 +24,7 @@
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17h.01"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-forward" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
   <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
   <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
@@ -42,13 +43,13 @@
   <header class="topbar">
     <button type="button" class="icon-btn" id="nav-toggle" aria-label="Menü öffnen" aria-expanded="false" aria-controls="sidebar">
       <svg class="icon"><use href="#i-menu"/></svg></button>
-    <a class="brand" href="#/new"><span class="logo" aria-hidden="true"></span>Commander Deckbuilder</a>
+    <a class="brand" href="#/"><span class="logo" aria-hidden="true"></span>Commander Deckbuilder</a>
     <a id="job-indicator-top" class="job-indicator top" href="#/new" hidden aria-label="Laufender Auftrag"><span class="spinner" aria-hidden="true"></span>läuft</a>
   </header>
 
   <aside id="sidebar" class="sidebar" aria-label="Navigation">
-    <a class="brand" href="#/new"><span class="logo" aria-hidden="true"></span>Commander Deckbuilder</a>
-    <a class="btn primary block" href="#/new" data-nav="new"><svg class="icon"><use href="#i-plus"/></svg>Neues Deck</a>
+    <a class="brand" href="#/"><span class="logo" aria-hidden="true"></span>Commander Deckbuilder</a>
+    <a class="btn block" id="nav-new" href="#/new" data-nav="new"><svg class="icon"><use href="#i-plus"/></svg>Neues Deck</a>
     <button type="button" class="search-btn" id="palette-btn"><svg class="icon"><use href="#i-search"/></svg><span>Suchen …</span><kbd>Strg K</kbd></button>
     <a id="job-indicator" class="job-indicator" href="#/new" hidden>
       <span class="spinner" aria-hidden="true"></span><span id="job-indicator-text">Auftrag läuft …</span></a>
@@ -58,6 +59,12 @@
       <input id="deck-filter" type="search" class="filter" placeholder="Decks filtern …" aria-label="Decks filtern" hidden>
       <ul id="deck-list" class="deck-list"></ul>
     </div>
+
+    <details class="nav-trash" id="nav-trash" hidden>
+      <summary>Papierkorb <span id="trash-count" class="count"></span></summary>
+      <ul id="trash-list" class="nav-trash-list"></ul>
+      <button type="button" class="btn ghost small" id="trash-empty">Papierkorb leeren …</button>
+    </details>
 
     <nav class="nav-bottom" aria-label="Weitere Bereiche">
       <a href="#/collection" data-nav="collection"><svg class="icon"><use href="#i-box"/></svg>Meine Sammlung <span id="coll-count" class="count"></span></a>
@@ -145,7 +152,9 @@
         <img id="deck-thumb" class="deck-thumb" alt="" hidden>
         <div class="deck-title">
           <h1 id="deck-name"></h1>
-          <div id="deck-meta" class="meta-row"></div>
+          <p id="deck-commanders" class="deck-commanders"></p>
+          <p id="deck-facts" class="muted small"></p>
+          <p id="deck-verdict" class="verdict"></p>
           <p id="deck-desc" class="lead"></p>
           <p id="deck-against" class="muted small" hidden></p>
         </div>
@@ -170,9 +179,7 @@
 
       <div class="tabs" role="tablist" id="deck-tabs" aria-label="Deckbereiche">
         <button type="button" role="tab" id="tab-karten" aria-controls="panel-karten" data-tab="karten">Karten</button>
-        <button type="button" role="tab" id="tab-anleitung" aria-controls="panel-anleitung" data-tab="anleitung">Rule 0</button>
         <button type="button" role="tab" id="tab-testen" aria-controls="panel-testen" data-tab="testen">Testen</button>
-        <button type="button" role="tab" id="tab-anpassen" aria-controls="panel-anpassen" data-tab="anpassen">Anpassen</button>
         <button type="button" role="tab" id="tab-partien" aria-controls="panel-partien" data-tab="partien">Partien <span class="count" id="game-count"></span></button>
         <button type="button" role="tab" id="tab-verlauf" aria-controls="panel-verlauf" data-tab="verlauf">Verlauf <span class="count" id="version-count"></span></button>
         <button type="button" role="tab" id="tab-drucken" aria-controls="panel-drucken" data-tab="drucken">Drucken</button>
@@ -182,6 +189,7 @@
       <div role="tabpanel" id="panel-karten" aria-labelledby="tab-karten" class="tabpanel">
         <div class="deck-layout">
           <section class="panel">
+            <button type="button" class="deck-status" id="deck-status"><span id="deck-status-text"></span></button>
             <div class="panel-head">
               <h2>Karten <span id="card-total" class="count"></span></h2>
               <div class="card-tools">
@@ -225,43 +233,55 @@
             <section class="panel" id="check-panel">
               <h2>Deck-Check</h2>
               <div id="validation"></div>
+              <div id="deck-target" class="deck-target">
+                <div class="tune-head">
+                  <h3>Ziel</h3>
+                  <div class="btn-group">
+                    <button type="button" class="btn small" id="step-down">▼ Schwächer</button>
+                    <button type="button" class="btn small" id="step-up">▲ Stärker</button>
+                  </div>
+                </div>
+                <div id="power-scale" class="scale"></div>
+                <div id="power-text" class="muted small"></div>
+                <form id="retune-form" autocomplete="off">
+                  <div class="field-block">
+                    <span class="field-label">Ziel-Bracket</span>
+                    <div id="retune-brackets" class="brackets" role="radiogroup" aria-label="Ziel-Bracket"></div>
+                  </div>
+                  <details class="more" id="target-more">
+                    <summary>Feiner einstellen</summary>
+                    <div class="profile-fields"></div>
+                  </details>
+                  <button type="submit" id="retune-btn" class="btn" hidden>Ziel speichern</button>
+                </form>
+              </div>
+              <div class="tune-table" id="table-panel">
+                <div class="tune-table-row">
+                  <label for="deck-table" class="field-label">Tischregel</label>
+                  <select id="deck-table"><option value="">Keine Tischregel</option></select>
+                </div>
+                <div id="deck-table-status" aria-live="polite"></div>
+              </div>
+              <div class="check-actions">
+                <button type="button" class="btn" id="rule0-open">Rule 0</button>
+              </div>
               <div id="health-panel" class="health-box" hidden>
                 <h3>Bereiche</h3>
                 <p id="health-summary" class="muted small"></p>
                 <ul id="health-list" class="health"></ul>
+                <details class="more" id="health-all">
+                  <summary>Alle Bereiche</summary>
+                  <ul id="health-all-list" class="health"></ul>
+                </details>
               </div>
             </section>
-            <section class="panel" id="own-panel" hidden><h2>Sammlung</h2><div id="own-summary"></div></section>
-            <section class="panel" id="token-panel" hidden>
+            <section class="deck-aside" id="own-panel" hidden><h2>Sammlung</h2><div id="own-summary"></div></section>
+            <section class="deck-aside" id="token-panel" hidden>
               <h2>Tokens &amp; Marker <span id="token-count" class="count"></span></h2>
               <ul id="token-list" class="token-list"></ul>
             </section>
-            <section class="panel"><h2>Statistik</h2><div id="stats"></div></section>
+            <section class="deck-aside"><h2>Statistik</h2><div id="stats"></div></section>
           </aside>
-        </div>
-      </div>
-
-      <!-- guide: rule 0 + play guide, printable as one cheat sheet -->
-      <div role="tabpanel" id="panel-anleitung" aria-labelledby="tab-anleitung" class="tabpanel" hidden>
-        <div class="sheet-actions no-print">
-          <p class="muted small">Rule 0 passt auf eine Seite – zum Ausdrucken oder als PDF fürs Handy.</p>
-          <button type="button" class="btn" id="sheet-print">Drucken / als PDF</button>
-        </div>
-        <div class="sheet">
-          <h1 class="print-only" id="sheet-title"></h1>
-          <section class="panel rule0">
-            <div class="panel-head">
-              <div>
-                <h2>Rule 0 – das sagst du vor dem Spiel</h2>
-                <p class="muted small no-print">Automatisch aus der Deck-Prüfung. Markierte Punkte sollte die Runde vorher wissen.</p>
-              </div>
-              <div class="btn-group no-print">
-                <button type="button" class="btn small" id="rule0-copy"><svg class="icon"><use href="#i-copy"/></svg>Kopieren</button>
-                <button type="button" class="btn small" id="rule0-show">Am Tisch zeigen</button>
-              </div>
-            </div>
-            <dl id="rule0-rows" class="rule0-rows"></dl>
-          </section>
         </div>
       </div>
 
@@ -290,47 +310,11 @@
         </section>
       </div>
 
-      <!-- tune -->
-      <div role="tabpanel" id="panel-anpassen" aria-labelledby="tab-anpassen" class="tabpanel" hidden>
-        <section class="panel tune-table" id="table-panel">
-          <div class="tune-table-row">
-            <label for="deck-table" class="field-label">Tischregel</label>
-            <select id="deck-table"><option value="">Keine Tischregel</option></select>
-            <span class="muted small">Für welche Runde ist das Deck? Verstöße zeigt die Prüfung als Fehler.</span>
-          </div>
-          <div id="deck-table-status" aria-live="polite"></div>
-        </section>
-
-        <section class="panel" id="power-panel">
-          <div class="panel-head">
-            <div>
-              <h2>Ziel-Stärke</h2>
-              <p class="muted small">Wie stark soll das Deck sein? Die Prüfung misst deine Karten am Ziel – tauschen tust du sie selbst unter „Karten“ → „Bearbeiten“.</p>
-            </div>
-            <div class="btn-group">
-              <button type="button" class="btn" id="step-down">▼ Schwächer</button>
-              <button type="button" class="btn" id="step-up">▲ Stärker</button>
-            </div>
-          </div>
-          <div id="power-scale" class="scale"></div>
-          <div id="power-text" class="muted small"></div>
-          <form id="retune-form" autocomplete="off">
-            <div class="field-block">
-              <span class="field-label">Ziel-Bracket</span>
-              <div id="retune-brackets" class="brackets" role="radiogroup" aria-label="Ziel-Bracket"></div>
-            </div>
-            <div class="profile-fields"></div>
-            <button type="submit" id="retune-btn" class="btn primary">Ziel speichern</button>
-          </form>
-        </section>
-      </div>
-
       <div role="tabpanel" id="panel-partien" aria-labelledby="tab-partien" class="tabpanel" hidden>
-        <div class="games-layout">
-          <section class="panel">
-            <h2>Partie festhalten</h2>
-            <p class="muted small">Nach dem Spiel kurz eintragen – aus den Problemen werden gezielte Verbesserungen.</p>
-            <form id="game-form" autocomplete="off">
+        <details class="panel fold" id="game-form-box">
+          <summary>Partie festhalten</summary>
+          <p class="muted small">Nach dem Spiel kurz eintragen – aus den Problemen werden gezielte Verbesserungen.</p>
+          <form id="game-form" autocomplete="off">
               <div class="field-block">
                 <span class="field-label">Ergebnis</span>
                 <div class="segmented" role="radiogroup" aria-label="Ergebnis">
@@ -370,13 +354,12 @@
                 <textarea name="note" rows="2" placeholder="Was ist dir aufgefallen?"></textarea></label>
               <button type="submit" class="btn primary">Partie speichern</button>
             </form>
-          </section>
-          <section class="panel" id="game-stats-panel">
+        </details>
+        <section class="panel" id="game-stats-panel">
             <h2>Bilanz</h2>
             <p id="game-learn" class="hint-box" hidden></p>
             <div id="game-stats"></div>
           </section>
-        </div>
         <section class="panel">
           <h2>Gespielte Partien</h2>
           <ol id="game-list" class="game-list" reversed></ol>
@@ -414,80 +397,89 @@
         <div id="print-job-slot" class="job-slot"></div>
         <section class="panel" id="print-steps-panel">
           <h2>Drucken</h2>
-          <form id="print-form" class="toolbar print-options" autocomplete="off">
-            <label class="field">Bilder
-              <select name="source">
-                <option value="auto">Automatisch (eigene Wahl › MPC Autofill › Scryfall)</option>
-                <option value="mpcfill">MPC Autofill</option>
-                <option value="scryfall">nur Scryfall</option>
-              </select>
-            </label>
-            <label class="field">Kartenstärke <select name="stock"></select></label>
-            <label class="check"><input type="checkbox" name="foil"> Foil</label>
-            <span class="check token-opt" title="Tokens, Embleme und Marker (z. B. Monarch) des Decks mitdrucken – die Anzahl stellst du pro Token ein">
-              <label class="check"><input type="checkbox" name="tokens"> Tokens mitdrucken</label>
-              <label class="check" title="Für Tokens ohne eigene Anzahl; Embleme und Marker bekommen 1">Standard je <input type="number" name="token_copies" min="1" max="20" value="2" aria-label="Standard-Exemplare pro Token"></label>
-            </span>
-            <label class="check needs-collection" hidden title="Karten, die du (echt oder als Proxy) schon hast, werden nicht gedruckt">
-              <input type="checkbox" name="only_missing"> Nur fehlende Karten</label>
-            <label class="check" title="Opt-in: Scryfall-Scans mit Real-ESRGAN auf 600 DPI hochrechnen (braucht das Zusatzprogramm, kostet Rechenzeit)">
-              <input type="checkbox" name="upscale"> KI-Hochskalierung <span class="muted">(600 DPI)</span></label>
-            <button type="submit" class="btn">Vorschau aktualisieren</button>
-          </form>
-          <p id="print-summary" class="muted small"></p>
-          <div id="print-tokens" class="print-tokens" hidden>
-            <div class="print-tokens-head">
-              <h3>Tokens, Embleme &amp; Marker <span id="print-tokens-count" class="muted small"></span></h3>
-              <p class="muted small">Anzahl pro Token – 0 = nicht drucken. Ein Klick aufs Bild wählt ein anderes Artwork.</p>
+          <form id="print-form" class="print-options" autocomplete="off">
+            <div class="print-quick">
+              <label class="check needs-collection" hidden title="Karten, die du (echt oder als Proxy) schon hast, werden nicht gedruckt">
+                <input type="checkbox" name="only_missing"> Nur fehlende Karten</label>
+              <label class="check token-opt" title="Tokens, Embleme und Marker (z. B. Monarch) des Decks mitdrucken – die Anzahl stellst du pro Token ein">
+                <input type="checkbox" name="tokens"> Tokens mitdrucken</label>
             </div>
-            <ul id="print-token-list" class="token-qty-list"></ul>
-          </div>
-          <ol class="print-steps">
-            <li>
-              <div>
-                <h3>Druckdateien vorbereiten</h3>
-                <p class="muted small">Lädt die Bilder, ergänzt den Beschnitt-Rand und schreibt die order.xml.</p>
-                <p id="prepared-info" class="muted small" hidden></p>
+            <p id="print-summary" class="muted small"></p>
+            <div id="print-tokens" class="print-tokens" hidden>
+              <div class="print-tokens-head">
+                <h3>Tokens, Embleme &amp; Marker <span id="print-tokens-count" class="muted small"></span></h3>
+                <p class="muted small">Anzahl pro Token – 0 = nicht drucken. Ein Klick aufs Bild wählt ein anderes Artwork.</p>
               </div>
-              <div class="step-actions">
-                <button type="button" id="prepare-btn" class="btn primary">Vorbereiten</button>
-                <button type="button" class="btn ghost" id="open-folder-btn" hidden title="Druckbilder im Explorer/Finder öffnen">Ordner öffnen</button>
-                <a id="xml-link" class="link" href="#" hidden>order.xml</a>
+              <ul id="print-token-list" class="token-qty-list"></ul>
+            </div>
+            <ol class="print-steps">
+              <li>
+                <div>
+                  <h3>Druckdateien vorbereiten</h3>
+                  <p class="muted small">Lädt die Bilder, ergänzt den Beschnitt-Rand und schreibt die order.xml.</p>
+                  <p id="prepared-info" class="muted small" hidden></p>
+                </div>
+                <div class="step-actions">
+                  <button type="button" id="prepare-btn" class="btn primary">Vorbereiten</button>
+                  <button type="button" class="btn ghost" id="open-folder-btn" hidden title="Druckbilder im Explorer/Finder öffnen">Ordner öffnen</button>
+                  <a id="xml-link" class="link" href="#" hidden>order.xml</a>
+                </div>
+              </li>
+              <li>
+                <div>
+                  <h3>Selbst drucken</h3>
+                  <p class="muted small">PDF mit 9 Karten pro Seite (63 × 88 mm) und Schnittmarken.</p>
+                </div>
+                <div class="step-actions">
+                  <select id="pdf-paper" aria-label="Papier"><option>A4</option><option>Letter</option></select>
+                  <label class="check"><input type="checkbox" id="pdf-backs" checked> DFC-Rückseiten</label>
+                  <button type="button" class="btn" id="pdf-btn">PDF erstellen</button>
+                  <a id="pdf-link" class="link" href="#" hidden>PDF öffnen</a>
+                </div>
+              </li>
+            </ol>
+            <details class="more" id="print-more">
+              <summary>Weitere Optionen</summary>
+              <div class="print-options-more">
+                <label class="field">Bilder
+                  <select name="source">
+                    <option value="auto">Automatisch (eigene Wahl › MPC Autofill › Scryfall)</option>
+                    <option value="mpcfill">MPC Autofill</option>
+                    <option value="scryfall">nur Scryfall</option>
+                  </select>
+                </label>
+                <label class="field">Kartenstärke <select name="stock"></select></label>
+                <label class="check"><input type="checkbox" name="foil"> Foil</label>
+                <label class="check token-opt" title="Für Tokens ohne eigene Anzahl; Embleme und Marker bekommen 1">Standard je
+                  <input type="number" name="token_copies" min="1" max="20" value="2" aria-label="Standard-Exemplare pro Token"></label>
+                <label class="check" title="Opt-in: Scryfall-Scans mit Real-ESRGAN auf 600 DPI hochrechnen (braucht das Zusatzprogramm, kostet Rechenzeit)">
+                  <input type="checkbox" name="upscale"> KI-Hochskalierung <span class="muted">(600 DPI)</span></label>
+                <label class="check" title="Statt im eingebetteten Terminal in einem separaten Konsolenfenster starten">
+                  <input type="checkbox" id="mpc-window"> eigenes Fenster</label>
               </div>
-            </li>
-            <li>
-              <div>
-                <h3>Selbst drucken</h3>
-                <p class="muted small">PDF mit 9 Karten pro Seite (63 × 88 mm) und Schnittmarken.</p>
-              </div>
-              <div class="step-actions">
-                <select id="pdf-paper" aria-label="Papier"><option>A4</option><option>Letter</option></select>
-                <label class="check"><input type="checkbox" id="pdf-backs" checked> DFC-Rückseiten</label>
-                <button type="button" class="btn" id="pdf-btn">PDF erstellen</button>
-                <a id="pdf-link" class="link" href="#" hidden>PDF öffnen</a>
-              </div>
-            </li>
-            <li>
-              <div>
-                <h3>Bei MakePlayingCards bestellen</h3>
-                <p class="muted small">Das MPC-Autofill-Programm lädt alles hoch – Login und Bestellung machst du dort.
-                  Die order.xml geht auch auf mpcfill.com.</p>
-              </div>
-              <div class="step-actions">
-                <button type="button" id="mpc-btn" class="btn">An MakePlayingCards senden</button>
-                <label class="check" title="Statt im eingebetteten Terminal in einem separaten Konsolenfenster starten"><input type="checkbox" id="mpc-window"> eigenes Fenster</label>
-              </div>
-            </li>
-            <li>
-              <div>
-                <h3>In die Sammlung übernehmen</h3>
-                <p class="muted small">Wenn die Proxies da sind: alle gedruckten Karten mit ihrem Artwork als Proxy in „Meine Sammlung“ eintragen.</p>
-              </div>
-              <div class="step-actions">
-                <button type="button" id="add-printed-btn" class="btn">Zur Sammlung hinzufügen</button>
-              </div>
-            </li>
-          </ol>
+              <ol class="print-steps continue">
+                <li>
+                  <div>
+                    <h3>Bei MakePlayingCards bestellen</h3>
+                    <p class="muted small">Das MPC-Autofill-Programm lädt alles hoch – Login und Bestellung machst du dort.
+                      Die order.xml geht auch auf mpcfill.com.</p>
+                  </div>
+                  <div class="step-actions">
+                    <button type="button" id="mpc-btn" class="btn">An MakePlayingCards senden</button>
+                  </div>
+                </li>
+                <li>
+                  <div>
+                    <h3>In die Sammlung übernehmen</h3>
+                    <p class="muted small">Wenn die Proxies da sind: alle gedruckten Karten mit ihrem Artwork als Proxy in „Meine Sammlung“ eintragen.</p>
+                  </div>
+                  <div class="step-actions">
+                    <button type="button" id="add-printed-btn" class="btn">Zur Sammlung hinzufügen</button>
+                  </div>
+                </li>
+              </ol>
+            </details>
+          </form>
         </section>
 
         <section class="panel" id="print-panel">
@@ -671,16 +663,18 @@
               Beim Festhalten einer Partie wählst du sie aus, die Bilanz gegen jedes Deck steht hier.</p>
           </div>
         </header>
-        <form class="panel" id="opp-new" autocomplete="off">
-          <h2>Gegnerdeck merken</h2>
-          <div class="row2">
-            <label class="field">Commander <input name="commander" list="ac-opp-new" required placeholder="z. B. Atraxa (auch deutsch)"><datalist id="ac-opp-new"></datalist></label>
-            <label class="field"><span>Spieler / eigener Name <span class="muted">(optional)</span></span><input name="label" placeholder="z. B. Tims Atraxa" maxlength="80"></label>
-          </div>
-          <label class="field"><span>Was ist dir aufgefallen? <span class="muted">(optional)</span></span>
-            <input name="note" placeholder="z. B. gewinnt mit Combo, viele Board Wipes, sehr schnell" maxlength="1000"></label>
-          <div class="form-actions"><button type="submit" class="btn primary"><svg class="icon"><use href="#i-plus"/></svg>Merken</button></div>
-        </form>
+        <details class="panel fold" id="opp-new-box">
+          <summary>Gegnerdeck merken</summary>
+          <form id="opp-new" autocomplete="off">
+            <div class="row2">
+              <label class="field">Commander <input name="commander" list="ac-opp-new" required placeholder="z. B. Atraxa (auch deutsch)"><datalist id="ac-opp-new"></datalist></label>
+              <label class="field"><span>Spieler / eigener Name <span class="muted">(optional)</span></span><input name="label" placeholder="z. B. Tims Atraxa" maxlength="80"></label>
+            </div>
+            <label class="field"><span>Was ist dir aufgefallen? <span class="muted">(optional)</span></span>
+              <input name="note" placeholder="z. B. gewinnt mit Combo, viele Board Wipes, sehr schnell" maxlength="1000"></label>
+            <div class="form-actions"><button type="submit" class="btn primary"><svg class="icon"><use href="#i-plus"/></svg>Merken</button></div>
+          </form>
+        </details>
         <div id="opp-list" class="orders-list"></div>
         <p id="opp-empty" class="empty-inline">Noch keine Gegnerdecks. Sie entstehen auch automatisch, wenn du im Deck unter „Partien“ eine Partie mit Gegner-Commandern festhältst.</p>
       </div>
@@ -706,6 +700,11 @@
         </header>
 
         <section class="panel">
+          <h2>Bilanz</h2>
+          <div id="opp-record"></div>
+        </section>
+
+        <section class="panel">
           <h2>Aufgefallen</h2>
           <form id="opp-note-form" class="inline-form" autocomplete="off">
             <input name="note" placeholder="z. B. hat in Zug 5 mit Thassa's Oracle gewonnen" aria-label="Neue Beobachtung" maxlength="1000" required>
@@ -715,7 +714,12 @@
           <p id="opp-notes-empty" class="empty-inline">Noch nichts notiert.</p>
         </section>
 
-        <form class="panel" id="opp-form" autocomplete="off">
+        <section class="panel" id="opp-games-panel">
+          <h2>Partien</h2>
+          <ul id="opp-games" class="game-list"></ul>
+        </section>
+
+        <form class="panel" id="opp-form" autocomplete="off" hidden>
           <h2>Steckbrief</h2>
           <p class="muted small">Name, Commander und Partner kannst du jederzeit ändern. Partien und Notizen bleiben an diesem Gegnerdeck.</p>
           <div class="row2">
@@ -734,13 +738,6 @@
           </div>
           <div class="form-actions"><button type="submit" class="btn primary">Speichern</button></div>
         </form>
-
-
-        <section class="panel">
-          <h2>Partien gegen dieses Deck</h2>
-          <div id="opp-record"></div>
-          <ul id="opp-games" class="game-list"></ul>
-        </section>
       </div>
     </section>
 
@@ -752,7 +749,8 @@
             <h1>Tischregeln</h1>
             <p class="lead">Regeln für eine Runde, z. B. „Freitagsrunde: höchstens Bracket 3, keine 2-Karten-Combos, kein Stax“.
               Beim Bauen und Umbauen wählst du, welche gilt – das Deck merkt sie sich und die Prüfung meldet Verstöße.
-              Anders als die Blacklist gilt eine Tischregel nur für die Decks, die sie gewählt haben.</p>
+              Anders als die Blacklist gilt eine Tischregel nur für die Decks, die sie gewählt haben.
+              Die Ziel-Stärke im Deck-Check gilt nur für dieses eine Deck.</p>
           </div>
         </header>
         <section class="panel">
@@ -837,7 +835,7 @@
       <header class="page-head">
         <div>
           <h1>Blacklist</h1>
-          <p class="lead">Was hier steht, kommt nie in ein Deck – auch nicht beim Überarbeiten. Einzelne Karten (deutsche Namen gehen auch) oder ganze Gruppen wie „True Duals“ oder „Günstige Tutoren“.</p>
+          <p class="lead">Gilt für alle Decks: was hier steht, kommt nie hinein, auch nicht beim Überarbeiten. Eine Runde begrenzst du unter Tischregeln, ein einzelnes Deck im Deck-Check unter „Ziel“.</p>
         </div>
       </header>
       <section class="panel">
@@ -867,9 +865,20 @@
       <header class="page-head">
         <div>
           <h1>Einstellungen</h1>
-          <p class="lead">Sync zwischen Geräten, Datensicherung, Papierkorb, Kartendatenbank und Proxy-Druck.</p>
+          <p class="lead">Darstellung, Sync zwischen Geräten, Datensicherung, Kartendatenbank und Proxy-Druck.</p>
         </div>
       </header>
+
+      <section class="panel">
+        <h2>Darstellung</h2>
+        <label class="field inline">Schrift
+          <select id="font-choice" aria-label="Schrift">
+            <option value="cascadia">Cascadia Code</option>
+            <option value="inter">Inter</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="hover-preview" checked> Kartenbild an der Maus, wenn du über die Liste fährst</label>
+      </section>
 
       <section class="panel" id="desktop-panel" hidden>
         <h2>Desktop-App</h2>
@@ -970,18 +979,6 @@
           <label class="btn file-btn">Sicherung einspielen …<input type="file" id="backup-file" accept=".zip,application/zip" hidden></label>
         </div>
         <ul id="backup-list" class="backup-list"></ul>
-      </section>
-
-      <section class="panel" id="trash-panel">
-        <div class="panel-head">
-          <div>
-            <h2>Papierkorb</h2>
-            <p class="muted small">Gelöschte Decks samt Versionen und Partien. Bis du sie endgültig löschst, holst du sie hier zurück.</p>
-          </div>
-          <button type="button" class="btn ghost small" id="trash-empty" hidden>Papierkorb leeren …</button>
-        </div>
-        <ul id="trash-list" class="backup-list"></ul>
-        <p id="trash-none" class="empty-inline">Der Papierkorb ist leer.</p>
       </section>
 
       <section class="panel">
@@ -1279,38 +1276,54 @@
   <div id="similar-grid" class="similar-grid"></div>
 </dialog>
 
-<dialog id="card-view" class="dialog card-view">
-  <div class="dialog-head">
-    <h2 id="card-view-title"></h2>
-    <div class="btn-group">
-      <button type="button" class="btn small" id="card-view-order"><svg class="icon"><use href="#i-cart"/></svg>Zur Sammelbestellung</button>
-      <a id="card-view-link" class="link" href="#" target="_blank" rel="noopener">Auf Scryfall öffnen</a>
-      <button type="button" class="icon-btn" id="card-view-close" aria-label="Schließen" autofocus><svg class="icon"><use href="#i-x"/></svg></button>
-    </div>
+<dialog id="card-view" class="dialog card-view" aria-labelledby="card-view-title">
+  <div class="card-view-bar">
+    <h2 id="card-view-title" class="sr-only"></h2>
+    <button type="button" class="icon-btn" id="card-view-close" aria-label="Schließen" autofocus><svg class="icon"><use href="#i-x"/></svg></button>
   </div>
   <div class="card-view-body">
-    <div id="card-view-faces" class="card-view-faces"></div>
-    <div id="card-view-text" class="card-view-text" hidden>
-      <div class="segmented small" role="radiogroup" aria-label="Sprache des Kartentexts">
-        <label><input type="radio" name="cardlang" value="de" checked><span>Deutsch</span></label>
-        <label><input type="radio" name="cardlang" value="en"><span>Englisch</span></label>
+    <div class="card-view-stage">
+      <div id="card-view-faces" class="card-view-faces"></div>
+      <button type="button" class="icon-btn card-view-nav prev" id="card-view-prev" hidden><svg class="icon"><use href="#i-back"/></svg></button>
+      <button type="button" class="icon-btn card-view-nav next" id="card-view-next" hidden><svg class="icon"><use href="#i-forward"/></svg></button>
+    </div>
+    <div class="card-view-col">
+      <div id="card-view-text" class="card-view-text" hidden>
+        <div class="card-view-panel">
+          <div class="segmented small" role="radiogroup" aria-label="Sprache des Kartentexts">
+            <label><input type="radio" name="cardlang" value="de" checked><span>Deutsch</span></label>
+            <label><input type="radio" name="cardlang" value="en"><span>Englisch</span></label>
+          </div>
+          <div id="card-view-rules" class="rules" aria-live="polite"></div>
+          <div id="card-view-terms" class="terms" hidden>
+            <h3>Begriffe auf dieser Karte</h3>
+            <dl id="card-view-terms-list"></dl>
+          </div>
+        </div>
+        <p id="card-view-note" class="card-view-note" hidden></p>
       </div>
-      <div id="card-view-rules" class="rules" aria-live="polite"></div>
-      <div id="card-view-terms" class="terms" hidden>
-        <h3>Begriffe auf dieser Karte</h3>
-        <dl id="card-view-terms-list"></dl>
+      <div class="card-view-actions">
+        <button type="button" class="btn small" id="card-view-order"><svg class="icon"><use href="#i-cart"/></svg>Zur Sammelbestellung</button>
+        <a id="card-view-link" class="card-view-ext" href="#" target="_blank" rel="noopener">Auf Scryfall öffnen</a>
       </div>
     </div>
   </div>
 </dialog>
 
 <dialog id="rule0-full" class="dialog rule0-full" aria-labelledby="rule0-full-title">
-  <div class="dialog-head">
-    <h2 id="rule0-full-title"></h2>
+  <div class="dialog-head no-print">
+    <h2 id="rule0-full-title">Rule 0</h2>
     <button type="button" class="icon-btn" id="rule0-full-close" aria-label="Schließen" autofocus><svg class="icon"><use href="#i-x"/></svg></button>
   </div>
-  <dl id="rule0-full-rows" class="rule0-rows big"></dl>
-  <p class="rule0-ask">Passt das für eure Runde?</p>
+  <div class="sheet">
+    <h1 class="print-only" id="sheet-title"></h1>
+    <dl id="rule0-full-rows" class="rule0-rows big"></dl>
+    <p class="rule0-ask">Passt das für eure Runde?</p>
+  </div>
+  <div class="dialog-actions no-print">
+    <button type="button" class="btn" id="rule0-copy"><svg class="icon"><use href="#i-copy"/></svg>Kopieren</button>
+    <button type="button" class="btn" id="rule0-print">Drucken</button>
+  </div>
 </dialog>
 
 <dialog id="deck-compare" class="dialog deck-compare" aria-labelledby="dc-title">
