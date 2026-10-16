@@ -307,6 +307,8 @@ async function importFromClipboard() {
 
 async function loadImport(body) {
   if (body.url !== undefined && !body.url.trim()) { toast("Füge zuerst einen Link ein.", "error"); $("#import-url").focus(); return; }
+  const mox = body.url?.match(/moxfield\.com\/decks\/([A-Za-z0-9_-]+)/i);
+  if (mox && await moxfieldWindow()) return openMoxfield(mox[1]);
   const msg = $("#import-msg");
   msg.className = "small muted";
   msg.textContent = body.url ? "Lade das Deck …" : "Prüfe die Liste …";
@@ -316,7 +318,6 @@ async function loadImport(body) {
     msg.textContent = "";
     renderImportPreview(importData);
   } catch (err) {
-    const mox = body.url?.match(/moxfield\.com\/decks\/([A-Za-z0-9_-]+)/i);
     if (mox) return moxfieldFallback(mox[1]);
     msg.className = "small bad";
     msg.textContent = err.message;
@@ -334,6 +335,32 @@ function moxfieldFallback(id) {
     <a href="https://moxfield.com/decks/${esc(id)}" target="_blank" rel="noopener">Deck in Moxfield öffnen</a>`;
   $("#import-text").focus();
 }
+
+// The desktop app opens moxfield.com links in its own window (desktop/src-tauri/src/moxfield.rs): you log in
+// there, „In Conclave importieren“ on the deck page sends the deck the page loaded back to conclaveMoxfield().
+async function moxfieldWindow() {
+  try { desktopShell = (await api("/api/desktop")).shell; } catch { /* keep the last answer */ }
+  return !!desktopShell?.features?.includes("moxfield");
+}
+
+function openMoxfield(id) {
+  const msg = $("#import-msg");
+  msg.className = "small muted";
+  msg.textContent = "Moxfield öffnet sich in einem eigenen Fenster. Melde dich dort an, falls nötig, und klicke auf der Deckseite „In Conclave importieren“.";
+  location.href = `https://moxfield.com/decks/${encodeURIComponent(id)}`;  // the shell catches this and opens its window
+}
+
+window.conclaveMoxfield = (d) => {
+  const cards = Array.isArray(d?.cards) ? d.cards.filter((c) => Array.isArray(c) && typeof c[0] === "string") : [];
+  const commanders = Array.isArray(d?.commanders) ? d.commanders.filter((c) => typeof c === "string") : [];
+  if (!cards.length) { toast("Moxfield hat kein Deck geliefert.", "error"); return; }
+  const lines = [...(commanders.length ? ["Commander", ...commanders.map((n) => `1 ${n}`), "", "Deck"] : []),
+    ...cards.map(([n, q]) => `${Math.max(1, Number(q) || 1)} ${n}`)];
+  if (parseHash().view !== "new") go("#/new");
+  setImportMode("text");
+  $("#import-text").value = lines.join("\n");
+  loadImport({ text: lines.join("\n"), name: typeof d.name === "string" ? d.name.slice(0, 120) : undefined });
+};
 
 function renderImportPreview(d) {
   const box = $("#import-preview");

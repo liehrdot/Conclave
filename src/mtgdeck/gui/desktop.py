@@ -43,13 +43,13 @@ def shell() -> dict[str, Any] | None:
     if not present():
         return None
     with _lock:
-        return {k: _shell.get(k) for k in ("version", "autostart", "visible", "update", "seen")}
+        return {k: _shell.get(k) for k in ("version", "autostart", "visible", "update", "features", "seen")}
 
 
 def poll(info: dict[str, Any], since: int) -> dict[str, Any]:
     """The shell reports its state and fetches the notices newer than ``since`` plus the queued commands (once)."""
     with _lock:
-        _shell.update({k: info[k] for k in ("version", "autostart", "visible", "update") if k in info}, seen=time.time())
+        _shell.update({k: info[k] for k in ("version", "autostart", "visible", "update", "features") if k in info}, seen=time.time())
         notices = [n for n in _notices if n["id"] > since]
         commands, _commands[:] = list(_commands), []
         last = _notices[-1]["id"] if _notices else since

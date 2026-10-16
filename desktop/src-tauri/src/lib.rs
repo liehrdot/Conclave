@@ -5,6 +5,7 @@
 
 mod backend;
 mod bridge;
+mod moxfield;
 mod updates;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -14,7 +15,7 @@ use backend::Backend;
 use updates::Updates;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{AppHandle, Manager, RunEvent, WindowEvent};
+use tauri::{AppHandle, Manager, RunEvent, WebviewWindowBuilder, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt as _};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_window_state::{StateFlags, WindowExt};
@@ -152,6 +153,19 @@ pub fn run() {
                 bridge::start(handle.clone(), backend.clone(), autostart_item, updates.clone());
                 updates::start(handle.clone(), updates.clone(), backend.clone());
             }
+            // built here, not from tauri.conf.json, so moxfield.com links open in the Moxfield window
+            if let Some(cfg) = app.config().app.windows.iter().find(|w| w.label == "main").cloned() {
+                let nav = handle.clone();
+                WebviewWindowBuilder::from_config(&handle, &cfg)?
+                    .on_navigation(move |url| {
+                        if !moxfield::is_moxfield(url) {
+                            return true;
+                        }
+                        moxfield::open(&nav, url.clone());
+                        false
+                    })
+                    .build()?;
+            }
             if let Some(w) = app.get_webview_window("main") {
                 let _ = w.restore_state(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED);
                 if !hidden && !is_selftest {
@@ -164,7 +178,7 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
+            if let (WindowEvent::CloseRequested { api, .. }, "main") = (event, window.label()) {
                 // the app lives on in the tray: sync and questions from the phone keep working
                 api.prevent_close();
                 let _ = window.hide();

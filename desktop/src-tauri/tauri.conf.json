@@ -11,6 +11,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "Conclave",
         "url": "index.html",
         "width": 1280,

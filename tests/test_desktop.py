@@ -36,6 +36,10 @@ def test_shell_poll_reports_state_and_fetches_notices_and_commands_once():
     assert client.get("/api/desktop").json()["shell"]["update"]["version"] == "0.2.0"
     client.post("/api/desktop/command", json={"type": "install_update"})
     assert client.post("/api/desktop/poll", json={}).json()["commands"] == [{"type": "install_update"}]
+    # a shell that opens moxfield.com links in its own window says so; older shells send no features
+    assert client.get("/api/desktop").json()["shell"]["features"] is None
+    client.post("/api/desktop/poll", json={"features": ["moxfield"]})
+    assert client.get("/api/desktop").json()["shell"]["features"] == ["moxfield"]
 
 
 def test_notices_follow_the_setting_and_the_tooltip_shows_the_state(monkeypatch):
