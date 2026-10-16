@@ -32,6 +32,7 @@ pub fn start(app: AppHandle, backend: Backend, autostart_item: CheckMenuItem<Wry
             let body = serde_json::json!({
                 "since": since, "visible": visible, "autostart": autostart,
                 "version": app.package_info().version.to_string(),
+                "features": ["moxfield"],
                 "update": serde_json::to_value(updates::snapshot(&updates)).unwrap_or(serde_json::Value::Null),
             })
             .to_string();

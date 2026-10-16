@@ -254,6 +254,7 @@ class DesktopPoll(BaseModel):
     autostart: bool | None = None
     version: str | None = None
     update: dict[str, Any] | None = None  # the shell's update state: state, current, version, notes, progress, error
+    features: list[str] | None = None  # what this shell can do, e.g. "moxfield" (opens moxfield.com links in its own window)
 
 
 class DesktopCommand(BaseModel):
