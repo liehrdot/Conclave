@@ -321,6 +321,15 @@ class PresenceRequest(BaseModel):
     info: dict[str, Any] = Field(default_factory=dict)
 
 
+def _qr_svg(text: str) -> str | None:
+    """``text`` as an inline SVG QR code, or None without segno (an optional import: the server needs only files/store)."""
+    try:
+        import segno
+    except ImportError:
+        return None
+    return segno.make(text, error="m").svg_inline(scale=5, border=2, dark="#000", light="#fff", omitsize=True)
+
+
 def create_app(data: Path | None = None, public_url: str | None = None) -> FastAPI:
     folder = Path(data) if data else data_dir()
     db_file = folder / "sync.sqlite"
@@ -368,7 +377,7 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
     @app.get("/app/sw.js", include_in_schema=False)
     async def app_sw() -> Response:
         files = ["/app/"] + sorted(f"/app/{p.relative_to(APP_DIR).as_posix()}" for p in APP_DIR.rglob("*")
-                                   if p.is_file() and p.name not in ("sw.js", "index.html", "README.txt", "LICENSE")
+                                   if p.is_file() and p.name not in ("sw.js", "index.html", "LICENSE") and p.suffix != ".txt"
                                    and p.suffix != ".map" and "__pycache__" not in p.parts)  # fmt: skip
         text = (APP_DIR / "sw.js").read_text("utf-8").replace("__VERSION__", await asyncio.to_thread(app_version))
         text = text.replace("__FILES__", json.dumps(files))
@@ -413,9 +422,12 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
         return {**got, "server": base_url(request), "server_id": store.server_id()}
 
     @app.post("/api/pair/start")
-    async def pair_start(request: Request, me: dict[str, Any] = Depends(device)) -> dict[str, Any]:
+    async def pair_start(request: Request, qr: bool = False, me: dict[str, Any] = Depends(device)) -> dict[str, Any]:
         got = devices.new_code(by=me["id"])
-        return {**got, "link": f"{base_url(request)}/koppeln#{got['code']}", "server": base_url(request)}
+        got = {**got, "link": f"{base_url(request)}/koppeln#{got['code']}", "server": base_url(request)}
+        if qr:  # the phone app shows the link as a QR code too (it has no QR encoder of its own)
+            got["qr"] = _qr_svg(got["link"])
+        return got
 
     @app.get("/api/sync/changes")
     async def changes(since: int = 0, limit: int | None = None, me: dict[str, Any] = Depends(device)) -> dict[str, Any]:

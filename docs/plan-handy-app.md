@@ -239,7 +239,7 @@ schneller.
 
 ## Gestaltung
 
-- **Eine Linie mit der Desktop-App:** dieselbe Akzentfarbe (Violett) und dieselbe Sprache. Die Begriffe sind dieselben:
+- **Eine Linie mit der Desktop-App:** derselbe flache Look mit dem Neon-Grün des App-Icons (#4ae05a, schwarze Schrift darauf; grüne Schrift über `--accent-text`), dieselben Schriften (Cascadia Code, in den Einstellungen Inter) und dieselbe Sprache. Die Begriffe sind dieselben:
   Bracket, Game Changer, Extra-Züge, Massen-Landzerstörung.
 - **Bilder tragen die Optik.** Commander-Artwork (Scryfall `art_crop`) ist der Kopf von Deck-, Gegner- und Rule-0-Karten.
   Farbidentität erscheint als kleine Manapunkte (W/U/B/R/G). So sieht die App nach Magic aus, ohne verspielt zu sein.

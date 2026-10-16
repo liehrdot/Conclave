@@ -8,8 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
-# the package without its app dependencies (Pillow, httpx …): the server needs only FastAPI and uvicorn
-RUN pip install --no-deps . && pip install "fastapi>=0.115,<1" "uvicorn>=0.30,<1" && rm -rf /app/src \
+# the package without its app dependencies (Pillow, httpx …): the server needs only FastAPI, uvicorn and segno (pairing QR)
+RUN pip install --no-deps . && pip install "fastapi>=0.115,<1" "uvicorn>=0.30,<1" "segno>=1.6" && rm -rf /app/src \
     && useradd --uid 1000 --no-create-home --shell /usr/sbin/nologin mtgsync && mkdir /data && chown mtgsync /data
 
 USER mtgsync

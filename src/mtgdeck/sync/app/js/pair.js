@@ -24,7 +24,7 @@ export function welcome(code = null) {
         <button class="btn primary big" type="button" id="scan">${icon("qr")}QR-Code scannen</button>
         <button class="btn big" type="button" id="enter">Code eingeben</button>
       </div>
-      <p class="hint-small center">Den Code zeigt dein PC unter <b>Einstellungen → Sync zwischen Geräten → Weiteres Gerät koppeln</b>.</p>
+      <p class="hint-small center">Den Code zeigt dein PC unter <b>Einstellungen → Sync zwischen Geräten → Weiteres Gerät koppeln</b> – ein schon verbundenes Handy unter <b>Einstellungen → Gerät verbinden</b>.</p>
       <button class="btn plain" type="button" id="demo">Erst mal mit Beispieldaten ansehen</button>
     </div>`;
   return {
@@ -104,7 +104,7 @@ export function codeSheet(prefill = "") {
   let name = defaultName();
   openSheet(({ redraw }) => ({
     title: "Code eingeben",
-    body: `<p class="hint-small">Den Code zeigt dein PC unter <b>Einstellungen → Sync zwischen Geräten → Weiteres Gerät koppeln</b>.</p>
+    body: `<p class="hint-small">Den Code zeigt dein PC unter <b>Einstellungen → Sync zwischen Geräten → Weiteres Gerät koppeln</b> – ein schon verbundenes Handy unter <b>Einstellungen → Gerät verbinden</b>.</p>
       <input class="input code-input" id="code" value="${esc(value)}" placeholder="ABCD-EFGH" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go" aria-label="Kopplungscode">
       ${error ? `<p class="notice">${esc(error)}</p>` : ""}
       <div class="field-label">Name dieses Handys</div>
