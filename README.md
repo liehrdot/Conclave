@@ -31,10 +31,7 @@ into a deck stays with me; the app only gives me the facts I need for it.
 
 ## On the PC
 
-<picture>
-  <source media="(prefers-color-scheme: light)" srcset="docs/images/desktop-grid-light.jpg">
-  <img src="docs/images/desktop-grid-dark.jpg" alt="A deck in Conclave with its cards as pictures and the deck check on the right">
-</picture>
+<img src="docs/images/desktop-grid.jpg" alt="A deck in Conclave with its cards as pictures and the deck check, half in dark and half in light mode">
 
 - **Start a deck however you like:** pick a commander and add cards yourself, paste a link from Archidekt,
   Moxfield and others, paste a list, or start from an official precon.
@@ -49,17 +46,11 @@ into a deck stays with me; the app only gives me the facts I need for it.
 <table>
   <tr>
     <td width="50%">
-      <picture>
-        <source media="(prefers-color-scheme: light)" srcset="docs/images/desktop-test-light.jpg">
-        <img src="docs/images/desktop-test-dark.jpg" alt="A test hand with seven cards and the odds for land drops">
-      </picture>
+      <img src="docs/images/desktop-test.jpg" alt="A test hand with seven cards and the odds for land drops">
       <p align="center"><sub>Test hands and odds</sub></p>
     </td>
     <td width="50%">
-      <picture>
-        <source media="(prefers-color-scheme: light)" srcset="docs/images/desktop-print-light.jpg">
-        <img src="docs/images/desktop-print-dark.jpg" alt="The print studio with one picture per card">
-      </picture>
+      <img src="docs/images/desktop-print.jpg" alt="The print studio with one picture per card">
       <p align="center"><sub>Proxy printing with your own choice of art</sub></p>
     </td>
   </tr>
