@@ -205,7 +205,7 @@ body:has(.topbar.show)::before, body.no-tabs::before { opacity: 0; }
 .tabbar {
   position: fixed; z-index: 40; left: 12px; right: 12px; bottom: var(--tabbar-gap); height: var(--tabbar-h);
   max-width: 520px; margin: 0 auto;
-  display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px;
+  display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px;
   background: var(--bar); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
   border-radius: var(--r-pill); box-shadow: var(--shadow-bar);
 }
@@ -910,3 +910,69 @@ body.immersive:not(.has-build-bar) .toasts { bottom: calc(max(env(safe-area-inse
 .pair-qr { width: min(72%, 260px); margin: 16px auto 4px; padding: 10px; background: #fff; border-radius: var(--r-card); box-shadow: var(--shadow-card); }
 .pair-qr svg { display: block; width: 100%; height: auto; }
 .link-text { font-size: var(--t-foot); word-break: break-all; }
+
+/* ---------- Sammlung (collection) ---------- */
+.coll-sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border-radius: var(--r-row); overflow: hidden; margin-bottom: 14px; }
+.coll-sum div { background: var(--surface); padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.coll-sum b { font-size: var(--t-title3); font-weight: 750; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.coll-sum span { font-size: var(--t-cap); color: var(--text-2); }
+.coll-filter { margin: 12px 0 14px; }
+.chip .n { font-size: var(--t-cap); opacity: .7; margin-left: 2px; }
+.coll-row .trail.qty { font-size: var(--t-body); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.entry-row { align-items: center; }
+.entry-flags { display: flex; gap: 6px; margin-top: 8px; }
+.chip.small { min-height: 30px; padding: 0 10px; font-size: var(--t-foot); }
+.chip.small::after { inset: -7px 0; }
+.card-image.small-card { width: min(46%, 190px); }
+
+/* the sheet "Zur Sammlung" */
+.add-card { display: flex; gap: 14px; align-items: flex-start; }
+.add-img { width: 38%; max-width: 170px; flex: none; aspect-ratio: 63 / 88; border-radius: 4.75% / 3.4%; overflow: hidden; background: var(--surface-2); box-shadow: 0 8px 24px rgb(0 0 0 / .22); }
+.add-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.add-facts { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding-top: 2px; }
+.add-name { font-size: var(--t-title3); font-weight: 750; line-height: 1.2; letter-spacing: -.01em; }
+.add-sub { font-size: var(--t-sub); color: var(--text-2); }
+.add-sub.mono, .subtitle.mono { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.add-print { align-self: flex-start; margin: 6px 0 0 -10px; gap: 2px; }
+.add-have { display: flex; align-items: center; gap: 6px; margin: 14px 2px 0; font-size: var(--t-sub); color: var(--accent-text); font-weight: 600; }
+.big-stepper button { width: 56px; height: 44px; }
+.big-stepper output { min-width: 3.6em; font-size: var(--t-title3); }
+.print-row[aria-current="true"] .title { color: var(--accent-text); }
+.print-row > .icon { color: var(--accent-text); flex: none; }
+
+/* the card scanner: the camera fills the screen, a card-shaped frame, the name line at its top */
+.present.bare { background: #000; overflow: hidden; }
+.cam { position: absolute; inset: 0; color: #fff; }
+.cam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cam-frame {
+  position: absolute; left: 50%; top: 47%; translate: -50% -50%;
+  width: min(82vw, calc(62svh * 63 / 88), 420px); aspect-ratio: 63 / 88; border-radius: 4.75% / 3.4%;
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / .52); outline: 2px solid rgb(255 255 255 / .9); outline-offset: 0;
+  transition: outline-color .2s;
+}
+.cam-name, .cam-line { position: absolute; border-radius: 6px; border: 1.5px dashed rgb(255 255 255 / .55); transition: border-color .2s, background-color .2s; }
+.cam-name { left: 4%; top: 2.5%; width: 82%; height: 9%; }
+.cam-line { left: 3%; top: 89.5%; width: 53%; height: 8%; }
+.cam:has(.cam-hint.reading) .cam-name { border-color: var(--accent); border-style: solid; background: rgb(74 224 90 / .12); }
+.cam.paused .cam-frame { outline-color: var(--accent); }
+.cam-top { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(var(--top) + 10px) 14px 10px; }
+.cam-top .icon-btn { width: 44px; height: 44px; }
+.cam-top .icon-btn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.cam-title { font-weight: 700; font-size: var(--t-body); text-shadow: 0 1px 8px rgb(0 0 0 / .6); }
+.cam-top::after { content: ""; width: 44px; }
+.cam-top:has(#cam-torch:not([hidden]))::after { display: none; }
+.cam-hint {
+  position: absolute; left: 50%; translate: -50% 0; top: calc(47% + min(41vw * 88 / 63, 31svh, 293px) + 14px);
+  max-width: calc(100% - 32px); width: max-content; margin: 0; padding: 8px 14px; border-radius: var(--r-pill);
+  background: rgb(20 20 28 / .55); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  font-size: var(--t-sub); font-weight: 600; text-align: center; line-height: 1.35;
+}
+.cam-hint.reading { color: #d9ffde; }
+.cam-hint.done { color: var(--accent); }
+.cam-hint.warn { color: #ffd8a8; border-radius: var(--r-row); }
+.cam-bottom { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 16px calc(max(env(safe-area-inset-bottom), 12px) + 6px); }
+.btn.glass { background: rgb(20 20 28 / .5); color: #fff; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.cam-count { padding: 8px 14px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--t-sub); }
+body.camera .toasts { z-index: 120; bottom: calc(max(env(safe-area-inset-bottom), 12px) + 76px); }
+.segmented button:disabled { opacity: .38; }

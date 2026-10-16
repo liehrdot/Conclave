@@ -80,6 +80,7 @@ transparent, nach iOS 26 nur für Bedienelemente; Inhalte bleiben auf festem Gru
 | **Decks** | eigene Decks → Deck mit Rule 0 · Karten · Partien |
 | **Gegner** | Gegnerdecks (Suche, zuletzt gesehen zuerst) → Bilanz, Notizen, Merkmale; Knopf **Gegnerdeck** |
 | **Karten** | Kartensuche (deutsch/englisch), zuletzt nachgeschlagen; Karten der eigenen Decks auch offline |
+| **Sammlung** | die Sammlung vom PC (Suche, Original/Proxy/Foil, Anzahl ändern); Hauptknopf **Karte scannen** |
 
 - **Sheets** (von unten, mit Griff, nach unten wegwischbar) für Eingaben:
   - Partie eintragen in voller Höhe;
@@ -321,6 +322,17 @@ schneller.
 - keine Benachrichtigungen, keine Bewertungsbitten;
 - kein Deck-Bearbeiten auf dem Handy (dafür ist der PC da);
 - kein Zähler für alle Spieler am Tisch. Der Runden-Helfer (unten) zählt nur die eigenen Werte.
+
+## Sammlung und Karten-Scanner
+
+- Der Tab **Sammlung** zeigt `collection.json` (eine Zeile pro Karte, darin pro Ausgabe Anzahl, Original/Proxy, Foil).
+- **Karte scannen** öffnet die Kamera mit einem Kartenrahmen. Die Texterkennung läuft auf dem Handy (Tesseract,
+  keine KI, wird beim ersten Scannen geladen): Namenszeile oben, Set-Zeile unten links („MKM • DE“ + Sammlernummer).
+  Set + Nummer finden die genaue Ausgabe, sonst sucht Scryfall den Namen unscharf (auch deutsche Namen).
+- Ein Treffer öffnet das Sheet **Zur Sammlung**: Original oder Proxy, Normal oder Foil, Sprache, andere Ausgabe,
+  Anzahl. Original/Proxy bleibt für die nächste Karte stehen; nach dem Hinzufügen scannt die Kamera weiter.
+- „Name eingeben“ ist der Weg ohne Kamera; im Karten-Tab hat jede Karte „Zur Sammlung“.
+- Gespeichert wird als Operation `collection.add` / `collection.update` (wie am PC: gleiche Ausgabe = mehr Exemplare).
 
 ## Runden-Helfer
 

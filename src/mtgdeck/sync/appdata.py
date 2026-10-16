@@ -1,8 +1,9 @@
 """Read model for the phone app ("Am Tisch"): one compact JSON built from the synced documents.
 
-``snapshot(docs)`` takes ``{logical path: parsed document}`` (decks, game logs, opponents) and returns what the phone
-shows: decks with Rule 0, card list (names + categories; card data comes from Scryfall on the phone) and record,
-opponents with their record against the user, all games (newest first) and the quick-pick lists. Pure – no files, no
+``snapshot(docs)`` takes ``{logical path: parsed document}`` (decks, game logs, opponents, the collection) and returns
+what the phone shows: decks with Rule 0, card list (names + categories; card data comes from Scryfall on the phone) and
+record, opponents with their record against the user, all games (newest first), the collection (one row per printing,
+without notes; the artwork follows from the Scryfall id) and the quick-pick lists. Pure – no files, no
 network – so the sync server can build it from its store and tests from plain dicts.
 """
 
@@ -20,6 +21,8 @@ from .files import DECK_RE
 
 GAMES_RE = re.compile(r"decks/\.games/([^/.][^/]*)\.json")
 OPPONENTS_PATH = "decks/.opponents.json"
+COLLECTION_PATH = "collection.json"
+COLLECTION_KEYS = ("id", "name", "qty", "proxy", "foil", "lang", "set", "set_name", "collector_number", "scryfall_id", "price_eur")
 GAMES_MAX = 400
 NOTES_MAX = 30
 VERSION = 1
@@ -46,6 +49,21 @@ def _deck(slug: str, d: dict[str, Any], games: list[dict[str, Any]]) -> dict[str
         "maybe": [{"name": m["name"], "category": m.get("category") or ""} for m in d.get("maybe") or [] if isinstance(m, dict) and m.get("name")],
         "record": _record(games),
     }  # fmt: skip
+
+
+def collection(doc: Any) -> list[dict[str, Any]]:
+    """The collection for the phone: the fields it shows; ``image`` only where there is no Scryfall id to derive it."""
+    out = []
+    for e in doc if isinstance(doc, list) else []:
+        if not (isinstance(e, dict) and e.get("id") and e.get("name")):
+            continue
+        row = {k: e.get(k) for k in COLLECTION_KEYS}
+        row["qty"] = int(e.get("qty") or 0)
+        row["proxy"], row["foil"], row["lang"] = bool(e.get("proxy")), bool(e.get("foil")), e.get("lang") or "en"
+        if not e.get("scryfall_id") and e.get("image"):
+            row["image"] = e["image"]
+        out.append(row)
+    return sorted(out, key=lambda e: e["name"].lower())
 
 
 def snapshot(docs: dict[str, Any]) -> dict[str, Any]:
@@ -80,6 +98,7 @@ def snapshot(docs: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "version": VERSION, "decks": decks, "opponents": opponents, "games": games[:GAMES_MAX],
+        "collection": collection(docs.get(COLLECTION_PATH)),
         "players": sorted({o["player"] for o in opponents if o["player"]}, key=str.lower),
         "options": {
             "results": RESULTS, "issues": [[k, v[0]] for k, v in ISSUES.items()],

@@ -298,6 +298,9 @@ const INVERSE = {
   "opponent.add": (p) => ({ type: "opponent.delete", payload: { id: p.opponent.id } }),
   "opponent.note": (p) => ({ type: "opponent.note_delete", payload: { id: p.id, note_id: p.note_id } }),
   "opponent.update": (p) => (p.prev ? { type: "opponent.update", payload: { id: p.id, ...p.prev } } : null),
+  "collection.add": (p) => ({ type: "collection.add", payload: { entry: { ...p.entry, qty: -p.entry.qty } } }),
+  "collection.update": (p) => (p.restore ? { type: "collection.add", payload: { entry: p.restore } }
+    : p.prev ? { type: "collection.update", payload: { id: p.id, ...p.prev } } : null),
 };
 
 /** Take an operation back: not sent yet → it disappears; already sent (or already in the read model) → its
@@ -350,6 +353,37 @@ export const isPending = (gameId) => state.ops.some((o) => o.status === "pending
 
 // ---------- applying operations (mirrors sync/appops.py) ---------------------------------------
 
+// one collection entry per printing: name, Scryfall id, proxy, foil, language (like collection._key on the PC)
+export const collKey = (e) => [String(e.name || "").toLowerCase(), e.scryfall_id || "", !!e.proxy, !!e.foil, e.lang || "en"].join("|");
+const COLL_KEYS = ["id", "name", "qty", "proxy", "foil", "lang", "set", "set_name", "collector_number", "scryfall_id", "price_eur"];
+
+function applyCollection(snap, op) {
+  const p = op.payload || {};
+  const list = (snap.collection ||= []);
+  if (op.type === "collection.add") {
+    const e = p.entry || {};
+    const hit = list.find((x) => collKey(x) === collKey(e));
+    if (hit) hit.qty += e.qty;
+    else if (e.qty > 0) {
+      const row = Object.fromEntries(COLL_KEYS.map((k) => [k, e[k] ?? null]));
+      Object.assign(row, { id: e.id || op.id, proxy: !!e.proxy, foil: !!e.foil, lang: e.lang || "en" });
+      if (!row.scryfall_id && e.image) row.image = e.image;
+      list.push(row);
+    }
+  } else {
+    const e = list.find((x) => x.id === p.id);
+    if (!e) return;
+    if ("qty" in p) e.qty = p.qty;
+    for (const k of ["proxy", "foil", "lang"]) if (k in p) e[k] = p[k];
+    const seen = new Map();  // entries that now describe the same thing become one
+    for (const x of [...list]) {
+      const k = collKey(x);
+      if (seen.has(k)) { seen.get(k).qty += x.qty; list.splice(list.indexOf(x), 1); } else seen.set(k, x);
+    }
+  }
+  snap.collection = list.filter((x) => x.qty > 0).sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+}
+
 function findOpponent(snap, slot) {
   if (slot.id) {
     const o = snap.opponents.find((x) => x.id === slot.id);
@@ -369,6 +403,7 @@ function newOpponent(fields, at) {
 
 function apply(snap, op) {
   const p = op.payload || {};
+  if (op.type.startsWith("collection.")) return applyCollection(snap, op);
   if (op.type === "game.add") {
     if (snap.games.some((g) => g.id === p.game.id && g.deck === p.game.deck)) return;
     const deck = snap.decks.find((d) => d.slug === p.game.deck);

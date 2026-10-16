@@ -64,6 +64,8 @@ export function openSheet(render, { full = false, onClose = null } = {}) {
 }
 
 export function closeSheet() { if (dlg().open) closeOverlay(); }
+/** Close the full screen opened with ``present`` (like its own close button). */
+export function closePresent() { if (!$("#present").hidden) closeOverlay(); }
 
 function finishClose(immediate = false) {
   const d = dlg();
@@ -169,13 +171,15 @@ export function toast(msg, { sub = "", action = null, ms = 4500, ok = false } = 
 
 // ---------- full screen (Rule 0 to hand across the table) ----------
 let wake = null;
-export function present(html, { actions = "", bind = null, onClose = null } = {}) {
+/** ``bare``: ``html`` fills the whole screen as it is (the card scanner), with its own [data-present-close] button. */
+export function present(html, { actions = "", bind = null, onClose = null, bare = false, label = "Rule 0" } = {}) {
   const el = $("#present");
-  el.innerHTML = `<div class="present" role="dialog" aria-modal="true" aria-label="Rule 0"><div class="inner">${html}</div></div>
+  el.innerHTML = bare ? `<div class="present bare" role="dialog" aria-modal="true" aria-label="${esc(label)}">${html}</div>`
+    : `<div class="present" role="dialog" aria-modal="true" aria-label="${esc(label)}"><div class="inner">${html}</div></div>
     <div class="present-actions">${actions}<button class="btn primary" type="button" data-present-close>Schließen</button></div>`;
   el.hidden = false;
   document.documentElement.style.overflow = "hidden";
-  el.querySelector("[data-present-close]").addEventListener("click", closeOverlay);
+  el.querySelector("[data-present-close]")?.addEventListener("click", closeOverlay);
   bind?.(el);
   navigator.wakeLock?.request("screen").then((w) => { wake = w; }, () => {});
   openOverlay(() => {
