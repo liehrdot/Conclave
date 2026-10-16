@@ -8,7 +8,7 @@ name: Preview build
 
 on:
   push:
-    branches: [master]
+    branches: [master, claude/preview-builds]  # TEMP: one test run from the PR branch, removed before merge
     paths: ["src/**", "desktop/**", "pyproject.toml", "uv.lock", ".github/workflows/preview.yml"]
   workflow_dispatch:
 
