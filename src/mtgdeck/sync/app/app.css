@@ -975,4 +975,5 @@ body.immersive:not(.has-build-bar) .toasts { bottom: calc(max(env(safe-area-inse
 .btn.glass { background: rgb(20 20 28 / .5); color: #fff; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
 .cam-count { padding: 8px 14px; border-radius: var(--r-pill); background: var(--accent); color: var(--on-accent); font-weight: 700; font-size: var(--t-sub); }
 body.camera .toasts { z-index: 120; bottom: calc(max(env(safe-area-inset-bottom), 12px) + 76px); }
+body.camera:has(.toasts .toast) .cam-hint { visibility: hidden; }  /* the toast sits where the hint is */
 .segmented button:disabled { opacity: .38; }

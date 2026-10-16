@@ -105,7 +105,9 @@ export async function identify(name, line) {
   if (line?.set && line.number) {
     bySet = await lookup(`#${line.set}/${line.number}/${line.lang}`, () => scry.printing(line.set, line.number, line.lang)
       .then((x) => x || (line.lang !== "en" ? scry.printing(line.set, line.number) : null)));
-    if (bySet && similar(name, bySet) >= 0.45) return { card: bySet, sure: true };
+    // agrees with the name, or the name is a cut-off piece of it ("Fight" from "Rejoin the Fight")
+    const piece = norm(name).length >= 4 && [bySet?.name, bySet?.printed_name].some((n) => norm(n).includes(norm(name)));
+    if (bySet && (piece || similar(name, bySet) >= 0.45)) return { card: bySet, sure: true };
   }
   // a set line that disagrees with a clearly read name was misread: the name wins
   if (name.length < 3) return bySet ? { card: bySet, sure: false } : null;
