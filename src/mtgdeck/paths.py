@@ -65,3 +65,16 @@ def cache_home() -> Path:
     if env:
         return Path(env).expanduser()
     return _platform_cache() if frozen() else Path.home() / ".cache" / "mtgdeck"
+
+
+def inside(base: Path, *parts: str) -> Path:
+    """``base / parts`` – refused (``ValueError``) when the result would leave ``base``.
+
+    Every path built from a deck slug, an order id or another name that came in over the API goes through this,
+    on top of the name checks themselves (``storage.slug()``, the id patterns).
+    """
+    root = os.path.abspath(base)
+    target = os.path.abspath(os.path.join(root, *parts))
+    if target != root and not target.startswith(root + os.sep):
+        raise ValueError(f"Pfad außerhalb von {root}: {os.path.join(*parts) if parts else ''}")
+    return Path(target)

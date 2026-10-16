@@ -145,3 +145,14 @@ async def test_prints_are_paginated_not_capped():
     p2 = client.get("/api/cards/prints", params={"name": "Forest", "page": 2}).json()
     assert (len(p1["prints"]), p1["total"], p1["has_more"]) == (175, 250, True)
     assert (len(p2["prints"]), p2["has_more"], p2["prints"][0]["set_name"]) == (75, False, "Set 175")
+
+
+def test_parse_lines_printing_and_flags():
+    from mtgdeck.collection import _parse_lines
+
+    items = _parse_lines("2 Sol Ring *F*\n1 Llanowar Elves (M19) 314 [proxy]\n1 Opt [m19] #59")
+    assert [(i["name"], i["qty"], i["set"], i["collector_number"], i["foil"], i["proxy"]) for i in items] == [
+        ("Sol Ring", 2, None, None, True, False),
+        ("Llanowar Elves", 1, "m19", "314", False, True),
+        ("Opt", 1, "m19", "59", False, False),
+    ]

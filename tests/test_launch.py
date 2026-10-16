@@ -112,3 +112,10 @@ def test_token_cookie_survives_the_shells_cross_site_navigation(monkeypatch):
     cookie = r.headers["set-cookie"].lower()
     assert "mtg_token=tok123" in cookie and "httponly" in cookie and "samesite=lax" in cookie
     assert client.get("/?token=wrong").status_code == 401
+
+
+def test_inside_refuses_paths_outside(tmp_path):
+    assert paths.inside(tmp_path, "a", "b.json") == tmp_path / "a" / "b.json"
+    for bad in ("..", "../x", "a/../../x", "/etc/passwd"):
+        with pytest.raises(ValueError):
+            paths.inside(tmp_path, bad)

@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           python-version: "3.12"
       - name: Install
@@ -50,8 +50,8 @@ jobs:
           Write-Host "decks: $($decks.Count), url: $base"
           Stop-Process -Id $p.Id -Force
           '"backend: {0:N0} MB" -f ((Get-ChildItem dist/mtgdeck-backend -Recurse | Measure-Object Length -Sum).Sum / 1MB)' | Invoke-Expression
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
           workspaces: desktop/src-tauri
       - uses: actions/setup-node@v4
@@ -59,7 +59,7 @@ jobs:
           node-version: 22
       - name: Build desktop app
         working-directory: desktop
-        run: npx --yes @tauri-apps/cli@^2 build --config tauri.nosign.conf.json  # no updater artifacts: the signing key lives only in the release workflow
+        run: npx --yes @tauri-apps/cli@2.12.3 build --config tauri.nosign.conf.json  # no updater artifacts: the signing key lives only in the release workflow
       - name: Self-test desktop app
         shell: pwsh
         run: |

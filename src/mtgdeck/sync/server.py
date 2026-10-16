@@ -448,9 +448,10 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
             return await asyncio.to_thread(lambda: store.put(req.path, kind=req.kind, data=data, base_seq=req.base_seq,
                                                              deleted=req.deleted, device=me["id"]))  # fmt: skip
         except SyncConflict as exc:
-            return JSONResponse({"detail": str(exc), "current": _out(exc.current)}, status_code=409)
-        except ValueError as exc:
-            raise HTTPException(400, str(exc)) from None
+            detail = f"Konflikt: {req.path} hat sich auf dem Server geändert"
+            return JSONResponse({"detail": detail, "current": _out(exc.current)}, status_code=409)
+        except ValueError:
+            raise HTTPException(400, f"Dokument passt nicht: {req.path} ({req.kind})") from None
 
     @app.get("/api/devices")
     async def list_devices(me: dict[str, Any] = Depends(device)) -> dict[str, Any]:

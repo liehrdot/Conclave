@@ -9,7 +9,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from . import storage
+from . import paths, storage
 from .fmt import num as de_num
 from .jsonstore import locked, read_json, write_json
 
@@ -38,7 +38,7 @@ HOW: dict[str, str] = {
 
 
 def _file(deck_slug: str) -> Path:
-    return storage.DECKS_DIR / GAMES_DIRNAME / f"{storage.slug(deck_slug)}.json"
+    return paths.inside(storage.DECKS_DIR, GAMES_DIRNAME, f"{storage.slug(deck_slug)}.json")
 
 
 def games(deck_slug: str) -> list[dict[str, Any]]:
