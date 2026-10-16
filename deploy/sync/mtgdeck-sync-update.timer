@@ -1,5 +1,5 @@
 [Unit]
-Description=MTG-Deckbuilder Sync: stündlich nach Updates schauen
+Description=Conclave Sync: stündlich nach Updates schauen
 
 [Timer]
 OnCalendar=hourly

@@ -344,7 +344,7 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
         finally:
             task.cancel()
 
-    app = FastAPI(title="MTG-Deckbuilder Sync", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="Conclave Sync", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.devices = store, devices
 
     @app.middleware("http")
@@ -551,7 +551,7 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="mtg-sync-server", description="Sync-Server des MTG-Deckbuilders")
+    parser = argparse.ArgumentParser(prog="mtg-sync-server", description="Sync-Server von Conclave")
     sub = parser.add_subparsers(dest="cmd")
     sub.add_parser("serve", help="Server starten (Standard)")
     pair = sub.add_parser("pair", help="Kopplungscode für ein neues Gerät ausgeben")

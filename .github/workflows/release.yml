@@ -86,7 +86,7 @@ jobs:
           projectPath: desktop
           tagName: ${{ env.TAG }}
           releaseCommitish: ${{ github.sha }}
-          releaseName: "MTG Deckbuilder ${{ env.TAG }}"
+          releaseName: "Conclave ${{ env.TAG }}"
           releaseBody: "Windows-Installer (pro Benutzer, ohne Adminrechte). Eine installierte App holt sich diese Version von selbst: Einstellungen → Desktop-App."
           releaseDraft: true
           prerelease: false

@@ -55,7 +55,7 @@ jobs:
           for i in $(seq 1 30); do curl -fsS localhost:8080/api/health && break; sleep 1; done
           curl -fsS localhost:8080/api/health | grep -q '"service":"mtgdeck-sync"'
           docker exec sync mtg-sync-server pair | grep -q "https://sync.example.de/koppeln#"
-          curl -fsS localhost:8080/app/ | grep -q "Am Tisch"
+          curl -fsS localhost:8080/app/ | grep -q "Conclave"
           curl -fsS localhost:8080/app/sw.js | grep -q "amtisch-shell-"
           curl -fsS -o /dev/null localhost:8080/app/vendor/qr-scanner/qr-scanner.min.js
           test -f data/sync.sqlite
@@ -82,6 +82,6 @@ jobs:
             ${{ env.IMAGE }}:${{ github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.description=Sync-Server des MTG-Deckbuilders
+            org.opencontainers.image.description=Sync-Server von Conclave
           cache-from: type=gha
           cache-to: type=gha,mode=max

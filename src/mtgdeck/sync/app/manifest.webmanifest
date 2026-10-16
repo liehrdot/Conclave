@@ -1,7 +1,7 @@
 {
   "id": "/app/",
-  "name": "Am Tisch – Commander Deckbuilder",
-  "short_name": "Am Tisch",
+  "name": "Conclave",
+  "short_name": "Conclave",
   "description": "Partien und Gegnerdecks am Spieltisch festhalten, Rule 0 zeigen, Karten nachschlagen – auch offline.",
   "lang": "de",
   "start_url": "/app/#/tisch",

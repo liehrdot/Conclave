@@ -60,7 +60,7 @@ async def _lifespan(_app: FastAPI):
             task.cancel()
 
 
-app = FastAPI(title="MTG Commander Deckbuilder", lifespan=_lifespan)
+app = FastAPI(title="Conclave", lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
@@ -1879,7 +1879,7 @@ def serve() -> None:
     port = sock.getsockname()[1]
     shown = f"[{host}]" if ":" in host else host
     url = f"http://{shown}:{port}/" + (f"?token={GUI_TOKEN}" if GUI_TOKEN else "")
-    print(f"Commander Deckbuilder GUI: {url}")
+    print(f"Conclave GUI: {url}")
     print(f"MTGDECK_URL={url}", flush=True)
     try:
         made = backup.auto_backup()

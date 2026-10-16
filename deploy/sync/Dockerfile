@@ -1,4 +1,4 @@
-# Sync-Server des MTG-Deckbuilders (nur der Server-Teil: FastAPI + SQLite, keine Karten- oder Bild-Abhängigkeiten).
+# Sync-Server von Conclave (nur der Server-Teil: FastAPI + SQLite, keine Karten- oder Bild-Abhängigkeiten).
 # Bauen aus dem Repo-Wurzelordner:  docker build -f deploy/sync/Dockerfile -t mtgdeck-sync .
 FROM python:3.12-slim
 

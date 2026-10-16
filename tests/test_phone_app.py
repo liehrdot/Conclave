@@ -49,7 +49,7 @@ def test_snapshot_of_nothing():
 def test_server_serves_the_app_with_a_strict_policy(tmp_path):
     client = TestClient(create_app(tmp_path))
     r = client.get("/app/")
-    assert r.status_code == 200 and "Am Tisch" in r.text and "/app/js/main.js" in r.text
+    assert r.status_code == 200 and "Conclave" in r.text and "/app/js/main.js" in r.text
     csp = r.headers["content-security-policy"]
     assert "script-src 'self'" in csp and "unsafe-inline" not in csp and "api.scryfall.com" in csp
     assert client.get("/app", follow_redirects=False).headers["location"] == "/app/"

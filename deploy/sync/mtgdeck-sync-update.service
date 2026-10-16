@@ -1,5 +1,5 @@
 [Unit]
-Description=MTG-Deckbuilder Sync: neue Images holen
+Description=Conclave Sync: neue Images holen
 Wants=network-online.target
 After=network-online.target docker.service
 
