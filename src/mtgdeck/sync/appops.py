@@ -286,7 +286,16 @@ def _deck_edit(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, An
 
 
 def _coll_key(e: dict[str, Any]) -> tuple[Any, ...]:  # like collection._key (that module needs the network stack)
-    return (str(e.get("name") or "").lower(), e.get("scryfall_id") or "", bool(e.get("proxy")), bool(e.get("foil")), e.get("lang") or "en")
+    return (str(e.get("name") or "").lower(), e.get("scryfall_id") or "", bool(e.get("proxy")), bool(e.get("foil")), e.get("lang") or "en",
+            e.get("place_deck") or "", "" if e.get("place_deck") else str(e.get("place") or "").strip().lower())  # fmt: skip
+
+
+PLACE_DECK_RE = re.compile(r"[a-z0-9][a-z0-9-]{0,80}")
+
+
+def _place(place: Any, place_deck: Any) -> tuple[str, str]:  # like collection.clean_place
+    text = " ".join(str(place or "").split())[:80] if isinstance(place, str) else ""
+    return text, _match_str(place_deck, PLACE_DECK_RE) or ""
 
 
 def _coll_items(doc: Any) -> list[Any]:
@@ -304,7 +313,7 @@ def _image(value: Any) -> str | None:
 
 def _collection_add(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, Any]:
     """``entry`` {name, qty, proxy, foil, lang, scryfall_id, set, set_name, collector_number, image, image_back, price_eur,
-    price_usd}: more copies of the matching entry, else a new one. A negative ``qty`` takes copies away again (undo)."""
+    price_usd, place, place_deck}: more copies of the matching entry, else a new one. A negative ``qty`` takes copies away again (undo)."""
     e = p.get("entry")
     if not isinstance(e, dict):
         raise OpError("Ungültige Daten")
@@ -319,6 +328,7 @@ def _collection_add(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[st
         "image_back": _image(e.get("image_back")), "price_eur": _match_str(e.get("price_eur"), PRICE_RE),
         "price_usd": _match_str(e.get("price_usd"), PRICE_RE),
     }  # fmt: skip
+    entry["place"], entry["place_deck"] = _place(e.get("place"), e.get("place_deck"))
     items = _coll_items(docs.get(COLLECTION))
     key = _coll_key(entry)
     hit = next((x for x in items if isinstance(x, dict) and x.get("name") and _coll_key(x) == key), None)
@@ -338,7 +348,8 @@ def _collection_add(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[st
 
 
 def _collection_update(p: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
-    """Like ``collection.update``: ``id`` plus ``qty`` (0 deletes), ``proxy``, ``foil``, ``lang``; then entries that now
+    """Like ``collection.update``: ``id`` plus ``qty`` (0 deletes), ``proxy``, ``foil``, ``lang``, ``place`` +
+    ``place_deck`` (where the cards are); then entries that now
     describe the same thing are merged."""
     items = _coll_items(docs.get(COLLECTION))
     entry = next((x for x in items if isinstance(x, dict) and x.get("id") == p.get("id")), None)
@@ -357,6 +368,8 @@ def _collection_update(p: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any
             entry[key] = p[key] is True
     if "lang" in p:
         entry["lang"] = p["lang"] if p["lang"] in LANGS else "en"
+    if "place" in p or "place_deck" in p:
+        entry["place"], entry["place_deck"] = _place(p.get("place", entry.get("place")), p.get("place_deck", entry.get("place_deck")))
     if entry == before:
         return {}
     out: list[Any] = []

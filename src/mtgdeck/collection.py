@@ -2,8 +2,9 @@
 
 Stored as JSON (``MTG_COLLECTION_FILE``, default ``<repo>/collection.json``, gitignored). One entry
 per printing: name (English Oracle name), qty, proxy, foil, lang, set/set_name/collector_number/
-scryfall_id/image (the artwork), price at import, note, added. Entries that only differ in quantity
-are merged.
+scryfall_id/image (the artwork), price at import, note, added, and where the cards are: ``place`` (free text
+like "Binder rot", or a deck's name) with ``place_deck`` (that deck's slug, else ""). Entries that only differ in
+quantity are merged; the same card in two places stays two entries.
 
 Imports understand the CSV exports of ManaBox, Moxfield (incl. its Proxy column) and Archidekt as
 well as plain lists ("2 Sol Ring (C21) 263 *F*"). ``deck_ownership`` compares a deck with the
@@ -57,12 +58,25 @@ def _write(entries: list[dict[str, Any]]) -> None:
     write_json(COLLECTION_FILE, entries, indent=1)
 
 
+PLACE_MAX = 80
+
+
 def _key(e: dict[str, Any]) -> tuple[Any, ...]:
-    return (e["name"].lower(), e.get("scryfall_id") or "", bool(e.get("proxy")), bool(e.get("foil")), e.get("lang") or "en")
+    return (e["name"].lower(), e.get("scryfall_id") or "", bool(e.get("proxy")), bool(e.get("foil")), e.get("lang") or "en",
+            e.get("place_deck") or "", "" if e.get("place_deck") else (e.get("place") or "").strip().lower())  # fmt: skip
+
+
+def clean_place(place: str | None, place_deck: str | None) -> tuple[str, str]:
+    """(place, place_deck) as stored: trimmed text (≤ ``PLACE_MAX``), a deck slug only when it looks like one."""
+    text = " ".join(str(place or "").split())[:PLACE_MAX]
+    slug = str(place_deck or "").strip()
+    if slug and not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,80}", slug):
+        slug = ""
+    return text, slug
 
 
 def _merge(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Combine entries that describe the same thing (same card, printing, proxy, foil, language)."""
+    """Combine entries that describe the same thing (same card, printing, proxy, foil, language, place)."""
     out: dict[tuple[Any, ...], dict[str, Any]] = {}
     for e in entries:
         k = _key(e)
@@ -84,6 +98,8 @@ def _entry(name: str, *, qty: int = 1, proxy: bool = False, foil: bool = False, 
         "lang": lang or "en",
         **{k: printing.get(k) for k in PRINTING_KEYS},
         "note": note,
+        "place": "",
+        "place_deck": "",
         "added": _now(),
     }
 
@@ -246,9 +262,14 @@ async def _resolve_items(items: list[dict[str, Any]], *, proxy_default: bool = F
     return entries, not_found
 
 
-async def add(items: list[dict[str, Any]], *, proxy_default: bool = False, replace: bool = False) -> dict[str, Any]:
-    """Add raw items (``name``/``qty``/``proxy``/``foil``/``lang``/``set``/``collector_number``/``scryfall_id``)."""
+async def add(items: list[dict[str, Any]], *, proxy_default: bool = False, replace: bool = False,
+              place: str = "", place_deck: str = "") -> dict[str, Any]:  # fmt: skip
+    """Add raw items (``name``/``qty``/``proxy``/``foil``/``lang``/``set``/``collector_number``/``scryfall_id``), all
+    at ``place`` (text or a deck's name, with ``place_deck`` = its slug)."""
     new, not_found = await _resolve_items(items, proxy_default=proxy_default)
+    place, place_deck = clean_place(place, place_deck)
+    for e in new:
+        e["place"], e["place_deck"] = place, place_deck
     with locked(COLLECTION_FILE):  # read after the (slow) lookups, so nothing saved meanwhile is lost
         before = [] if replace else load()
         merged = _merge(before + new)
@@ -285,14 +306,57 @@ async def import_text(text: str, *, proxy: bool = False, replace: bool = False) 
 
 
 def update(entry_id: str, *, qty: int | None = None, proxy: bool | None = None, foil: bool | None = None,
-           lang: str | None = None, note: str | None = None, printing: dict[str, Any] | None = None) -> dict[str, Any] | None:  # fmt: skip
+           lang: str | None = None, note: str | None = None, printing: dict[str, Any] | None = None,
+           place: str | None = None, place_deck: str | None = None) -> dict[str, Any] | None:  # fmt: skip
     """Change one entry; ``qty <= 0`` deletes it. Returns the (possibly merged) entry or None."""
     with locked(COLLECTION_FILE):
-        return _update(entry_id, qty=qty, proxy=proxy, foil=foil, lang=lang, note=note, printing=printing)
+        return _update(entry_id, qty=qty, proxy=proxy, foil=foil, lang=lang, note=note, printing=printing,
+                       place=place, place_deck=place_deck)  # fmt: skip
+
+
+def bulk_update(entry_ids: list[str], *, place: str | None = None, place_deck: str | None = None,
+                proxy: bool | None = None, foil: bool | None = None, lang: str | None = None,
+                delete: bool = False) -> int:  # fmt: skip
+    """Change (or delete) several entries at once; fields left at None stay. Equal entries merge afterwards.
+    Returns how many entries were found."""
+    wanted = set(entry_ids)
+    if place is not None or place_deck is not None:
+        place, place_deck = clean_place(place or "", place_deck or "")
+    with locked(COLLECTION_FILE):
+        entries = load()
+        hits = [e for e in entries if e["id"] in wanted]
+        if delete:
+            _write([e for e in entries if e["id"] not in wanted])
+            return len(hits)
+        for e in hits:
+            if place is not None:
+                e["place"], e["place_deck"] = place, place_deck
+            if proxy is not None:
+                e["proxy"] = bool(proxy)
+            if foil is not None:
+                e["foil"] = bool(foil)
+            if lang is not None:
+                e["lang"] = lang or "en"
+        _write(_merge(entries))
+    return len(hits)
+
+
+def places(entries: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """The places in use, most cards first: ``{place, place_deck, cards}``."""
+    count: Counter[tuple[str, str]] = Counter()
+    label: dict[tuple[str, str], str] = {}
+    for e in load() if entries is None else entries:
+        if not (e.get("place") or e.get("place_deck")):
+            continue
+        k = (e.get("place_deck") or "", "" if e.get("place_deck") else e["place"].strip().lower())
+        count[k] += int(e.get("qty") or 0)
+        label.setdefault(k, e.get("place") or "")
+    return [{"place": label[k], "place_deck": k[0], "cards": n} for k, n in count.most_common()]
 
 
 def _update(entry_id: str, *, qty: int | None, proxy: bool | None, foil: bool | None, lang: str | None,
-            note: str | None, printing: dict[str, Any] | None) -> dict[str, Any] | None:  # fmt: skip
+            note: str | None, printing: dict[str, Any] | None, place: str | None = None,
+            place_deck: str | None = None) -> dict[str, Any] | None:  # fmt: skip
     entries = load()
     entry = next((e for e in entries if e["id"] == entry_id), None)
     if entry is None:
@@ -309,6 +373,9 @@ def _update(entry_id: str, *, qty: int | None, proxy: bool | None, foil: bool | 
         entry["note"] = note
     if printing is not None:
         entry.update({k: printing.get(k) for k in PRINTING_KEYS})
+    if place is not None or place_deck is not None:
+        entry["place"], entry["place_deck"] = clean_place(entry.get("place") if place is None else place,
+                                                          entry.get("place_deck") if place_deck is None else place_deck)  # fmt: skip
     merged = _merge(entries)
     _write(merged)
     return next((e for e in merged if _key(e) == _key(entry)), None)

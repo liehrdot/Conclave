@@ -524,12 +524,13 @@
       </header>
       <section class="panel">
         <div class="coll-toolbar">
-          <input type="search" id="coll-q" placeholder="Suchen: Name, Set, Notiz …" aria-label="Sammlung durchsuchen">
+          <input type="search" id="coll-q" placeholder="Suchen: Name, Set, Ort, Notiz …" aria-label="Sammlung durchsuchen">
           <div class="segmented small" role="radiogroup" aria-label="Filter">
             <label><input type="radio" name="collfilter" value="all" checked><span>Alle</span></label>
             <label><input type="radio" name="collfilter" value="real"><span>Echt</span></label>
             <label><input type="radio" name="collfilter" value="proxy"><span>Proxy</span></label>
           </div>
+          <select id="coll-place" aria-label="Ort"><option value="">Alle Orte</option></select>
           <select id="coll-sort" aria-label="Sortieren nach">
             <option value="name">Name</option><option value="qty">Anzahl</option><option value="price">Preis</option>
             <option value="added">Zuletzt hinzugefügt</option><option value="set">Set</option>
@@ -540,6 +541,19 @@
           </div>
         </div>
         <p id="coll-result" class="muted small"></p>
+        <div id="coll-bulk" class="coll-bulk" hidden>
+          <span id="coll-bulk-count"></span>
+          <button type="button" class="btn small primary" id="coll-bulk-place"><svg class="icon"><use href="#i-box"/></svg>Ort setzen …</button>
+          <select id="coll-bulk-set" aria-label="Markierte ändern">
+            <option value="">Ändern …</option>
+            <optgroup label="Art"><option value="real">Original</option><option value="proxy">Proxy</option></optgroup>
+            <optgroup label="Ausführung"><option value="foil">Foil</option><option value="nonfoil">Ohne Foil</option></optgroup>
+            <optgroup label="Sprache"><option value="lang:en">Englisch</option><option value="lang:de">Deutsch</option><option value="lang:fr">Französisch</option><option value="lang:it">Italienisch</option><option value="lang:es">Spanisch</option><option value="lang:pt">Portugiesisch</option><option value="lang:ja">Japanisch</option><option value="lang:ko">Koreanisch</option><option value="lang:ru">Russisch</option><option value="lang:zhs">Chinesisch</option></optgroup>
+          </select>
+          <button type="button" class="btn small danger" id="coll-bulk-delete">Löschen</button>
+          <button type="button" class="btn small" id="coll-bulk-all">Alle angezeigten markieren</button>
+          <button type="button" class="btn small" id="coll-bulk-none">Auswahl aufheben</button>
+        </div>
         <div id="coll-list" class="coll-list"></div>
         <div id="coll-more" class="center" hidden><button type="button" class="btn">Mehr anzeigen</button></div>
         <div id="coll-empty" class="empty" hidden>
@@ -1199,6 +1213,9 @@
           <option value="zhs">Chinesisch</option></select>
       </label>
     </div>
+    <label class="field">Ort <span class="muted small">– ein Deck oder frei, z. B. „Binder rot“</span>
+      <input id="coll-add-place" list="place-options" maxlength="80" placeholder="Kein Ort">
+    </label>
     <div class="checks">
       <label class="check"><input type="checkbox" id="coll-add-proxy"> Proxy</label>
       <label class="check"><input type="checkbox" id="coll-add-foil"> Foil</label>
@@ -1213,6 +1230,22 @@
     <div class="dialog-actions">
       <button type="button" class="btn" id="coll-add-cancel">Abbrechen</button>
       <button type="submit" class="btn primary">Hinzufügen</button>
+    </div>
+  </form>
+</dialog>
+
+<datalist id="place-options"></datalist>
+<dialog id="place-dialog" class="dialog small-dialog">
+  <form id="place-form" autocomplete="off">
+    <h2 id="place-title">Ort setzen</h2>
+    <p id="place-text" class="muted small"></p>
+    <label class="field">Ort <span class="muted small">– ein Deck oder frei, z. B. „Binder rot“</span>
+      <input id="place-input" list="place-options" maxlength="80" placeholder="Kein Ort">
+    </label>
+    <div id="place-chips" class="chip-row"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn" id="place-cancel">Abbrechen</button>
+      <button type="submit" class="btn primary">Ort setzen</button>
     </div>
   </form>
 </dialog>

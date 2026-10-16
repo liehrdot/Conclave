@@ -572,6 +572,19 @@ def test_collection_update_changes_flags_and_quantities_and_merges():
         appops.apply_copy(_op("collection.update", {"id": "gone", "foil": True}), {"collection.json": items})
 
 
+def test_collection_place_keeps_entries_apart_and_moves_them():
+    out = appops.apply(_op("collection.add", _scanned(2, place="Binder rot")), {"collection.json": None})
+    out = appops.apply(_op("collection.add", _scanned(1, id="scan0002", place=" binder  ROT")), out)
+    out = appops.apply(_op("collection.add", _scanned(1, id="scan0003", place_deck="meren", place="egal")), out)
+    items = out["collection.json"]
+    assert [(e["place"], e["place_deck"], e["qty"]) for e in items] == [("Binder rot", "", 3), ("egal", "meren", 1)]
+    bad = appops.apply(_op("collection.add", _scanned(1, id="scan0004", place_deck="../x", place=5)), out)
+    assert bad["collection.json"][-1]["place"] == "" and bad["collection.json"][-1]["place_deck"] == ""
+    moved = appops.apply_copy(_op("collection.update", {"id": "scan0001", "place": "", "place_deck": "meren"}), {"collection.json": items})
+    assert [(e["id"], e["qty"]) for e in moved["collection.json"]] == [("scan0001", 4)]  # same deck now: one entry
+    assert appops.apply_copy(_op("collection.update", {"id": "scan0003", "place_deck": "meren"}), {"collection.json": items}) == {}
+
+
 def test_snapshot_has_the_collection_without_notes_and_derivable_images():
     snap = appdata.snapshot({"collection.json": [
         {"id": "a1", "name": "Sol Ring", "qty": 2, "proxy": False, "foil": True, "lang": "de", "scryfall_id": SID, "set": "c21",

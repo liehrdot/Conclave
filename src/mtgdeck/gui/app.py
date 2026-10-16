@@ -1207,6 +1207,8 @@ class CollectionItem(BaseModel):
 
 class CollectionAdd(BaseModel):
     items: list[CollectionItem]
+    place: str = Field(default="", max_length=200)  # where the cards are: free text or a deck's name
+    place_deck: str = Field(default="", max_length=100)  # that deck's slug
 
 
 class CollectionImport(BaseModel):
@@ -1222,19 +1224,37 @@ class EntryUpdate(BaseModel):
     lang: str | None = None
     note: str | None = None
     printing: dict[str, Any] | None = None
+    place: str | None = Field(default=None, max_length=200)
+    place_deck: str | None = Field(default=None, max_length=100)
+
+
+class CollectionBulk(BaseModel):
+    ids: list[str] = Field(min_length=1, max_length=50000)
+    place: str | None = Field(default=None, max_length=200)
+    place_deck: str | None = Field(default=None, max_length=100)
+    proxy: bool | None = None
+    foil: bool | None = None
+    lang: str | None = Field(default=None, pattern=r"^[a-z]{2,3}$")
+    delete: bool = False
 
 
 @app.get("/api/collection")
 async def api_collection() -> dict[str, Any]:
     entries = collection.load()
     usage = collection.decks_by_card() if entries else {}
-    return {"entries": entries, "summary": collection.summary(entries),
+    return {"entries": entries, "summary": collection.summary(entries), "places": collection.places(entries),
             "decks": {name: [d["name"] for d in decks] for name, decks in usage.items()}}  # fmt: skip
+
+
+@app.post("/api/collection/bulk")
+async def api_collection_bulk(req: CollectionBulk) -> dict[str, int]:
+    """Change or delete several marked entries at once (Ort, Proxy/Original, Foil, Sprache, Löschen)."""
+    return {"changed": collection.bulk_update(req.ids, **req.model_dump(exclude={"ids"}))}
 
 
 @app.post("/api/collection")
 async def api_collection_add(req: CollectionAdd) -> dict[str, Any]:
-    return await collection.add([i.model_dump() for i in req.items])
+    return await collection.add([i.model_dump() for i in req.items], place=req.place, place_deck=req.place_deck)
 
 
 @app.post("/api/collection/import")
