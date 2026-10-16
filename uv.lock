@@ -235,7 +235,7 @@ wheels = [
 
 [[package]]
 name = "mtgdeck"
-version = "0.1.9"
+version = "0.1.10"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
