@@ -246,6 +246,24 @@ def test_pairing_link_and_root_lead_to_the_app_and_the_worker_is_versioned(tmp_p
     assert "connect-src 'self' https://api.scryfall.com https://*.scryfall.io" in sw.headers["content-security-policy"]
 
 
+def test_the_phone_app_creates_a_pairing_link_with_a_qr_code_for_another_device(tmp_path):
+    app = create_app(tmp_path, public_url="https://sync.example.de")
+    client = TestClient(app)
+    phone = client.post("/api/pair/claim", json={"code": app.state.devices.new_code()["code"], "name": "Handy", "kind": "phone"}).json()
+    auth = {"Authorization": f"Bearer {phone['token']}"}
+    got = client.post("/api/pair/start?qr=1", headers=auth).json()
+    assert got["link"] == f"https://sync.example.de/koppeln#{got['code']}" and got["qr"].startswith("<svg")
+    assert "qr" not in client.post("/api/pair/start", headers=auth).json()  # the PC renders its own
+    ipad = client.post("/api/pair/claim", json={"code": got["code"], "name": "iPad", "kind": "phone"})
+    assert ipad.status_code == 200 and ipad.json()["token"]
+    assert client.post("/api/pair/start?qr=1").status_code == 401
+
+
+def test_the_worker_precaches_the_fonts_but_not_their_licenses(tmp_path):
+    sw = TestClient(create_app(tmp_path)).get("/app/sw.js").text
+    assert "/app/fonts/cascadia-code-latin.woff2" in sw and "/app/fonts/inter-latin.woff2" in sw and "LICENSE.txt" not in sw
+
+
 def test_the_server_image_needs_no_card_libraries(tmp_path):
     """The Docker image installs the package without its app dependencies (httpx, Pillow)."""
     code = f"""

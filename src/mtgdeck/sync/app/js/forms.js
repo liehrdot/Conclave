@@ -602,6 +602,7 @@ const OP_LABEL = {
 export function settingsSheet() {
   openSheet(({ push }) => {
     const theme = state.prefs.theme || "system";
+    const font = state.prefs.font === "inter" ? "inter" : "cascadia";
     const pend = pendingCount();
     const failed = failedOps();
     const d = state.device;
@@ -619,6 +620,9 @@ export function settingsSheet() {
         ${state.pcs.map((pc) => `<div class="row"><span class="status-dot ${pc.online ? "" : "off"}"></span><span class="main"><span class="title">PC „${esc(pc.name)}“</span>
           <span class="subtitle">${pc.online ? "online" : `zuletzt ${esc(ago(new Date(pc.last_seen * 1000).toISOString()))}`}</span></span></div>`).join("")}
       </div>
+      <div class="field-label">Weiteres Gerät</div>
+      <div class="group settings"><button class="row" type="button" id="link-open"><span class="row-icon">${icon("qr", "sm")}</span><span class="main"><span class="title">Gerät verbinden</span>
+        <span class="subtitle wrap">QR-Code, Code und Link für ein Handy oder iPad</span></span>${icon("chev-r", "sm chev")}</button></div>
       <div class="field-label">Kartensuche</div>
       <div class="group settings"><button class="row" type="button" id="ai-open"><span class="row-icon">${icon("sparkle", "sm")}</span><span class="main"><span class="title">Suche mit KI</span>
         <span class="subtitle wrap" id="ai-state">${esc(aiStateText())}</span></span>${icon("chev-r", "sm chev")}</button></div>
@@ -635,17 +639,21 @@ export function settingsSheet() {
       title: "Einstellungen", left: "", right: `<button class="btn plain" type="button" data-sheet-close><b>Fertig</b></button>`,
       body: `<div class="field-label">Erscheinungsbild</div>
         <div class="segmented" id="theme">${[["system", "System"], ["light", "Hell"], ["dark", "Dunkel"]].map(([k, l]) => `<button type="button" data-theme="${k}" aria-pressed="${theme === k}">${l}</button>`).join("")}</div>
+        <div class="field-label">Schrift</div>
+        <div class="segmented" id="font">${[["cascadia", "Cascadia Code"], ["inter", "Inter"]].map(([k, l]) => `<button type="button" data-font="${k}" aria-pressed="${font === k}">${l}</button>`).join("")}</div>
         <div class="field-label">Verbindung</div>
         ${isDemo() ? demo : live}
         <p class="hint-small center">Conclave · für den Spieltisch</p>`,
       bind(el) {
         for (const b of $$("[data-theme]", el)) b.addEventListener("click", () => { setPref("theme", b.dataset.theme); applyTheme(); redraw(); });
+        for (const b of $$("[data-font]", el)) b.addEventListener("click", () => { setPref("font", b.dataset.font); applyTheme(); redraw(); });
         $("#demo-reset", el)?.addEventListener("click", () => { resetDemo(); save(KEY_DRAFT, null); toast("Beispieleinträge gelöscht"); redraw(); });
         $("#demo-end", el)?.addEventListener("click", () => { closeSheet(); endDemo(); });
         $("#sync-now", el)?.addEventListener("click", () => { wake(); toast("Wird aktualisiert …"); setTimeout(redraw, 1200); });
         for (const b of $$("[data-drop]", el)) b.addEventListener("click", () => { dropOp(b.dataset.drop); redraw(); });
         $("#sign-off", el)?.addEventListener("click", () => push(signOffPage));
         $("#ai-open", el)?.addEventListener("click", () => push(aiPage));
+        $("#link-open", el)?.addEventListener("click", () => push(linkPage));
         if (!isDemo()) loadAi().then(() => { const s = $("#ai-state", el); if (s) s.textContent = aiStateText(); });
       },
     };
@@ -716,6 +724,54 @@ function aiPage({ pop, close, redraw: again, onSaved }) {
   };
 }
 
+// ---- connect another device: a fresh one-time code from the server, shown as QR code, code and link ----
+let pairing = null;  // {code, link, expires, qr} or {error}
+const pairValid = () => pairing?.code && pairing.expires * 1000 > Date.now() + 60_000;
+
+function linkPage({ redraw: again }) {
+  const back = `<button class="back-btn" type="button" data-sheet-back>${icon("chev-l")}<span>Zurück</span></button>`;
+  const fresh = () => { pairing = null; again(); };
+  if (!pairValid() && !pairing?.error) {
+    return { title: "Gerät verbinden", left: back, body: `<div class="empty">${icon("qr")}<p>Code wird erstellt …</p></div>`,
+      bind() {
+        serverCall("/api/pair/start?qr=1", { method: "POST" })
+          .then((got) => { pairing = got; }, (e) => { pairing = { error: e.message }; })
+          .then(again);
+      } };
+  }
+  if (pairing.error) {
+    const msg = pairing.error;
+    return { title: "Gerät verbinden", left: back, body: `<div class="empty">${icon("alert")}<h3>Kein Code</h3><p>${esc(msg)}</p></div>`,
+      foot: `<button class="btn primary big" type="button" id="again">Noch einmal</button>`,
+      bind(el) { $("#again", el).addEventListener("click", fresh); } };
+  }
+  const p = pairing;
+  const until = new Date(p.expires * 1000).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  return {
+    title: "Gerät verbinden", left: back,
+    body: `<p class="lead-small">Auf dem anderen Handy oder iPad die Kamera auf den Code halten – oder den Link schicken.</p>
+      ${p.qr ? `<div class="pair-qr" role="img" aria-label="QR-Code mit dem Kopplungslink">${p.qr}</div>` : ""}
+      <div class="field-label">Code</div>
+      <div class="code-box"><span class="code">${esc(p.code)}</span><button class="btn tint" type="button" id="copy-code">${icon("copy", "sm")}Kopieren</button></div>
+      <div class="field-label">Link</div>
+      <div class="group settings"><div class="row"><span class="main"><span class="title wrap link-text">${esc(p.link)}</span></span></div></div>
+      <p class="hint-small">Gültig bis ${esc(until)} Uhr und nur für ein Gerät. In der App dort: „QR-Code scannen“ oder „Code eingeben“.</p>
+      <div class="btn-col"><button class="btn" type="button" id="new-code">Neuer Code</button></div>`,
+    foot: `<button class="btn primary big" type="button" id="share-link">${icon("share", "sm")}Link teilen</button>`,
+    bind(el) {
+      const copy = async (text, what) => {
+        try { await navigator.clipboard.writeText(text); toast(`${what} kopiert`, { ok: true }); } catch { toast("Kopieren ging nicht – bitte von Hand abschreiben."); }
+      };
+      $("#copy-code", el).addEventListener("click", () => copy(p.code, "Code"));
+      $("#share-link", el).addEventListener("click", async () => {
+        if (!navigator.share) return copy(p.link, "Link");
+        try { await navigator.share({ title: "Mit dem Deckbuilder verbinden", text: `Kopplungscode ${p.code}`, url: p.link }); } catch { /* closed */ }
+      });
+      $("#new-code", el).addEventListener("click", fresh);
+    },
+  };
+}
+
 function signOffPage({ pop }) {
   const pend = pendingCount();
   return {
@@ -738,9 +794,10 @@ function signOffPage({ pop }) {
 }
 
 export function applyTheme() {
+  document.documentElement.dataset.font = state.prefs.font === "inter" ? "inter" : "cascadia";  // like the desktop's „Schrift“
   const t = state.prefs.theme;
   if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
   else delete document.documentElement.dataset.theme;
   const dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
-  for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = dark ? "#0b0b0f" : "#f2f2f7";
+  for (const m of document.querySelectorAll('meta[name="theme-color"]')) m.content = dark ? "#141414" : "#f4f4f4";
 }
