@@ -19,7 +19,7 @@ use crate::backend::{self, Backend};
 
 const CHECK_AFTER: Duration = Duration::from_secs(45);
 const CHECK_EVERY: Duration = Duration::from_secs(24 * 3600);
-const RELEASES: &str = "https://github.com/liehrdot/mtgdeckbuilder/releases/";
+const RELEASES: &str = "https://github.com/liehrdot/conclave/releases/"; // compared in lower case
 
 #[derive(Clone, Serialize, Default, Debug)]
 pub struct UpdateState {
@@ -66,7 +66,7 @@ fn feed(backend: &Backend, version: Option<&str>) -> Result<Option<(Url, bool)>,
     };
     let data: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
     let Some(feed) = data["feed"].as_str() else { return Ok(None) };
-    if !feed.starts_with(RELEASES) {
+    if !feed.to_ascii_lowercase().starts_with(RELEASES) {
         return Err(format!("unerwartete Update-Adresse {feed}"));
     }
     Ok(Some((Url::parse(feed).map_err(|e| e.to_string())?, data["preview"].as_bool().unwrap_or(false))))

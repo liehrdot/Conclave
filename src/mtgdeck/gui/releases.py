@@ -11,7 +11,7 @@ from typing import Any
 
 from .. import http, settings
 
-REPO = "liehrdot/mtgdeckbuilder"
+REPO = "liehrdot/Conclave"  # renamed from mtgdeckbuilder; GitHub redirects the old URLs
 API = f"https://api.github.com/repos/{REPO}/releases"
 DOWNLOAD = f"https://github.com/{REPO}/releases/download/"
 STABLE_FEED = f"https://github.com/{REPO}/releases/latest/download/latest.json"
@@ -38,7 +38,7 @@ def parse(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
         feed = next((a.get("browser_download_url") for a in r.get("assets") or [] if a.get("name") == "latest.json"), None)
         tag = str(r.get("tag_name") or "")
         version = tag.removeprefix("preview-").lstrip("v")
-        if not feed or not str(feed).startswith(DOWNLOAD) or version_key(version) == (-1,):
+        if not feed or not str(feed).lower().startswith(DOWNLOAD.lower()) or version_key(version) == (-1,):
             continue
         out.append({"version": version, "tag": tag, "preview": bool(r.get("prerelease")), "feed": feed,
                     "date": r.get("published_at"), "notes": (r.get("body") or "").strip()[:500]})  # fmt: skip
