@@ -314,15 +314,29 @@ def update(entry_id: str, *, qty: int | None = None, proxy: bool | None = None, 
                        place=place, place_deck=place_deck)  # fmt: skip
 
 
-def set_place(entry_ids: list[str], place: str, place_deck: str = "") -> int:
-    """Move several entries to one place (``place`` "" = no place). Returns how many entries were found."""
-    place, place_deck = clean_place(place, place_deck)
+def bulk_update(entry_ids: list[str], *, place: str | None = None, place_deck: str | None = None,
+                proxy: bool | None = None, foil: bool | None = None, lang: str | None = None,
+                delete: bool = False) -> int:  # fmt: skip
+    """Change (or delete) several entries at once; fields left at None stay. Equal entries merge afterwards.
+    Returns how many entries were found."""
     wanted = set(entry_ids)
+    if place is not None or place_deck is not None:
+        place, place_deck = clean_place(place or "", place_deck or "")
     with locked(COLLECTION_FILE):
         entries = load()
         hits = [e for e in entries if e["id"] in wanted]
+        if delete:
+            _write([e for e in entries if e["id"] not in wanted])
+            return len(hits)
         for e in hits:
-            e["place"], e["place_deck"] = place, place_deck
+            if place is not None:
+                e["place"], e["place_deck"] = place, place_deck
+            if proxy is not None:
+                e["proxy"] = bool(proxy)
+            if foil is not None:
+                e["foil"] = bool(foil)
+            if lang is not None:
+                e["lang"] = lang or "en"
         _write(_merge(entries))
     return len(hits)
 

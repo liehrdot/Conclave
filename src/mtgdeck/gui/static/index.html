@@ -544,6 +544,13 @@
         <div id="coll-bulk" class="coll-bulk" hidden>
           <span id="coll-bulk-count"></span>
           <button type="button" class="btn small primary" id="coll-bulk-place"><svg class="icon"><use href="#i-box"/></svg>Ort setzen …</button>
+          <select id="coll-bulk-set" aria-label="Markierte ändern">
+            <option value="">Ändern …</option>
+            <optgroup label="Art"><option value="real">Original</option><option value="proxy">Proxy</option></optgroup>
+            <optgroup label="Ausführung"><option value="foil">Foil</option><option value="nonfoil">Ohne Foil</option></optgroup>
+            <optgroup label="Sprache"><option value="lang:en">Englisch</option><option value="lang:de">Deutsch</option><option value="lang:fr">Französisch</option><option value="lang:it">Italienisch</option><option value="lang:es">Spanisch</option><option value="lang:pt">Portugiesisch</option><option value="lang:ja">Japanisch</option><option value="lang:ko">Koreanisch</option><option value="lang:ru">Russisch</option><option value="lang:zhs">Chinesisch</option></optgroup>
+          </select>
+          <button type="button" class="btn small danger" id="coll-bulk-delete">Löschen</button>
           <button type="button" class="btn small" id="coll-bulk-all">Alle angezeigten markieren</button>
           <button type="button" class="btn small" id="coll-bulk-none">Auswahl aufheben</button>
         </div>

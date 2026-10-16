@@ -2849,11 +2849,11 @@ function openPlaceDialog(ids) {
     ev.preventDefault();
     const p = parsePlace($("#place-input").value);
     try {
-      const r = await api("/api/collection/place", { method: "POST", body: { ids, ...p } });
+      const r = await api("/api/collection/bulk", { method: "POST", body: { ids, ...p } });
       if (p.place) store.set("collplace", p.place);
       dlg.close();
       collSel.clear();
-      toast(p.place ? `${r.moved} ${r.moved === 1 ? "Eintrag" : "Einträge"} → ${p.place}` : `Ort bei ${r.moved} ${r.moved === 1 ? "Eintrag" : "Einträgen"} entfernt.`);
+      toast(p.place ? `${r.changed} ${r.changed === 1 ? "Eintrag" : "Einträge"} → ${p.place}` : `Ort bei ${r.changed} ${r.changed === 1 ? "Eintrag" : "Einträgen"} entfernt.`);
       await loadCollection();
     } catch (err) { fail(err); }
   };
@@ -2867,6 +2867,35 @@ $("#place-chips").addEventListener("click", (e) => {
 $("#place-cancel").addEventListener("click", () => $("#place-dialog").close());
 $("#coll-place").addEventListener("change", () => { collShown = COLL_PAGE; renderCollection(); });
 $("#coll-bulk-place").addEventListener("click", () => openPlaceDialog([...collSel]));
+const BULK_SET = {  // „Ändern …“ in the marking bar: what each choice sends, and the toast
+  real: [{ proxy: false }, "als Original"], proxy: [{ proxy: true }, "als Proxy"],
+  foil: [{ foil: true }, "als Foil"], nonfoil: [{ foil: false }, "ohne Foil"],
+};
+$("#coll-bulk-set").addEventListener("change", async (ev) => {
+  const v = ev.target.value, text = ev.target.selectedOptions[0]?.textContent || v;
+  ev.target.value = "";
+  if (!v || !collSel.size) return;
+  const [body, label] = v.startsWith("lang:") ? [{ lang: v.slice(5) }, `auf ${text}`] : BULK_SET[v];
+  try {
+    const r = await api("/api/collection/bulk", { method: "POST", body: { ids: [...collSel], ...body } });
+    collSel.clear();
+    toast(`${r.changed} ${r.changed === 1 ? "Eintrag" : "Einträge"} ${label} gesetzt.`, "ok");
+    await loadCollection();
+  } catch (err) { fail(err); }
+});
+$("#coll-bulk-delete").addEventListener("click", async () => {
+  const ids = [...collSel];
+  const cards = coll.entries.filter((e) => collSel.has(e.id)).reduce((n, e) => n + e.qty, 0);
+  const yes = await ask({ title: `${ids.length} ${ids.length === 1 ? "Eintrag" : "Einträge"} löschen?`,
+    text: `${cards} ${cards === 1 ? "Karte verschwindet" : "Karten verschwinden"} aus deiner Sammlung.`, ok: "Löschen", danger: true });
+  if (!yes) return;
+  try {
+    const r = await api("/api/collection/bulk", { method: "POST", body: { ids, delete: true } });
+    collSel.clear();
+    toast(`${r.changed} ${r.changed === 1 ? "Eintrag" : "Einträge"} gelöscht.`, "ok");
+    await loadCollection();
+  } catch (err) { fail(err); }
+});
 $("#coll-bulk-none").addEventListener("click", () => { collSel.clear(); renderCollection(); });
 $("#coll-bulk-all").addEventListener("click", () => { for (const e of collFiltered()) collSel.add(e.id); renderCollection(); });
 

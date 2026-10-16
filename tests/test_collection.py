@@ -174,10 +174,29 @@ async def test_places_split_entries_and_move_together():
 
     client = TestClient(app)
     ids = [e["id"] for e in entries if e["place_deck"] != "meren"]
-    assert client.post("/api/collection/place", json={"ids": ids + ["gone"], "place": "Meren", "place_deck": "meren"}).json() == {"moved": 2}
+    assert client.post("/api/collection/bulk", json={"ids": ids + ["gone"], "place": "Meren", "place_deck": "meren"}).json() == {"changed": 2}
     [one] = collection.load()  # all in the deck now: one entry
     assert one["qty"] == 5 and one["place_deck"] == "meren"
     assert client.get("/api/collection").json()["places"] == [{"place": "Meren", "place_deck": "meren", "cards": 5}]
     assert client.patch(f"/api/collection/{one['id']}", json={"place": "Kiste", "place_deck": ""}).json()["entry"]["place"] == "Kiste"
     r = client.post("/api/collection", json={"items": [{"name": "Sol Ring", "qty": 1}], "place": "Kiste"}).json()
     assert r["entries"] == 1 and collection.load()[0]["qty"] == 6
+
+
+async def test_bulk_changes_flags_language_and_deletes():
+    from fastapi.testclient import TestClient
+
+    from mtgdeck.gui.app import app
+
+    await collection.add([{"name": "Sol Ring", "qty": 1}, {"name": "Sol Ring", "qty": 2, "proxy": True}, {"name": "Filler 1", "qty": 1}])
+    client = TestClient(app)
+    ids = [e["id"] for e in collection.load()]
+    assert client.post("/api/collection/bulk", json={"ids": ids, "proxy": True, "foil": True, "lang": "de"}).json() == {"changed": 3}
+    entries = collection.load()  # the two Sol Rings are the same now: one entry
+    assert sorted((e["name"], e["qty"], e["proxy"], e["foil"], e["lang"]) for e in entries) == [
+        ("Filler 1", 1, True, True, "de"), ("Sol Ring", 3, True, True, "de")]
+    assert all(e["place"] == "" for e in entries)  # fields not sent stay
+    assert client.post("/api/collection/bulk", json={"ids": ids, "lang": "deutsch"}).status_code == 422
+    sol = next(e["id"] for e in entries if e["name"] == "Sol Ring")
+    assert client.post("/api/collection/bulk", json={"ids": [sol], "delete": True}).json() == {"changed": 1}
+    assert [e["name"] for e in collection.load()] == ["Filler 1"]

@@ -592,6 +592,7 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .coll-bulk { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;
   padding: var(--space-2) var(--space-3); margin-bottom: var(--space-2); border: 1px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
 #coll-bulk-count { font-weight: 700; margin-right: auto; }
+#coll-bulk-set { width: auto; min-height: 32px; font-size: var(--fs-sm); border-color: var(--border-strong); }
 #place-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-2); }
 .tagb.foil { background: linear-gradient(90deg, #f6d365, #fda085, #a1c4fd); color: #3b2a00; }
 .coll-list.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--space-3); }

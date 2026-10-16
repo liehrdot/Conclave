@@ -1228,10 +1228,14 @@ class EntryUpdate(BaseModel):
     place_deck: str | None = Field(default=None, max_length=100)
 
 
-class PlaceSet(BaseModel):
+class CollectionBulk(BaseModel):
     ids: list[str] = Field(min_length=1, max_length=50000)
-    place: str = Field(default="", max_length=200)
-    place_deck: str = Field(default="", max_length=100)
+    place: str | None = Field(default=None, max_length=200)
+    place_deck: str | None = Field(default=None, max_length=100)
+    proxy: bool | None = None
+    foil: bool | None = None
+    lang: str | None = Field(default=None, pattern=r"^[a-z]{2,3}$")
+    delete: bool = False
 
 
 @app.get("/api/collection")
@@ -1242,10 +1246,10 @@ async def api_collection() -> dict[str, Any]:
             "decks": {name: [d["name"] for d in decks] for name, decks in usage.items()}}  # fmt: skip
 
 
-@app.post("/api/collection/place")
-async def api_collection_place(req: PlaceSet) -> dict[str, int]:
-    """Several entries to one place at once ("Ort setzen")."""
-    return {"moved": collection.set_place(req.ids, req.place, req.place_deck)}
+@app.post("/api/collection/bulk")
+async def api_collection_bulk(req: CollectionBulk) -> dict[str, int]:
+    """Change or delete several marked entries at once (Ort, Proxy/Original, Foil, Sprache, Löschen)."""
+    return {"changed": collection.bulk_update(req.ids, **req.model_dump(exclude={"ids"}))}
 
 
 @app.post("/api/collection")
