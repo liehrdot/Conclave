@@ -847,12 +847,17 @@ function groupRank(g) {
 }
 
 // pending edits (saved together as one new version)
-let edit = null;  // { slug, add: Map(name -> {qty, category, data}), qty: Map(name -> qty), remove: Set, cat: Map(name -> category) }
-const editChanges = () => edit ? edit.add.size + edit.qty.size + edit.remove.size + edit.cat.size : 0;
+// { slug, add: Map(name -> {qty, category, data}), qty: Map(name -> qty), remove: Set, cat: Map(name -> category),
+//   maybeAdd: Map(name -> {category, data, fromDeck}), maybeRemove: Set } – the maybe list never counts towards the deck
+let edit = null;
+const movedToMaybe = (name) => !!edit?.maybeAdd.get(name)?.fromDeck;
+const editChanges = () => edit ? edit.add.size + edit.qty.size + [...edit.remove].filter((n) => !movedToMaybe(n)).length + edit.cat.size
+  + edit.maybeAdd.size + edit.maybeRemove.size : 0;
 
 function deckRows(d) {
   const rows = d.commanders.map((n) => ({ name: n, qty: 1, commander: true, cd: d.card_data?.[n] || {} }));
   for (const c of d.cards) {
+    if (movedToMaybe(c.name)) continue;  // shown on the maybe list
     const row = { ...c, cd: d.card_data?.[c.name] || {} };
     if (edit) {
       if (edit.remove.has(c.name)) row.status = "removed";
@@ -863,6 +868,50 @@ function deckRows(d) {
   }
   if (edit) for (const [name, a] of edit.add) rows.push({ name, qty: a.qty, category: a.category || "", cd: a.data || {}, status: "new" });
   return rows;
+}
+
+// the maybe list ("Vielleicht"): saved entries (minus the ones going into the deck) plus pending ones
+function maybeRows(d) {
+  const rows = (d.maybe || []).filter((m) => !edit?.add.has(m.name))
+    .map((m) => ({ ...m, cd: d.card_data?.[m.name] || {}, status: edit?.maybeRemove.has(m.name) ? "removed" : "" }));
+  if (edit) for (const [name, m] of edit.maybeAdd) rows.push({ name, category: m.category || "", cd: m.data || {}, status: m.fromDeck ? "moved" : "new" });
+  return rows.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function maybeHtml(d, grid, editing) {
+  const rows = maybeRows(d);
+  if (!rows.length && !editing) return "";
+  const live = rows.filter((r) => r.status !== "removed").length;
+  const html = rows.map((c) => {
+    const cd = c.cd;
+    const data = `data-img="${esc(cd.image || "")}" data-img-back="${esc(cd.image_back || "")}" data-name="${esc(c.name)}" data-maybe="1"`;
+    if (grid) {
+      return `<div class="card" role="button" tabindex="0" ${data} aria-label="${esc(c.name)} – große Ansicht">
+        ${cd.image ? `<img src="${esc(cd.image)}" alt="" loading="lazy">` : `<div class="noimg">${esc(c.name)}</div>`}</div>`;
+    }
+    const name = `${esc(c.name)}${cd.game_changer ? '<span class="gc" title="Game Changer">GC</span>' : ""}`;
+    const ci = d.validation?.color_identity;
+    const off = typeof ci === "string" && (cd.color_identity || []).some((x) => !ci.includes(x));
+    const cat = off ? `<span class="maybe-cat bad" title="Passt nicht zur Farbidentität deines Commanders">nicht in deinen Farben</span>`
+      : c.category ? `<span class="maybe-cat">${esc(catLabel(c.category))}</span>` : "";
+    if (!editing) {
+      return `<div class="card" role="button" tabindex="0" ${data} aria-label="${esc(c.name)} – große Ansicht"><span>${name}</span>${cat}</div>`;
+    }
+    if (c.status === "removed") {
+      return `<div class="card removed" ${data}><span class="card-name"><s>${esc(c.name)}</s></span>
+        <span class="edit-ctrls"><button type="button" class="mini" data-act="undo-maybe" title="Rückgängig">↶ zurück</button></span></div>`;
+    }
+    const tag = c.status === "new" ? ' <span class="tag-new">neu</span>' : c.status === "moved" ? ' <span class="tag-new moved">aus dem Deck</span>' : "";
+    return `<div class="card ${c.status === "new" ? "new" : c.status === "moved" ? "changed" : ""}" ${data}>
+      <button type="button" class="card-name" data-act="view">${name}${tag}</button>
+      <span class="edit-ctrls">${cat}
+        <button type="button" class="mini to-deck" data-act="to-deck" title="Ins Deck nehmen">${icon("plus")}Ins Deck</button>
+        <button type="button" class="mini danger" data-act="unmaybe" title="Von der Liste nehmen" aria-label="${esc(c.name)} von der Vielleicht-Liste nehmen">✕</button>
+      </span></div>`;
+  }).join("");
+  const empty = `<p class="maybe-empty">Karten, bei denen du noch unsicher bist. Klick bei einer Karte auf ${icon("maybe")} oder zieh sie von Scryfall auf „Vielleicht“.</p>`;
+  return `<section class="group maybe-group"><h3>${icon("maybe")}Vielleicht <span class="count">${live}</span><span class="maybe-note">zählt nicht zum Deck</span></h3>
+    ${rows.length ? (grid ? `<div class="group-cards">${html}</div>` : html) : empty}</section>`;
 }
 
 function renderCards(d) {
@@ -913,19 +962,20 @@ function renderCards(d) {
           <span class="q">${c.qty}</span>
           <button type="button" class="mini" data-act="plus" aria-label="Eine mehr">+</button>
           <button type="button" class="mini" data-act="similar" title="Ähnliche Karten zum Tauschen">${icon("swap")}</button>
+          <button type="button" class="mini" data-act="maybe" title="Auf die Vielleicht-Liste" aria-label="${esc(c.name)} auf die Vielleicht-Liste">${icon("maybe")}</button>
           <button type="button" class="mini danger" data-act="remove" title="Entfernen" aria-label="${esc(c.name)} entfernen">✕</button>
         </span></div>`;
     }).join("");
     const n = items.filter((r) => r.status !== "removed").reduce((a, c) => a + (c.qty || 1), 0);
     return `<section class="group${!grid && items.length > 16 ? " long" : ""}"><h3>${esc(g)} <span class="count">${n}</span></h3>${grid ? `<div class="group-cards">${html}</div>` : html}</section>`;
-  }).join("");
+  }).join("") + maybeHtml(d, grid, editing);
   updateEditBar(total);
 }
 
 // ---------- edit mode ----------
 function setEditing(on) {
   if (on && !currentDeck) return;
-  edit = on ? { slug: currentDeck.slug, add: new Map(), qty: new Map(), remove: new Set(), cat: new Map() } : null;
+  edit = on ? { slug: currentDeck.slug, add: new Map(), qty: new Map(), remove: new Set(), cat: new Map(), maybeAdd: new Map(), maybeRemove: new Set() } : null;
   $("#edit-toggle").setAttribute("aria-pressed", String(on));
   $("#edit-toggle span").textContent = on ? "Fertig" : "Bearbeiten";
   $("#add-card-form").hidden = !on;
@@ -945,9 +995,11 @@ function updateEditBar(total) {
   syncSaveButtons();
   if (!edit || !n) return;
   const parts = [];
+  const out = [...edit.remove].filter((n) => !movedToMaybe(n)).length;
   if (edit.add.size) parts.push(`${edit.add.size} neu`);
-  if (edit.remove.size) parts.push(`${edit.remove.size} raus`);
+  if (out) parts.push(`${out} raus`);
   if (edit.qty.size + edit.cat.size) parts.push(`${edit.qty.size + edit.cat.size} geändert`);
+  if (edit.maybeAdd.size + edit.maybeRemove.size) parts.push(`Vielleicht ${[edit.maybeAdd.size && `+${edit.maybeAdd.size}`, edit.maybeRemove.size && `−${edit.maybeRemove.size}`].filter(Boolean).join(" ")}`);
   $("#edit-summary").innerHTML = `${parts.join(" · ")} · <b class="${total === 100 ? "ok" : "bad"}">${total} Karten</b>${total === 100 ? "" : " (Commander-Decks brauchen 100)"}`;
 }
 
@@ -968,6 +1020,13 @@ function setQty(name, qty) {
 }
 
 async function addCard(name, qty = 1, category = "") {
+  const pendingMaybe = [...edit.maybeAdd.keys()].find((n) => n.toLowerCase() === name.toLowerCase());
+  if (pendingMaybe) {  // back from the (unsaved) maybe list
+    const m = edit.maybeAdd.get(pendingMaybe);
+    edit.maybeAdd.delete(pendingMaybe);
+    if (m.fromDeck) { edit.remove.delete(pendingMaybe); return pendingMaybe; }
+    category ||= m.category;
+  }
   const inDeck = currentDeck.cards.find((c) => c.name.toLowerCase() === name.toLowerCase());
   if (inDeck && !edit.remove.has(inDeck.name)) { setQty(inDeck.name, currentQty(inDeck.name) + qty); return inDeck.name; }
   if (inDeck) { edit.remove.delete(inDeck.name); return inDeck.name; }
@@ -976,6 +1035,37 @@ async function addCard(name, qty = 1, category = "") {
   const existing = edit.add.get(data.name);
   edit.add.set(data.name, { qty: (existing?.qty || 0) + qty, category: category || existing?.category || "", data });
   return data.name;
+}
+
+/** Put a card on the maybe list: a deck card moves there (out of the deck), any other card is looked up first. */
+async function addMaybe(name, category = "") {
+  const inDeck = currentDeck.cards.find((c) => c.name.toLowerCase() === name.toLowerCase());
+  const pending = [...edit.add.keys()].find((n) => n.toLowerCase() === name.toLowerCase());
+  if (inDeck && !(edit.remove.has(inDeck.name) && !movedToMaybe(inDeck.name))) {
+    const n = inDeck.name;
+    edit.add.delete(n); edit.qty.delete(n); edit.cat.delete(n); edit.remove.add(n);
+    edit.maybeAdd.set(n, { category: category || inDeck.category || "", data: currentDeck.card_data?.[n] || {}, fromDeck: true });
+    return n;
+  }
+  if (pending) {
+    const a = edit.add.get(pending);
+    edit.add.delete(pending);
+    if (!(currentDeck.maybe || []).some((m) => m.name === pending)) edit.maybeAdd.set(pending, { category: category || a.category || "", data: a.data });
+    return pending;
+  }
+  const saved = (currentDeck.maybe || []).find((m) => m.name.toLowerCase() === name.toLowerCase());
+  if (saved) { edit.maybeRemove.delete(saved.name); return saved.name; }
+  const data = await api(`/api/card?name=${enc(name)}`);
+  if (currentDeck.commanders.includes(data.name)) throw new Error(`${data.name} ist der Commander.`);
+  if (data.name !== name && [...currentDeck.cards, ...(currentDeck.maybe || [])].some((c) => c.name === data.name) || edit.add.has(data.name)) return addMaybe(data.name, category);  // a German name
+  edit.maybeAdd.set(data.name, { category, data });
+  return data.name;
+}
+
+/** Take a card off the maybe list (a card that came from the deck in this edit stays out of the deck, shown as removed). */
+function removeMaybe(name) {
+  if (edit.maybeAdd.delete(name)) return;
+  if ((currentDeck.maybe || []).some((m) => m.name === name)) edit.maybeRemove.add(name);
 }
 
 wireAutocomplete($("#add-card-name"), $("#ac-add"));
@@ -989,6 +1079,17 @@ $("#add-card-form").addEventListener("submit", async (e) => {
     $("#add-card-qty").value = 1;
     renderCards(currentDeck);
     toast(`${added} vorgemerkt – mit „Speichern & prüfen“ übernehmen.`);
+  } catch (err) { fail(err); }
+});
+$("#add-card-maybe").addEventListener("click", async () => {
+  const name = $("#add-card-name").value.trim();
+  if (!edit) return;
+  if (!name) { $("#add-card-name").focus(); return toast("Gib zuerst einen Kartennamen ein."); }
+  try {
+    const added = await addMaybe(name, $("#add-card-cat").value);
+    $("#add-card-name").value = "";
+    renderCards(currentDeck);
+    toast(`${added} kommt auf die Vielleicht-Liste – mit „Speichern & prüfen“ übernehmen.`);
   } catch (err) { fail(err); }
 });
 
@@ -1006,9 +1107,11 @@ $("#edit-save").addEventListener("click", async () => {
   if (!edit || !editChanges()) return;
   const body = {
     add: [...edit.add].map(([name, a]) => ({ name, qty: a.qty, category: a.category || null })),
-    remove: [...edit.remove],
+    remove: [...edit.remove].filter((n) => !movedToMaybe(n)),  // the server moves those itself
     set_qty: Object.fromEntries(edit.qty),
     set_category: Object.fromEntries([...edit.cat].filter(([n]) => !edit.remove.has(n))),
+    maybe_add: [...edit.maybeAdd].map(([name, m]) => ({ name, category: m.category || null })),
+    maybe_remove: [...edit.maybeRemove],
   };
   const btn = $("#edit-save");
   btn.disabled = true;
@@ -1039,21 +1142,28 @@ const isCardDrag = (e) => {
   return !dragFromApp && types.some((t) => DROP_TYPES.includes(t)) && !($("#picker").open && types.includes("Files"));
 };
 const dropIntoDeck = () => parseHash().view === "deck" && !!currentDeck;
+// in an open deck the overlay has two targets: the deck (left half of the window) and the maybe list (right half)
+const dropOnMaybe = (e) => dropIntoDeck() && !!e && e.clientX > window.innerWidth / 2;
 
 let dropHideTimer = 0;
-function showDropOverlay(on) {
+function showDropOverlay(on, e = null) {
   clearTimeout(dropHideTimer);
   $("#drop-overlay").hidden = !on;
   if (!on) return;
-  $("#drop-title").textContent = dropIntoDeck() ? `In „${currentDeck.name}“ legen` : "Als Commander für ein neues Deck";
-  $("#drop-hint").textContent = dropIntoDeck() ? "Loslassen – die Karte kommt in die Liste, du speicherst danach." : "Loslassen – danach nur noch „Leeres Deck anlegen“.";
+  const deck = dropIntoDeck(), maybe = dropOnMaybe(e);
+  $("#drop-overlay").classList.toggle("two", deck);
+  $("#drop-maybe").hidden = !deck;
+  $("#drop-main").classList.toggle("active", deck && !maybe);
+  $("#drop-maybe").classList.toggle("active", maybe);
+  $("#drop-title").textContent = deck ? `In „${currentDeck.name}“` : "Als Commander für ein neues Deck";
+  $("#drop-hint").textContent = deck ? "Die Karte kommt ins Deck, du speicherst danach." : "Loslassen – danach nur noch „Leeres Deck anlegen“.";
   dropHideTimer = setTimeout(() => showDropOverlay(false), 250);  // dragover repeats while the pointer is in the window
 }
 document.addEventListener("dragover", (e) => {
   if (!isCardDrag(e)) return;
   e.preventDefault();
   e.dataTransfer.dropEffect = "copy";
-  if (!document.querySelector("dialog[open]")) showDropOverlay(true);
+  if (!document.querySelector("dialog[open]")) showDropOverlay(true, e);
 });
 document.addEventListener("drop", async (e) => {
   if (!isCardDrag(e)) return;
@@ -1065,19 +1175,19 @@ document.addEventListener("drop", async (e) => {
   try {
     const r = await api("/api/cards/drop", { method: "POST", body });
     if (r.missing.length && !r.cards.length) throw new Error(`Karte nicht gefunden: ${r.missing.join(", ")}`);
-    if (dropIntoDeck()) await dropCardsIntoDeck(r.cards);
+    if (dropIntoDeck()) await dropCardsIntoDeck(r.cards, { maybe: dropOnMaybe(e) });
     else dropCommander(r.cards);
     if (r.missing.length) toast(`Nicht erkannt: ${r.missing.join(", ")}`, "error");
   } catch (err) { fail(err); }
 });
 
 let dropToast = null;
-async function dropCardsIntoDeck(cards) {
+async function dropCardsIntoDeck(cards, { maybe = false } = {}) {
   if ($("#panel-karten").hidden) selectTab("karten");
   if (!edit) setEditing(true);
   const added = [];
   for (const c of cards) {
-    try { added.push(await addCard(c.name)); } catch (err) { fail(err); }
+    try { added.push(await (maybe ? addMaybe(c.name) : addCard(c.name))); } catch (err) { fail(err); }
   }
   if (!added.length) return;
   renderCards(currentDeck);
@@ -1087,9 +1197,13 @@ async function dropCardsIntoDeck(cards) {
     if (name === added[added.length - 1]) row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }
   dropToast?.remove();  // one card after the other: one toast, not a stack
-  dropToast = toast(`${added.join(", ")} vorgemerkt – mit „Speichern & prüfen“ übernehmen.`, "info", 6000, { label: "Rückgängig", run: () => {
+  dropToast = toast(`${added.join(", ")} ${maybe ? "kommt auf die Vielleicht-Liste" : "vorgemerkt"} – mit „Speichern & prüfen“ übernehmen.`, "info", 6000, { label: "Rückgängig", run: () => {
     if (!edit) return;
-    for (const name of added) setQty(name, currentQty(name) - 1);
+    for (const name of added) {
+      if (!maybe) setQty(name, currentQty(name) - 1);
+      else if (movedToMaybe(name)) addCard(name);  // back into the deck
+      else removeMaybe(name);
+    }
     renderCards(currentDeck);
   } });
 }
@@ -1524,6 +1638,17 @@ function openCardFromEvent(e) {
   if (!el || !currentDeck) return;
   const act = e.target.closest("[data-act]")?.dataset.act;
   const name = el.dataset.name;
+  if (edit && act && act !== "view" && el.dataset.maybe) {
+    if (act === "unmaybe") removeMaybe(name);
+    if (act === "undo-maybe") edit.maybeRemove.delete(name);
+    if (act === "to-deck") {
+      const cat = edit.maybeAdd.get(name)?.category || (currentDeck.maybe || []).find((m) => m.name === name)?.category || "";
+      return addCard(name, 1, cat).then(() => renderCards(currentDeck), fail);
+    }
+    renderCards(currentDeck);
+    return;
+  }
+  if (edit && act === "maybe") return addMaybe(name).then(() => renderCards(currentDeck), fail);
   if (edit && act && act !== "view") {
     if (act === "cat") return;
     if (act === "plus") setQty(name, currentQty(name) + 1);
@@ -1535,9 +1660,10 @@ function openCardFromEvent(e) {
     return;
   }
   if (edit && !act) return;  // clicks on the row background in edit mode
-  const cdOf = (n) => currentDeck.card_data?.[n] || edit?.add.get(n)?.data || {};
-  const rows = [...$("#cards").querySelectorAll(".card[data-name]:not(.removed)")];
+  const cdOf = (n) => currentDeck.card_data?.[n] || edit?.add.get(n)?.data || edit?.maybeAdd.get(n)?.data || {};
   const row = e.target.closest(".card[data-name]");
+  // arrows step through the list the card is in: the deck, or the maybe list
+  const rows = [...$("#cards").querySelectorAll(`.card[data-name]:not(.removed)${row.dataset.maybe ? "[data-maybe]" : ":not([data-maybe])"}`)];
   showCardView(name, cdOf(name), rows.map((el) => ({ name: el.dataset.name, cd: cdOf(el.dataset.name) })), rows.indexOf(row));
 }
 $("#cards").addEventListener("click", openCardFromEvent);

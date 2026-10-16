@@ -33,7 +33,7 @@ VERSIONS_DIRNAME = ".versions"  # decks/.versions/<slug>/v0001.json – full sna
 
 # Fields whose change creates a new version (re-validation alone does not).
 _CONTENT_KEYS = ("name", "commanders", "cards", "bracket", "power_profile", "proxy", "budget", "currency",
-                 "description", "strategy", "notes", "table_rule")  # fmt: skip
+                 "description", "strategy", "notes", "table_rule", "maybe")  # fmt: skip
 # Written on every save; everything else that is not content (guide, upgrade_plan, built_against, precon,
 # copied_from …) is carried over when a caller saves a deck dict built from scratch.
 _PER_SAVE_KEYS = {"slug", "history", "version", "created", "updated", "validation", "change_note", "needs_revalidation"}

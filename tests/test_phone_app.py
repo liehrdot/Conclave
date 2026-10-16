@@ -447,6 +447,29 @@ def test_deck_new_and_edit_save_versions_like_the_desktop_app():
         apply(_op("deck.edit", {"deck": "kaalia", "add": [{"name": "Sol Ring"}]}, "opedit005"), {"decks/kaalia.json": None})
 
 
+def test_deck_edit_maybe_list():
+    from mtgdeck.sync.appdata import snapshot
+    from mtgdeck.sync.appops import OpError, apply
+
+    deck = {"slug": "kaalia", "name": "Kaalia", "commanders": ["Kaalia of the Vast"], "version": 1, "history": [],
+            "cards": [{"name": "Sol Ring", "qty": 1, "category": "Ramp"}]}  # fmt: skip
+    out = apply(_op("deck.edit", {"deck": "kaalia", "maybe_add": [{"name": "Sol Ring"}, {"name": "Rhystic Study", "category": "Draw"}]}, "opmaybe01"),
+                {"decks/kaalia.json": deck})  # fmt: skip
+    d2 = out["decks/kaalia.json"]
+    assert d2["cards"] == [] and d2["maybe"] == [{"name": "Rhystic Study", "category": "Draw"}, {"name": "Sol Ring", "category": "Ramp"}]
+    assert d2["history"][-1]["note"] == "Am Tisch: Vielleicht + Rhystic Study; Sol Ring → Vielleicht" and d2["needs_revalidation"]
+    assert snapshot({"decks/kaalia.json": d2})["decks"][0]["maybe"] == [{"name": "Rhystic Study", "category": "Draw"}, {"name": "Sol Ring", "category": "Ramp"}]
+    out = apply(_op("deck.edit", {"deck": "kaalia", "add": [{"name": "Sol Ring", "category": "Ramp"}], "maybe_remove": ["Rhystic Study"]}, "opmaybe02"),
+                {"decks/kaalia.json": d2})  # fmt: skip
+    d3 = out["decks/kaalia.json"]
+    assert [c["name"] for c in d3["cards"]] == ["Sol Ring"] and "maybe" not in d3
+    assert apply(_op("deck.edit", {"deck": "kaalia", "maybe_remove": ["Nope"]}, "opmaybe03"), {"decks/kaalia.json": d3}) == {}
+    with pytest.raises(OpError, match="Commander"):
+        apply(_op("deck.edit", {"deck": "kaalia", "maybe_add": [{"name": "Kaalia of the Vast"}]}, "opmaybe04"), {"decks/kaalia.json": d3})
+    with pytest.raises(OpError, match="Ungültige"):
+        apply(_op("deck.edit", {"deck": "kaalia", "maybe_add": {"name": "x"}}, "opmaybe05"), {"decks/kaalia.json": d3})
+
+
 def test_a_deck_built_on_the_tablet_reaches_the_pc_and_gets_checked(tmp_path):
     from mtgdeck import storage
     from mtgdeck.sync import Roots, service

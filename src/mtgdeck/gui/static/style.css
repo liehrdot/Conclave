@@ -403,6 +403,20 @@ details.more[open] > summary { margin-bottom: var(--space-3); }
 .card-tools .btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--on-accent-soft); }
 #card-total.bad { color: var(--bad); font-weight: 700; }
 .add-card { display: grid; grid-template-columns: minmax(0, 1fr) 70px 170px auto; gap: var(--space-2); margin-bottom: var(--space-4); padding: var(--space-3); background: var(--surface-2); border-radius: var(--radius); }
+.add-card-btns { display: flex; gap: var(--space-2); }
+/* the maybe list ("Vielleicht"): last in the card list, across all columns, never counted */
+.cards .maybe-group { column-span: all; margin-top: var(--space-4); padding: var(--space-3) var(--space-4) var(--space-2); border: 1px dashed var(--border-strong); border-radius: var(--radius); background: var(--surface-2); }
+.cards.editing .maybe-group, .cards:not(.grid) .maybe-group { columns: 2 300px; column-gap: var(--space-5); }
+.cards .maybe-group h3 { column-span: all; display: flex; align-items: center; gap: 6px; }
+.cards .maybe-group h3 .icon { width: 16px; height: 16px; color: var(--accent); }
+.maybe-note { margin-left: auto; font-weight: 400; font-size: var(--fs-xs); color: var(--muted); text-transform: none; letter-spacing: 0; }
+.maybe-cat { color: var(--muted); font-size: var(--fs-xs); white-space: nowrap; }
+.maybe-cat.bad { color: var(--bad); }
+.maybe-group .card { break-inside: avoid; }
+.maybe-empty { column-span: all; margin: 0 0 var(--space-2); color: var(--muted); font-size: var(--fs-sm); }
+.maybe-empty .icon { width: 15px; height: 15px; vertical-align: -3px; }
+.mini.to-deck { gap: 3px; display: inline-flex; font-size: var(--fs-xs); }
+.tag-new.moved { color: var(--on-accent-soft); }
 .cards.editing { columns: 2 340px; }
 .cards.editing .card { align-items: center; cursor: default; padding: 2px 4px; }
 .cards.editing .card:hover { background: var(--surface-2); }
@@ -1080,6 +1094,11 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .drop-box .icon { width: 36px; height: 36px; color: var(--accent-text); }
 .drop-box strong { font-size: var(--fs-lg); }
 .drop-box span { color: var(--muted); }
+/* in an open deck: two targets side by side, the one under the pointer is highlighted */
+.drop-overlay.two { grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+.drop-overlay.two .drop-box { justify-self: center; width: min(100%, 380px); border-color: var(--border-strong); transform: scale(.96); transition: transform .1s, border-color .1s; }
+.drop-overlay.two .drop-box:not(.active) > * { opacity: .6; }
+.drop-overlay.two .drop-box.active { opacity: 1; transform: none; border-style: solid; box-shadow: 0 0 0 4px var(--accent-soft), var(--shadow-lg); }
 .drop-tip { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius); background: var(--accent-soft); color: var(--on-accent-soft); }
 .drop-tip .icon { flex: none; width: 16px; height: 16px; margin-top: 2px; }
 .card.just-dropped { animation: just-dropped 1.6s ease-out; }

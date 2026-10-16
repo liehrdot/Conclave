@@ -43,6 +43,7 @@ def _deck(slug: str, d: dict[str, Any], games: list[dict[str, Any]]) -> dict[str
         "rule0": {"rows": r0["rows"], "text": r0["text"]},
         "cards": [{"name": c["name"], "qty": int(c.get("qty") or 1), "category": c.get("category") or ""}
                   for c in d.get("cards") or [] if isinstance(c, dict) and c.get("name")],
+        "maybe": [{"name": m["name"], "category": m.get("category") or ""} for m in d.get("maybe") or [] if isinstance(m, dict) and m.get("name")],
         "record": _record(games),
     }  # fmt: skip
 

@@ -544,10 +544,12 @@ export function cardSheet(name, action = null) {
           ${showDe ? `<p class="note">Gedruckter deutscher Text – der aktuelle Regeltext steht unter „Original“.</p>` : ""}
           ${de === undefined && c ? `<p class="note">Suche deutschen Text …</p>` : ""}
         </div>`,
-      foot: action?.label ? `<button class="btn primary big" type="button" id="card-action">${icon("plus", "sm")}${esc(action.label)}</button>` : "",
+      foot: action?.label || action?.alt ? `<div class="foot-row">${action.alt ? `<button class="btn big" type="button" id="card-alt">${icon(action.alt.icon || "plus", "sm")}${esc(action.alt.label)}</button>` : ""}
+        ${action.label ? `<button class="btn primary big" type="button" id="card-action">${icon("plus", "sm")}${esc(action.label)}</button>` : ""}</div>` : "",
       bind(el) {
         for (const b of $$("[data-lang]", el)) b.addEventListener("click", () => { lang = b.dataset.lang; redraw(); });
         $("#card-action", el)?.addEventListener("click", action?.run);
+        $("#card-alt", el)?.addEventListener("click", action?.alt?.run);
       },
     };
   };

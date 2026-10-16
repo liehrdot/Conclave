@@ -412,6 +412,15 @@ function apply(snap, op) {
     for (const n of p.remove || []) cards.delete(n);
     for (const [n, q] of Object.entries(p.set_qty || {})) { const c = cards.get(n); if (c && q > 0) c.qty = q; else cards.delete(n); }
     for (const [n, k] of Object.entries(p.set_category || {})) { const c = cards.get(n); if (c) c.category = k; }
+    // the maybe list, like maybe.change(): deck cards leave it, a card put on it leaves the deck
+    const maybe = new Map((d.maybe || []).filter((m) => !cards.has(m.name)).map((m) => [m.name, { ...m }]));
+    for (const n of p.maybe_remove || []) maybe.delete(n);
+    for (const m of p.maybe_add || []) {
+      const c = cards.get(m.name);
+      cards.delete(m.name);
+      maybe.set(m.name, { name: m.name, category: m.category || c?.category || maybe.get(m.name)?.category || "Synergy" });
+    }
+    d.maybe = [...maybe.values()].sort((a, b) => a.name.localeCompare(b.name));
     d.cards = [...cards.values()].sort((a, b) => a.name.localeCompare(b.name));
     Object.assign(d, { checking: true, version: (d.version || 0) + 1, updated: op.at });
   } else if (op.type === "opponent.delete") {

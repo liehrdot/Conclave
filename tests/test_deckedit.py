@@ -59,3 +59,35 @@ async def test_edit_routes():
     assert client.post("/api/decks/nope/cards", json={"remove": ["x"]}).status_code == 404
     sim = client.get(f"/api/decks/{slug}/similar", params={"card": "Sol Ring"}).json()
     assert sim[0]["name"] == "Filler Ramp Rock"
+
+
+async def test_maybe_list_moves_cards_and_never_counts():
+    slug = await _deck()
+    count = storage.load(slug)["validation"]["stats"]["card_count"]
+    r = await deckedit.edit_deck(slug, maybe_add=[{"name": "demonic tutor"}, {"name": "Cultivate"}])
+    deck = storage.load(slug)
+    assert deck["maybe"] == [{"name": "Cultivate", "category": "Synergy"}, {"name": "Demonic Tutor", "category": "Synergy"}]
+    assert "Cultivate" not in {c["name"] for c in deck["cards"]}  # a deck card moves to the list
+    assert deck["validation"]["stats"]["card_count"] == count - 1  # maybe cards never count
+    assert r["version"] == 2 and r["change_note"] == "Manuell: Vielleicht + Demonic Tutor; Cultivate → Vielleicht"
+    assert storage.versions(slug)[-1]["removed"] == ["Cultivate"]
+
+    await deckedit.edit_deck(slug, add=[{"name": "Cultivate", "category": "Ramp"}])  # into the deck → off the list
+    deck = storage.load(slug)
+    assert [m["name"] for m in deck["maybe"]] == ["Demonic Tutor"] and {c["name"]: c for c in deck["cards"]}["Cultivate"]["category"] == "Ramp"
+    r = await deckedit.edit_deck(slug, maybe_remove=["Demonic Tutor"])
+    assert "maybe" not in storage.load(slug) and r["change_note"] == "Manuell: Vielleicht − Demonic Tutor"
+    with pytest.raises(ValueError, match="Commander"):
+        await deckedit.edit_deck(slug, maybe_add=[{"name": "Meren of Clan Nel Toth"}])
+    with pytest.raises(ValueError, match="Keine Änderung"):
+        await deckedit.edit_deck(slug, maybe_remove=["Demonic Tutor"])
+
+
+async def test_maybe_routes_and_card_data():
+    slug = await _deck()
+    client = TestClient(app)
+    r = client.post(f"/api/decks/{slug}/cards", json={"maybe_add": [{"name": "Demonic Tutor", "category": "Tutor"}]})
+    assert r.status_code == 200
+    deck = client.get(f"/api/decks/{slug}").json()
+    assert deck["maybe"] == [{"name": "Demonic Tutor", "category": "Tutor"}] and "Demonic Tutor" in deck["card_data"]
+    assert "Demonic Tutor" not in deck["export_text"]

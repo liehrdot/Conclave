@@ -21,6 +21,7 @@ import re
 import uuid
 from typing import Any
 
+from .. import maybe as maybe_list
 from ..games import HOW, ISSUES, RESULTS
 from ..opponents import MAX_NOTES, TAGS
 from ..storage import _metrics, diff, level_text
@@ -204,17 +205,19 @@ def _change_note(added: list[str], removed: list[str], changed: list[str], note:
 
 def _deck_edit(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, Any]:
     """Like ``deckedit.edit_deck``: ``add`` [{name, qty, category}] (quantities add up), ``remove`` [names],
-    ``set_qty`` {name: qty} (0 removes), ``set_category`` {name: category}. Applied to the server's current deck,
-    so changes made on the PC meanwhile stay. Nothing changed → nothing is written."""
+    ``set_qty`` {name: qty} (0 removes), ``set_category`` {name: category}, ``maybe_add`` [{name, category}] onto the
+    maybe list (a deck card moves there), ``maybe_remove`` [names] off it (``maybe.change``). Applied to the server's
+    current deck, so changes made on the PC meanwhile stay. Nothing changed → nothing is written."""
     slug = _deck_slug(p)
     old = docs.get(f"decks/{slug}.json")
     if not isinstance(old, dict):
         raise OpError("Dieses Deck gibt es nicht mehr – am PC gelöscht?")
     adds, removes = p.get("add") or [], p.get("remove") or []
     set_qty, set_cat = p.get("set_qty") or {}, p.get("set_category") or {}
-    if not all(isinstance(x, list) for x in (adds, removes)) or not all(isinstance(x, dict) for x in (set_qty, set_cat)):
+    maybe_adds, maybe_removes = p.get("maybe_add") or [], p.get("maybe_remove") or []
+    if not all(isinstance(x, list) for x in (adds, removes, maybe_adds, maybe_removes)) or not all(isinstance(x, dict) for x in (set_qty, set_cat)):
         raise OpError("Ungültige Daten")
-    if len(adds) + len(removes) + len(set_qty) + len(set_cat) > EDIT_MAX:
+    if len(adds) + len(removes) + len(set_qty) + len(set_cat) + len(maybe_adds) + len(maybe_removes) > EDIT_MAX:
         raise OpError("Zu viele Änderungen auf einmal")
     deck = copy.deepcopy(old)
     cards: dict[str, dict[str, Any]] = {c["name"]: c for c in deck.get("cards") or [] if isinstance(c, dict) and c.get("name")}
@@ -250,10 +253,21 @@ def _deck_edit(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, An
         if name in cards and cat and cards[name].get("category") != cat:
             cards[name]["category"] = cat
             changed.append(f"{name} → {cat}")
-    if not (added or removed or changed):
+    maybe = maybe_list.entries(deck)
+    before = dict(maybe)
+    try:
+        maybe_note = maybe_list.change(
+            cards, maybe, commanders=commanders, remove=[_card_name(n) for n in maybe_removes],
+            add=[{"name": _card_name((a or {}).get("name")), "category": _category((a or {}).get("category"))} for a in maybe_adds],
+        )  # fmt: skip
+    except ValueError as exc:
+        raise OpError(str(exc)) from exc
+    changed += ["; ".join(maybe_note)] if maybe_note else []
+    if not (added or removed or changed or maybe != before):
         return {}
     if len(cards) > DECK_CARDS_MAX:
         raise OpError("Das sind zu viele Karten für ein Deck.")
+    maybe_list.store(deck, maybe)
     deck["cards"] = sorted(cards.values(), key=lambda c: c["name"])
     return _save_version(deck, old, _change_note(added, removed, changed, _text(p.get("note"), 200)), at)
 
