@@ -1,0 +1,100 @@
+# A preview build of the Windows desktop app after every change on master that touches the app: the same build as a
+# release, published as a GitHub *prerelease* with the version <next patch>-preview.<run>, e.g. 0.1.10-preview.42
+# (it sorts after 0.1.9 and before 0.1.10). Installed apps only offer it with Einstellungen → Desktop-App →
+# „Vorschau-Versionen anzeigen“: the stable feed is releases/latest/download/latest.json, and GitHub never makes a
+# prerelease the latest release. The version files in the repo stay as they are; only tauri.conf.json is changed for
+# the build. Older previews are deleted, the newest KEEP stay (so you can go back a few builds).
+name: Preview build
+
+on:
+  push:
+    branches: [master]
+    paths: ["src/**", "desktop/**", "pyproject.toml", "uv.lock", ".github/workflows/preview.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: preview
+  cancel-in-progress: true
+
+jobs:
+  preview-windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      KEEP: "5"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preview version
+        shell: pwsh
+        run: |
+          $path = "desktop/src-tauri/tauri.conf.json"
+          $conf = Get-Content $path -Raw | ConvertFrom-Json
+          $v = [version]$conf.version
+          $preview = "$($v.Major).$($v.Minor).$($v.Build + 1)-preview.$env:GITHUB_RUN_NUMBER"
+          $conf.version = $preview
+          $conf | ConvertTo-Json -Depth 32 | Set-Content $path -Encoding utf8NoBOM
+          "VERSION=$preview" >> $env:GITHUB_ENV
+          "TAG=preview-$preview" >> $env:GITHUB_ENV
+          Write-Host "preview $preview"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv sync --all-extras
+      - name: Build backend
+        run: uv run pyinstaller --noconfirm --clean desktop/sidecar/backend.spec
+      - name: Smoke test backend
+        shell: pwsh
+        run: |
+          $data = Join-Path $env:RUNNER_TEMP "mtgdata"
+          $p = Start-Process -FilePath "dist/mtgdeck-backend/mtgdeck-backend.exe" -ArgumentList "--data", $data, "--port", "0", "--token", "auto" -RedirectStandardOutput out.txt -RedirectStandardError err.txt -PassThru -NoNewWindow
+          $url = $null
+          for ($i = 0; $i -lt 120 -and -not $url; $i++) {
+            Start-Sleep -Milliseconds 500
+            if (Test-Path out.txt) { $m = Select-String -Path out.txt -Pattern '^MTGDECK_URL=(.*)$' | Select-Object -First 1; if ($m) { $url = $m.Matches[0].Groups[1].Value } }
+          }
+          Get-Content out.txt, err.txt -ErrorAction SilentlyContinue
+          if (-not $url) { throw "backend printed no MTGDECK_URL" }
+          $health = Invoke-RestMethod "$($url.Split('?')[0])api/health"
+          Stop-Process -Id $p.Id -Force
+          if (-not $health.ok -or -not $health.frozen) { throw "health: $($health | ConvertTo-Json)" }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build, sign and upload into a draft prerelease
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: desktop
+          tagName: ${{ env.TAG }}
+          releaseCommitish: ${{ github.sha }}
+          releaseName: "Vorschau ${{ env.VERSION }}"
+          releaseBody: "Vorschau-Version vom Stand ${{ github.sha }} – nicht als Version freigegeben. Eine installierte App bietet sie nur mit Einstellungen → Desktop-App → „Vorschau-Versionen anzeigen“ an."
+          releaseDraft: true
+          prerelease: true
+          updaterJsonPreferNsis: true
+      - name: Publish as a prerelease (never the latest release)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit $env:TAG --draft=false --prerelease --latest=false
+      - name: Keep only the newest previews
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $old = gh release list --limit 100 --json tagName,isPrerelease,createdAt | ConvertFrom-Json |
+            Where-Object { $_.isPrerelease -and $_.tagName -like "preview-*" } |
+            Sort-Object createdAt -Descending | Select-Object -Skip ([int]$env:KEEP)
+          foreach ($r in $old) { Write-Host "delete $($r.tagName)"; gh release delete $r.tagName --yes --cleanup-tag }

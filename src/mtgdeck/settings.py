@@ -38,6 +38,8 @@ DEFAULTS: dict[str, Any] = {
     "sync_interval": 5,
     # desktop app: system notifications while the window is hidden (print files ready, news from the phone)
     "desktop_notify": True,
+    # desktop app: also offer preview builds (from every change on master, not tested like a release)
+    "desktop_preview": False,
     "font": "cascadia",  # cascadia | inter — the UI face; code and the console stay Cascadia
     # floating card image that follows the pointer over list rows (hand, tokens, collection thumbs too)
     "hover_preview": True,

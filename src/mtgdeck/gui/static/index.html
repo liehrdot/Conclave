@@ -893,6 +893,16 @@
           <button type="button" class="btn primary" id="desktop-install" hidden>Update installieren</button>
           <button type="button" class="btn" id="desktop-check">Nach Updates suchen</button>
         </div>
+        <label class="check"><input type="checkbox" id="desktop-preview"> Vorschau-Versionen anzeigen (das Neueste nach jeder Änderung, noch nicht freigegeben)</label>
+        <details class="more" id="desktop-other">
+          <summary>Andere Version installieren</summary>
+          <p class="muted small">Zum Beispiel zurück zur letzten Version, wenn etwas nicht mehr geht. Vorher wird eine Sicherung deiner Daten angelegt.</p>
+          <div class="btn-row">
+            <select id="desktop-versions" aria-label="Version"></select>
+            <button type="button" class="btn" id="desktop-switch" disabled>Zu dieser Version wechseln</button>
+          </div>
+          <p id="desktop-versions-note" class="small muted" role="status"></p>
+        </details>
         <label class="check"><input type="checkbox" id="desktop-autostart"> Beim Anmelden im Hintergrund starten</label>
         <label class="check"><input type="checkbox" id="desktop-notify"> Benachrichtigen, wenn das Fenster versteckt ist (Neues von deinen anderen Geräten)</label>
         <div class="btn-row">

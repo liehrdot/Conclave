@@ -66,8 +66,13 @@ pub fn start(app: AppHandle, backend: Backend, autostart_item: CheckMenuItem<Wry
                             crate::open_folder(folder);
                         }
                     }
-                    "check_update" => updates::check(app.clone(), updates.clone()),
-                    "install_update" => updates::install(app.clone(), updates.clone(), backend.clone()),
+                    "check_update" => updates::check(app.clone(), updates.clone(), backend.clone()),
+                    "install_update" => updates::install(app.clone(), updates.clone(), backend.clone(), None),
+                    "install_version" => {
+                        if let Some(v) = c["value"].as_str() {
+                            updates::install(app.clone(), updates.clone(), backend.clone(), Some(v.to_string()));
+                        }
+                    }
                     _ => {}
                 }
             }
