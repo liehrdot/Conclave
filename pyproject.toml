@@ -1,6 +1,6 @@
 [project]
 name = "mtgdeck"
-version = "0.1.9"
+version = "0.1.10"
 description = "Conclave, a Commander deckbuilder: a local app with Scryfall, EDHREC, Commander Spellbook and Archidekt data, printing and sync"
 readme = "README.md"
 requires-python = ">=3.10"
