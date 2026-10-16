@@ -1,0 +1,51 @@
+# Claude reads every pull request's diff for security problems, comments on the lines it flags and fails
+# the check on any finding. The action itself only warns (a finding or a failed run still ends green), so
+# the last step turns its result into the check: no result file, an error or a finding = red.
+# Needs the repository secret ANTHROPIC_API_KEY. Required by the master ruleset (check name `claude`).
+# The action is not hardened against prompt injection, so it only runs on trusted pull requests: forks
+# get no secrets, and outside contributors need approval before their workflows run.
+name: Security review
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: security-review-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  claude:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+      - name: Review
+        id: review
+        uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda # main, 2026-02-11
+        with:
+          claude-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude-model: claude-sonnet-5-5
+          run-every-commit: true
+          exclude-directories: "src/mtgdeck/gui/static/vendor,src/mtgdeck/sync/app/vendor"
+          custom-security-scan-instructions: ${{ github.workspace }}/.github/security-review.txt
+      - name: Verdict
+        env:
+          RESULTS: ${{ github.workspace }}/claudecode-results.json
+        run: |
+          if [ ! -s "$RESULTS" ]; then echo "::error::The security review produced no result."; exit 1; fi
+          if jq -e '.error' "$RESULTS" >/dev/null; then echo "::error::The security review failed: $(jq -r '.error' "$RESULTS")"; exit 1; fi
+          n=$(jq '.findings // [] | length' "$RESULTS")
+          if [ "$n" -gt 0 ]; then
+            jq -r '.findings[] | "::error file=\(.file // ""),line=\(.line // 1)::\(.severity // "?"): \(.description // .title // "finding")"' "$RESULTS" || true
+            echo "::error::$n security finding(s). Fix them, or merge with the admin bypass if they are false positives."
+            exit 1
+          fi
+          echo "No security findings."
