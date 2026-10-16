@@ -1,6 +1,9 @@
 # A release of the Windows desktop app: on a tag v<version> (set with scripts/bump_version.py), build the backend,
 # smoke-test it, build the Tauri shell with the NSIS installer plus the signed updater artifacts, and publish a
 # GitHub Release with the installer, its signature and latest.json – which installed apps read to update themselves.
+# The repo has immutable releases on: a published release takes no more files. So the files go into a draft first,
+# and the last step publishes it (which also creates the tag). Start it with "Run workflow" and the version
+# (e.g. 0.1.9), or by pushing a bare tag v<version>. Never publish the release by hand first: it stays empty.
 # Secrets: TAURI_SIGNING_PRIVATE_KEY (the key whose public part is in desktop/src-tauri/tauri.conf.json),
 # TAURI_SIGNING_PRIVATE_KEY_PASSWORD (empty if the key has none).
 name: Release
@@ -8,6 +11,11 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version without v, e.g. 0.1.9 (set with scripts/bump_version.py and merged first)"
+        required: true
 
 permissions:
   contents: write
@@ -16,12 +24,14 @@ jobs:
   release-windows:
     runs-on: windows-latest
     timeout-minutes: 60
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
       - name: Versions must match the tag
         shell: pwsh
         run: |
-          $tag = "${{ github.ref_name }}".TrimStart("v")
+          $tag = $env:TAG.TrimStart("v")
           $conf = (Get-Content desktop/src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
           $cargo = (Select-String -Path desktop/src-tauri/Cargo.toml -Pattern '^version = "(.*)"').Matches[0].Groups[1].Value
           $py = (Select-String -Path pyproject.toml -Pattern '^version = "(.*)"').Matches[0].Groups[1].Value
@@ -58,7 +68,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Build, sign and publish
+      - name: The release must not be published yet
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $state = gh release view $env:TAG --json isDraft --jq .isDraft 2>$null
+          if ($state -eq "false") { throw "release $env:TAG is already published, and immutable releases take no files - bump to the next version" }
+          exit 0  # gh exits 1 when there is no release yet, which is fine
+      - name: Build, sign and upload into a draft
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -66,9 +84,15 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: desktop
-          tagName: ${{ github.ref_name }}
-          releaseName: "MTG Deckbuilder ${{ github.ref_name }}"
+          tagName: ${{ env.TAG }}
+          releaseCommitish: ${{ github.sha }}
+          releaseName: "MTG Deckbuilder ${{ env.TAG }}"
           releaseBody: "Windows-Installer (pro Benutzer, ohne Adminrechte). Eine installierte App holt sich diese Version von selbst: Einstellungen → Desktop-App."
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
           updaterJsonPreferNsis: true
+      - name: Publish the release with all files
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit $env:TAG --draft=false --latest
