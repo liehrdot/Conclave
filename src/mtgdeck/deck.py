@@ -13,10 +13,29 @@ BASIC_LANDS = {
     "Snow-Covered Mountain", "Snow-Covered Forest", "Snow-Covered Wastes",
 }  # fmt: skip
 
-_LINE_RE = re.compile(r"^\s*(?:(\d+)\s*x?\s+)?(.+?)\s*$", re.IGNORECASE)
+MAX_LINE = 300
 # Trailing set/collector info as exported by Moxfield/Archidekt: "Sol Ring (C21) 263 *F*"
-_SET_SUFFIX_RE = re.compile(r"\s+\([A-Za-z0-9]{2,6}\)(?:\s+[\w-]+)?(?:\s+\*[A-Z]+\*)*\s*$")
-_SECTION_RE = re.compile(r"^\s*(//|#)?\s*(commanders?|deck|main(board)?|sideboard|maybeboard|companion)\s*:?\s*$", re.I)
+_SET_SUFFIX_RE = re.compile(r"\s\([A-Za-z0-9]{2,6}\)(?:\s+[\w-]+)?(?:\s+\*[A-Z]+\*)*$")
+_SECTIONS = re.compile(r"commanders?|deck|main(?:board)?|sideboard|maybeboard|companion")
+
+
+def split_qty(line: str) -> tuple[int, str]:
+    """'4x Sol Ring' -> (4, 'Sol Ring'); no number -> (1, line). Expects a stripped line."""
+    digits = len(line) - len(line.lstrip("0123456789"))
+    after = line[digits:]
+    if not digits:
+        return 1, line
+    tail = after.lstrip()
+    if tail[:1] in ("x", "X") and tail[1:2].isspace():
+        return int(line[:digits]), tail[1:].strip()
+    return (int(line[:digits]), after.strip()) if after[:1].isspace() else (1, line)
+
+
+def _section(line: str) -> str | None:
+    """'Commander:', '// Sideboard', '# deck' -> the lower-case word; None for a card line."""
+    body = line[2:] if line.startswith("//") else line[1:] if line.startswith("#") else line
+    word = body.strip().removesuffix(":").strip().lower()
+    return word if _SECTIONS.fullmatch(word) else None
 
 
 @dataclass
@@ -43,20 +62,18 @@ def parse_decklist(text_or_lines: str | list[str]) -> ParsedList:
     counts: dict[str, int] = {}
     for raw in lines:
         line = raw.strip()
-        if not line:
+        if not line or len(line) > MAX_LINE:  # no card line is that long; also caps the regex work
             continue
-        sec = _SECTION_RE.match(line)
-        if sec:
-            word = sec.group(2).lower()
+        word = _section(line)
+        if word:
             section = "commander" if word.startswith("commander") else ("skip" if word in {"sideboard", "maybeboard", "companion"} else "deck")
             continue
         if line.startswith(("#", "//")):
             continue
-        m = _LINE_RE.match(line)
-        if not m:
+        qty, rest = split_qty(line)
+        if not rest:
             continue
-        qty = int(m.group(1) or 1)
-        name = _SET_SUFFIX_RE.sub("", m.group(2)).strip()
+        name = _SET_SUFFIX_RE.sub("", rest).strip()
         if name.endswith("*CMDR*"):
             name, section_for_line = name[: -len("*CMDR*")].strip(), "commander"
         else:

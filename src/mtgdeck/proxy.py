@@ -77,7 +77,7 @@ def safe_filename(name: str) -> str:
 
 
 def order_dir(slug: str) -> Path:
-    return PROXIES_DIR / slug
+    return paths.inside(PROXIES_DIR, slug)
 
 
 def image_cache() -> Path:

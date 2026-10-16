@@ -25,6 +25,7 @@ from typing import Any
 
 from . import scryfall, storage
 from .cards import resolve
+from .deck import split_qty
 from .jsonstore import locked, read_json, write_json
 from . import paths
 
@@ -100,12 +101,25 @@ _COLS = {
     "lang": ("language", "lang", "sprache"),
 }
 _TRUE = {"1", "true", "yes", "ja", "y", "x", "foil", "etched", "proxy"}
-_LINE_RE = re.compile(
-    r"^\s*(?:(?P<qty>\d+)\s*x?\s+)?(?P<name>.+?)"
-    r"(?:\s+[(\[](?!proxy[)\]])(?P<set>[A-Za-z0-9]{2,6})[)\]](?:\s+#?(?P<cn>[\w★†\-]+))?)?"
-    r"(?P<flags>(?:\s+(?:\*F\*|\*E\*|\*P\*|\[proxy\]|\(proxy\)))*)\s*$",
-    re.IGNORECASE,
-)
+MAX_LINE = 300  # no card line is longer
+_FLAGS = ("*f*", "*e*", "*p*", "[proxy]", "(proxy)")
+# "(M19) 314" / "[m19] #314" at the end of a line, after the flags are cut off
+_PRINTING_RE = re.compile(r"\s[(\[]([A-Za-z0-9]{2,6})[)\]](?:\s+#?([\w★†\-]+))?$")
+
+
+def _split_line(rest: str) -> tuple[str, str | None, str | None, set[str]]:
+    """'Sol Ring (C21) 263 *F*' -> ('Sol Ring', 'C21', '263', {'*f*'})."""
+    flags: set[str] = set()
+    while True:
+        word = rest.rsplit(None, 1)
+        if len(word) < 2 or word[1].lower() not in _FLAGS:
+            break
+        flags.add(word[1].lower())
+        rest = word[0]
+    m = _PRINTING_RE.search(rest)
+    if not m:
+        return rest.strip(), None, None, flags
+    return rest[: m.start()].strip(), m.group(1), m.group(2), flags
 
 
 def _lang(value: str) -> str:
@@ -160,18 +174,20 @@ def _parse_lines(text: str) -> list[dict[str, Any]]:
         line = raw.strip()
         if not line or line.startswith(("#", "//")) or line.lower().rstrip(":") in {"deck", "commander", "sideboard", "maybeboard"}:
             continue
-        m = _LINE_RE.match(line)
-        if not m:
+        qty, rest = split_qty(line)
+        if len(line) > MAX_LINE:
             continue
-        flags = (m.group("flags") or "").lower()
+        name, set_code, cn, flags = _split_line(rest)
+        if not name:
+            continue
         items.append({
-            "name": m.group("name").strip(),
-            "qty": int(m.group("qty") or 1),
-            "set": (m.group("set") or "").lower() or None,
-            "collector_number": m.group("cn"),
+            "name": name,
+            "qty": qty,
+            "set": (set_code or "").lower() or None,
+            "collector_number": cn,
             "scryfall_id": None,
-            "foil": "*f*" in flags or "*e*" in flags,
-            "proxy": "*p*" in flags or "proxy" in flags,
+            "foil": bool(flags & {"*f*", "*e*"}),
+            "proxy": bool(flags & {"*p*", "[proxy]", "(proxy)"}),
             "lang": None,
         })  # fmt: skip
     return items

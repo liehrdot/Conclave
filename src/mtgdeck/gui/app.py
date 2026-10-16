@@ -1057,7 +1057,7 @@ async def api_deck(slug: str) -> dict[str, Any]:
         card_data, _, _ = await resolve(names)
     except Exception as exc:  # offline: show the list without images/prices
         card_data = {}
-        deck["card_data_error"] = str(exc)
+        deck["card_data_error"] = exc.friendly if isinstance(exc, HttpError) else "Kartendaten gerade nicht verfügbar"
     keep = ("image", "image_back", "layout", "type_line", "mana_cost", "cmc", "price_eur", "price_usd",
             "game_changer", "scryfall_uri", "color_identity", "roles")  # fmt: skip
     deck["card_data"] = {n: {k: c.get(k) for k in keep} for n, c in card_data.items()}
@@ -1508,7 +1508,7 @@ async def api_print_upload(slug: str, request: Request, face: str, filename: str
 async def api_print_upload_file(slug: str, name: str) -> FileResponse:
     if not proxy.UPLOAD_NAME.match(name):
         raise HTTPException(404, "Kein Bild")
-    path = proxy.order_dir(storage.slug(slug)) / proxy.UPLOADS / name
+    path = paths.inside(proxy.order_dir(storage.slug(slug)), proxy.UPLOADS, name)
     if not path.is_file():
         raise HTTPException(404, "Bild nicht gefunden")
     return FileResponse(path, headers={"Cache-Control": "max-age=86400"})
@@ -1576,13 +1576,13 @@ async def api_print_prepare(slug: str, req: PrintRequest) -> dict[str, str]:
 @app.get("/api/decks/{slug}/print/files")
 async def api_print_files(slug: str) -> dict[str, bool]:
     s = storage.slug(slug)
-    return {kind: (proxy.order_dir(s) / f"{s}.{kind}").exists() for kind in ("xml", "pdf")}
+    return {kind: paths.inside(proxy.order_dir(s), f"{s}.{kind}").exists() for kind in ("xml", "pdf")}
 
 
 @app.api_route("/api/decks/{slug}/print/files/{kind}", methods=["GET", "HEAD"])
 async def api_print_file(slug: str, kind: str) -> FileResponse:
     s = storage.slug(slug)
-    path = proxy.order_dir(s) / f"{s}.{'pdf' if kind == 'pdf' else 'xml'}"
+    path = paths.inside(proxy.order_dir(s), f"{s}.{'pdf' if kind == 'pdf' else 'xml'}")
     if not path.exists():
         raise HTTPException(404, "Datei noch nicht erstellt")
     return FileResponse(path, filename=path.name)
@@ -1635,8 +1635,8 @@ async def api_print_open_folder(slug: str) -> dict[str, Any]:
         raise HTTPException(404, "Noch keine Druckdateien – zuerst „Druckdateien vorbereiten“.")
     try:
         open_in_file_manager(folder)
-    except OSError as exc:
-        return {"opened": False, "path": str(folder), "error": str(exc)}
+    except OSError:
+        return {"opened": False, "path": str(folder), "error": "Der Ordner ließ sich nicht öffnen."}
     return {"opened": True, "path": str(folder)}
 
 

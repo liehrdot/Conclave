@@ -42,3 +42,15 @@ def test_roles_regex_and_tags():
     assert "tutor" in card_roles({"oracle_text": "Search your library for a card, put it into your hand.", "type_line": "Sorcery"})
     assert "tutor" not in card_roles({"oracle_text": "Search your library for a basic land card", "type_line": "Sorcery"})
     assert card_roles({"oracle_text": "", "type_line": "Sorcery", "tags": ["sweeper", "removal"]}) == ["board_wipe", "removal"]
+
+
+def test_split_qty_and_long_lines():
+    from mtgdeck.deck import split_qty
+
+    assert split_qty("4x Sol Ring") == (4, "Sol Ring")
+    assert split_qty("4 x Sol Ring") == (4, "Sol Ring")
+    assert split_qty("1 Xenagos, God of Revels") == (1, "Xenagos, God of Revels")
+    assert split_qty("Sol Ring") == (1, "Sol Ring")
+    assert split_qty("10Foo") == (1, "10Foo")
+    parsed = parse_decklist(["1 Sol Ring (C21) 263 *F*", "1 " + "a " * 400])
+    assert [e.name for e in parsed.entries] == ["Sol Ring"]

@@ -18,7 +18,10 @@ self.addEventListener("activate", (e) => {
   })());
 });
 
-self.addEventListener("message", (e) => { if (e.data === "skip-waiting") self.skipWaiting(); });
+self.addEventListener("message", (e) => {
+  if (e.origin && e.origin !== self.location.origin) return; // only the app's own pages
+  if (e.data === "skip-waiting") self.skipWaiting();
+});
 
 self.addEventListener("fetch", (e) => {
   const req = e.request;

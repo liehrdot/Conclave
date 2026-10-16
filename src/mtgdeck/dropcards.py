@@ -47,7 +47,7 @@ def from_url(url: str) -> dict[str, str] | None:
 def _name_line(line: str) -> str:
     """'1x Sol Ring' / 'Sol Ring (C21) 263' → 'Sol Ring'."""
     line = _QTY_RE.sub("", line.strip())
-    return re.sub(r"\s+\([A-Za-z0-9]{2,6}\)\s*[\w★-]*\s*$", "", line).strip()
+    return re.sub(r"\s\([A-Za-z0-9]{2,6}\)(?:\s*[\w★-]+)?$", "", line.strip()).strip()
 
 
 def refs(uri_list: str = "", html: str = "", text: str = "") -> list[dict[str, str]]:

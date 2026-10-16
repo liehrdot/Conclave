@@ -45,7 +45,7 @@ def _now() -> str:
 
 
 def _versions_dir(deck_slug: str) -> Path:
-    return DECKS_DIR / VERSIONS_DIRNAME / slug(deck_slug)
+    return paths.inside(DECKS_DIR, VERSIONS_DIRNAME, slug(deck_slug))
 
 
 def _card_counts(deck: dict[str, Any]) -> dict[str, int]:
@@ -91,7 +91,7 @@ def _snapshot(deck: dict[str, Any]) -> None:
 
 
 def _path(deck_slug: str) -> Path:
-    return DECKS_DIR / f"{slug(deck_slug)}.json"
+    return paths.inside(DECKS_DIR, f"{slug(deck_slug)}.json")
 
 
 def _write_current(deck: dict[str, Any]) -> dict[str, str]:
@@ -242,7 +242,7 @@ def restore(deck_slug: str, version: int, note: str = "") -> dict[str, Any]:
 def unique_slug(name: str) -> str:
     base = slug(name)
     candidate, n = base, 2
-    while (DECKS_DIR / f"{candidate}.json").exists():
+    while paths.inside(DECKS_DIR, f"{candidate}.json").exists():
         candidate, n = f"{base}-{n}", n + 1
     return candidate
 

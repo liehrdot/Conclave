@@ -150,7 +150,7 @@ RULES: dict[str, dict[str, Any]] = {
 _ALIASES = {a: key for key, r in RULES.items() for a in [*r["aliases"], key.replace("-", "")]}
 _PRICE_RE = re.compile(
     r"^(?:@?price>|preis>|>|teurer als|ueber|über|mehr als|ab|karten ueber|karten über|alles ueber|alles über)\s*"
-    r"(\d+(?:[.,]\d+)?)\s*(€|eur|euro|\$|usd|dollar)?\s*(?:teure karten)?$", re.I)  # fmt: skip
+    r"(\d+(?:[.,]\d+)?)\s*(?:(€|eur|euro|\$|usd|dollar)\s*)?(?:teure karten)?$", re.I)  # fmt: skip
 
 
 def _norm(text: str) -> str:

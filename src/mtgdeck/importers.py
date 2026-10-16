@@ -66,9 +66,9 @@ def _from_text(text: str, site: str, source: str, name: str | None = None) -> di
     for raw in text.splitlines():
         line = raw.strip()
         if re.search(r"#\s*!?commander\b", line, re.I):
-            line = re.sub(r"\s*#.*$", "", line) + " *CMDR*"
+            line = line.split("#", 1)[0].rstrip() + " *CMDR*"
         elif "#" in line and not line.startswith("#"):
-            line = re.sub(r"\s+#.*$", "", line)
+            line = re.split(r"\s#", line, maxsplit=1)[0].rstrip()
         lines.append(line)
     parsed = parse_decklist(lines)
     hint = None
@@ -188,20 +188,25 @@ async def import_edhrec(url: str) -> dict[str, Any]:
     return res
 
 
+def _on(host: str, domain: str) -> bool:
+    """The host is ``domain`` or one of its subdomains (not ``evil-domain.com`` or ``domain.com.evil``)."""
+    return host == domain or host.endswith("." + domain)
+
+
 async def import_url(url: str) -> dict[str, Any]:
     url = url.strip()
     host = (urlparse(url if "://" in url else f"https://{url}").hostname or "").lower()
-    if "archidekt.com" in host:
+    if _on(host, "archidekt.com"):
         return await import_archidekt(url)
-    if "moxfield.com" in host:
+    if _on(host, "moxfield.com"):
         return await import_moxfield(url)
-    if "mtggoldfish.com" in host and _GOLDFISH_RE.search(url):
+    if _on(host, "mtggoldfish.com") and _GOLDFISH_RE.search(url):
         return await import_goldfish(url)
-    if "tappedout.net" in host and _TAPPEDOUT_RE.search(url):
+    if _on(host, "tappedout.net") and _TAPPEDOUT_RE.search(url):
         return await import_tappedout(url)
-    if "deckstats.net" in host and _DECKSTATS_RE.search(url):
+    if _on(host, "deckstats.net") and _DECKSTATS_RE.search(url):
         return await import_deckstats(url)
-    if "edhrec.com" in host and _EDHREC_RE.search(url):
+    if _on(host, "edhrec.com") and _EDHREC_RE.search(url):
         return await import_edhrec(url)
     raise ValueError(f"Diese Seite kenne ich nicht. Unterstützt: {', '.join(SITES)}. "
                      "Sonst die Liste auf der Seite exportieren und unter „Liste einfügen“ einfügen.")  # fmt: skip
