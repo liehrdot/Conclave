@@ -171,6 +171,7 @@
               <hr>
               <button type="button" id="compare-deck-btn" role="menuitem">Mit anderem Deck vergleichen …</button>
               <button type="button" id="order-from-deck" role="menuitem">Zur Sammelbestellung …</button>
+              <button type="button" id="buylist-btn" role="menuitem">Einkaufsliste mit Preisen …</button>
               <hr>
               <button type="button" id="delete-btn" role="menuitem" class="danger">Deck löschen …</button>
             </div>
@@ -1375,6 +1376,29 @@
   <div class="dialog-actions">
     <button type="button" class="btn ghost" id="dc-copy">Auswahl als Liste kopieren</button>
     <button type="button" class="btn primary" id="dc-order"><svg class="icon"><use href="#i-cart"/></svg><span>Zur Sammelbestellung …</span></button>
+  </div>
+</dialog>
+
+<dialog id="buylist" class="dialog buylist" aria-labelledby="buy-title">
+  <div class="dialog-head">
+    <h2 id="buy-title">Einkaufsliste</h2>
+    <button type="button" class="icon-btn" id="buy-close" aria-label="Schließen"><svg class="icon"><use href="#i-x"/></svg></button>
+  </div>
+  <p id="buy-summary" class="dc-summary" aria-live="polite"></p>
+  <div class="buy-bar" id="buy-bar" hidden>
+    <div class="buy-checks" id="buy-checks">
+      <label class="check"><input type="checkbox" id="buy-owned" checked> <span>Mit Sammlung abgleichen</span></label>
+      <label class="check" id="buy-proxies-box"><input type="checkbox" id="buy-proxies" checked> <span>Proxies durch echte Karten ersetzen</span></label>
+    </div>
+    <label class="buy-max"><span>Nur Karten bis</span><span class="buy-max-input"><input type="number" id="buy-max" min="0" step="0.5" inputmode="decimal" placeholder="alle"> €</span></label>
+  </div>
+  <div id="buy-body" hidden>
+    <div class="buy-head" aria-hidden="true"><span></span><span></span><span>Karte · günstigste Ausgabe</span><span>ab</span><span>Trend</span></div>
+    <ul id="buy-list" class="dc-list buy-list"></ul>
+    <p class="muted small" id="buy-note"></p>
+  </div>
+  <div class="dialog-actions">
+    <button type="button" class="btn primary" id="buy-copy"><svg class="icon"><use href="#i-copy"/></svg><span>Für Cardmarket kopieren</span></button>
   </div>
 </dialog>
 

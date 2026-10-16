@@ -1065,6 +1065,19 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .dc-list .price { font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dc-list.plain li { grid-template-columns: 3ch minmax(0, 1fr) auto; }
 .dc-common { columns: 2 220px; margin: var(--space-2) 0 0; }
+.buylist { width: min(760px, calc(100vw - 32px)); }
+.buy-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); margin: var(--space-2) 0; }
+.buy-checks { display: flex; flex-direction: column; gap: 4px; }
+.buy-max { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
+.buy-max-input { display: inline-flex; align-items: center; gap: 4px; }
+.buy-max input { width: 9ch; }
+.buy-head, .buy-list li { grid-template-columns: auto 3ch minmax(0, 1fr) 9ch 9ch; }
+.buy-head { display: grid; gap: var(--space-2); padding: var(--space-2) 4px 0; font-size: var(--fs-xs); color: var(--muted); border-top: 1px solid var(--border); }
+.buy-head span:nth-last-child(-n+2) { text-align: right; }
+.buy-card { display: flex; flex-direction: column; min-width: 0; }
+.buy-list a.name { text-decoration: none; }
+.buy-list .price { text-align: right; }
+.buy-list .price.strong { color: var(--text); font-weight: 600; }
 .deck-compare-teaser { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-3); }
 .deck-compare-teaser h2 { margin-bottom: 4px; }
 @media (max-width: 600px) { .dc-list li { grid-template-columns: auto 3ch minmax(0, 1fr) auto; } .dc-list .price { display: none; } }
@@ -1109,3 +1122,8 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .card.just-dropped { animation: just-dropped 1.6s ease-out; }
 @keyframes just-dropped { from { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); } to { background: transparent; box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) { .card.just-dropped { animation: none; outline: 2px solid var(--accent-text); } }
+@media (max-width: 600px) {
+  .buy-head, .buy-list li { grid-template-columns: auto 3ch minmax(0, 1fr) 9ch; }
+  .buy-head span:nth-last-child(2), .buy-list .price:not(.strong) { display: none; }
+  .buy-list .price.strong { display: block; }
+}

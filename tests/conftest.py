@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 import pytest
 
-from mtgdeck import backup, blacklist, carddb, collection, http, proxy, settings, storage, tablerules
+from mtgdeck import backup, blacklist, cardmarket, carddb, collection, http, proxy, settings, storage, tablerules
 
 
 def card(name: str, *, ci: str = "", type_line: str = "Creature — Human", text: str = "", cmc: float = 2,
@@ -127,8 +127,35 @@ def lookup_card(name: str) -> dict[str, Any] | None:
     return None
 
 
+# Cardmarket's daily downloads: product id -> (name, trend, low); CM_PRINTS = what Scryfall knows.
+CM_PRODUCTS = {
+    100: ("Sol Ring", 0.10, 0.05),  # oversized: never picked
+    101: ("Sol Ring", 0.90, 0.50),
+    102: ("Sol Ring", 2.00, 1.00),
+    200: ("Meren of Clan Nel Toth", 1.50, 1.00),
+    300: ("Delver of Secrets / Insectile Aberration", 0.30, 0.02),
+}
+CM_PRINTS = {
+    100: {"set": "oc15", "set_name": "Commander 2015 Oversized", "collector_number": "1", "oversized": True, "set_type": "memorabilia"},
+    101: {"set": "c21", "set_name": "Commander 2021", "collector_number": "263", "set_type": "commander"},
+    200: {"set": "c15", "set_name": "Commander 2015", "collector_number": "49", "set_type": "commander"},
+}  # fmt: skip
+
+
+def cardmarket_response(url: httpx.URL) -> httpx.Response:
+    if url.path.endswith("/priceGuide/price_guide_1.json"):
+        return httpx.Response(200, json={"version": 1, "createdAt": "2026-10-16T02:42:33+0200", "priceGuides": [
+            {"idProduct": i, "idCategory": 1, "trend": t, "low": lo, "low-foil": None, "trend-foil": None} for i, (_, t, lo) in CM_PRODUCTS.items()]})  # fmt: skip
+    if url.path.endswith("/productList/products_singles_1.json"):
+        return httpx.Response(200, json={"version": 1, "products": [
+            {"idProduct": i, "name": n, "idCategory": 1, "idExpansion": i // 10} for i, (n, _, _) in CM_PRODUCTS.items()]})  # fmt: skip
+    return httpx.Response(403, text="AccessDenied")
+
+
 def handler(request: httpx.Request) -> httpx.Response:
     url = request.url
+    if url.host == "downloads.s3.cardmarket.com":
+        return cardmarket_response(url)
     if url.host == "cards.scryfall.io":
         return httpx.Response(200, content=_image_bytes("PNG"), headers={"Content-Type": "image/png"})
     if url.host == "cdn.mpcautofill.com":
@@ -147,6 +174,10 @@ def handler(request: httpx.Request) -> httpx.Response:
         if url.path == "/2/cardbacks/":
             return httpx.Response(200, json={"cardbacks": ["drive-back"]})
     if url.host == "api.scryfall.com":
+        if url.path.startswith("/cards/cardmarket/"):
+            cid = int(url.path.rsplit("/", 1)[1])
+            hit = CM_PRINTS.get(cid)
+            return httpx.Response(200, json={"object": "card", "name": CM_PRODUCTS[cid][0], **hit}) if hit else httpx.Response(404, json={})
         if url.path == "/cards/collection":
             idents = json.loads(request.content)["identifiers"]
             data, missing = [], []
@@ -272,6 +303,7 @@ def offline(tmp_path, monkeypatch):
     monkeypatch.setattr(http, "CACHE_DIR", tmp_path / "cache")
     monkeypatch.setattr(http, "_MIN_INTERVAL", {})
     monkeypatch.setattr(http, "_DEFAULT_INTERVAL", 0)
+    monkeypatch.setattr(cardmarket, "_memo", {})
     monkeypatch.setattr(carddb, "DATA_DIR", tmp_path / "data")
     monkeypatch.setattr(carddb, "DB_PATH", tmp_path / "data" / "cards.sqlite")
     monkeypatch.setattr(storage, "DECKS_DIR", tmp_path / "decks")

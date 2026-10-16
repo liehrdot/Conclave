@@ -3007,7 +3007,8 @@ async function loadOwnership(d) {
       · <b class="${o.missing ? "bad" : "ok"}">${o.missing} fehlen</b>${o.missing_price ? ` (≈ ${esc(fmtPrice(o.missing_price, cur))})` : ""}</p>
     ${o.shared_shortages.length ? `<p class="small warn">In mehreren Decks, aber zu wenige Exemplare: ${esc(o.shared_shortages.slice(0, 6).join(", "))}${o.shared_shortages.length > 6 ? " …" : ""}</p>` : ""}
     ${o.missing ? `<div class="btn-group">
-      <button type="button" class="btn small" id="own-copy">Einkaufsliste kopieren</button>
+      <button type="button" class="btn small" id="own-buy">Einkaufsliste mit Preisen</button>
+      <button type="button" class="btn small" id="own-copy">Liste kopieren</button>
       <button type="button" class="btn small" id="own-print">Fehlende drucken</button></div>` : '<p class="small ok">Du hast alle Karten dieses Decks.</p>'}`;
 }
 $("#own-summary").addEventListener("click", async (e) => {
@@ -3015,6 +3016,7 @@ $("#own-summary").addEventListener("click", async (e) => {
     try { await navigator.clipboard.writeText(ownership.shopping_text); toast("Einkaufsliste kopiert – z. B. bei Cardmarket als Wants-Liste einfügen."); }
     catch { toast("Kopieren nicht erlaubt.", "error"); }
   }
+  if (e.target.closest("#own-buy")) openBuylist();
   if (e.target.id === "own-print") {
     $("#print-form").elements.only_missing.checked = true;
     printLoadedFor = null;
@@ -4246,6 +4248,92 @@ $("#dc-order").addEventListener("click", async () => {
 $("#compare-deck-btn").addEventListener("click", () => openDeckCompare());
 $("#dc-open").addEventListener("click", () => openDeckCompare());
 
+// ---------- Einkaufsliste: buy the deck for real at Cardmarket's cheapest printings ----------
+let buyData = null;
+async function openBuylist() {
+  if (!currentDeck) return;
+  $("#deck-menu").open = false;
+  $("#buy-title").textContent = `Einkaufsliste – ${currentDeck.name}`;
+  if (!$("#buylist").open) $("#buylist").showModal();
+  await loadBuylist();
+}
+async function loadBuylist() {
+  const slug = currentDeck?.slug;
+  if (!slug) return;
+  $("#buy-summary").textContent = "Hole die Preise von Cardmarket …";
+  $("#buy-body").hidden = true;
+  try {
+    const r = await api(`/api/decks/${enc(slug)}/buylist?owned=${$("#buy-owned").checked}&proxies=${$("#buy-proxies").checked}`);
+    if (currentDeck?.slug !== slug) return;
+    buyData = r;
+    renderBuylist();
+  } catch (err) { $("#buy-summary").textContent = err.message; }
+}
+const buyMax = () => { const v = parseFloat(String($("#buy-max").value).replace(",", ".")); return Number.isFinite(v) && v >= 0 ? v : null; };
+function renderBuylist() {
+  const r = buyData, max = buyMax();
+  $("#buy-bar").hidden = false;
+  $("#buy-checks").hidden = !r.collection_size;
+  $("#buy-proxies-box").hidden = !r.use_collection;
+  $("#buy-body").hidden = !r.items.length;
+  const price = (v) => (v ? esc(fmtPrice(v, "eur")) : "–");
+  $("#buy-list").innerHTML = r.items.map((i, k) => {
+    const over = max != null && (i.trend || 0) > max;
+    const owned = [i.real ? `${i.real} echt` : "", i.proxy ? `${i.proxy} Proxy` : ""].filter(Boolean).join(", ");
+    const where = i.set_name ? `${esc(i.set_name)}${i.collector_number ? ` #${esc(i.collector_number)}` : ""}`
+      : i.source === "scryfall" ? "Preis von Scryfall" : i.source ? "" : "kein Preis gefunden";
+    return `<li class="${over ? "have" : ""}"><input type="checkbox" data-k="${k}" ${over ? "" : "checked"} aria-label="${esc(i.name)} kaufen">
+      <span class="qty">${i.qty}×</span>
+      <span class="buy-card"><a href="${esc(i.url || i.search_url)}" target="_blank" rel="noopener" class="name">${esc(i.name)}</a>
+        <span class="muted small">${where}${owned && r.use_collection ? ` · hast du: ${esc(owned)}` : ""}${i.in_decks?.length && r.use_collection
+          ? `, steckt in ${i.in_decks.slice(0, 2).map((n) => `„${esc(n)}“`).join(", ")}${i.in_decks.length > 2 ? " …" : ""}` : ""}</span></span>
+      <span class="price" title="Billigstes Angebot irgendeiner Ausgabe">${price(i.total_low)}</span>
+      <span class="price strong" title="Trendpreis der günstigsten Ausgabe">${price(i.total_trend)}</span></li>`;
+  }).join("");
+  const date = r.price_date ? ` vom ${fmtDate(r.price_date)}` : "";
+  $("#buy-note").innerHTML = (r.error ? `<span class="warn">${esc(r.error)} Die Preise kommen deshalb von Scryfall.</span><br>` : "")
+    + `Preise: Cardmarket-Preisliste${esc(date)} (einmal am Tag). „Trend“ = üblicher Preis der günstigsten Ausgabe, „ab“ = billigstes Angebot`
+    + " irgendeiner Ausgabe, oft gespielt oder in einer anderen Sprache. Was es wirklich kostet, zeigt Cardmarket nach dem Einfügen in eine Wants-Liste.";
+  updateBuylistSelection();
+}
+function buySelected() {
+  return $$("#buy-list input[type=checkbox]:checked").map((b) => buyData.items[Number(b.dataset.k)]);
+}
+function updateBuylistSelection() {
+  const r = buyData;
+  if (!r) return;
+  if (!r.items.length) {
+    $("#buy-summary").innerHTML = r.collection_size ? "<b>Nichts zu kaufen</b> – du hast alle Karten dieses Decks als echte Karten." : "<b>Nichts zu kaufen.</b>";
+    $("#buy-copy").disabled = true;
+    return;
+  }
+  const sel = buySelected();
+  const copies = sel.reduce((a, i) => a + i.qty, 0);
+  const sum = (k) => sel.reduce((a, i) => a + (i[k] || 0), 0);
+  const skipped = r.items.length - sel.length;
+  $("#buy-summary").innerHTML = `<b>${copies} ${copies === 1 ? "Karte" : "Karten"}</b> kaufen · ≈ <b>${esc(fmtPrice(sum("total_trend"), "eur"))}</b> (Trend)`
+    + ` · ab ${esc(fmtPrice(sum("total_low"), "eur"))}`
+    + (skipped ? ` · ${skipped} ${skipped === 1 ? "Karte bleibt" : "Karten bleiben"} Proxy` : "")
+    + (!r.collection_size ? '<br><span class="muted">Deine Sammlung ist leer, deshalb steht das ganze Deck auf der Liste (ohne Standardländer).</span>'
+      : !r.use_collection ? '<br><span class="muted">Ohne Abgleich steht das ganze Deck auf der Liste (ohne Standardländer).</span>'
+      : '<br><span class="muted">Karten aus deiner Sammlung fehlen nur, wenn sie schon in einem anderen Deck stecken.</span>');
+  $("#buy-copy span").textContent = copies ? `${copies} ${copies === 1 ? "Karte" : "Karten"} für Cardmarket kopieren` : "Für Cardmarket kopieren";
+  $("#buy-copy").disabled = !copies;
+}
+$("#buy-list").addEventListener("change", updateBuylistSelection);
+$("#buy-max").addEventListener("input", () => { if (buyData) renderBuylist(); });
+$("#buy-proxies").addEventListener("change", loadBuylist);
+$("#buy-owned").addEventListener("change", loadBuylist);
+$("#buy-close").addEventListener("click", () => $("#buylist").close());
+$("#buy-copy").addEventListener("click", async () => {
+  const text = buySelected().map((i) => `${i.qty} ${i.name}`).join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    toast("Kopiert. Bei Cardmarket unter „Wants“ eine Liste anlegen, einfügen und den Shopping Wizard die günstigsten Verkäufer suchen lassen.", "ok", 9000);
+  } catch { toast("Kopieren nicht möglich – der Browser erlaubt keinen Zugriff auf die Zwischenablage.", "error"); }
+});
+$("#buylist-btn").addEventListener("click", () => openBuylist());
+
 async function offerOrderAfterRebuild(slug, since) {
   if (!slug || !since) return;
   try {
@@ -4334,6 +4422,7 @@ function paletteItems() {
     const tabNames = { karten: "Karten", testen: "Testhand & Wahrscheinlichkeiten", partien: "Partien & Bilanz", verlauf: "Verlauf", drucken: "Drucken" };
     for (const [tab, label] of Object.entries(tabNames)) items.push({ label, hint: d.name, run: () => selectTab(tab) });
     items.push({ label: "Karten bearbeiten", hint: d.name, run: () => { selectTab("karten"); if (!edit) setEditing(true); } });
+    items.push({ label: "Einkaufsliste mit Preisen", hint: d.name, run: () => openBuylist() });
     items.push({ label: "Rule 0", hint: d.name, run: () => { selectTab("karten"); openRule0(); } });
     items.push({ label: "Ziel und Tischregel", hint: d.name, run: () => { selectTab("karten"); $("#deck-target").scrollIntoView({ behavior: "smooth", block: "start" }); } });
     items.push({ label: "Liste kopieren", hint: d.name, run: () => $("#copy-btn").click() });

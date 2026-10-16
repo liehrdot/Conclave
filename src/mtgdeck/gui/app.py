@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 from .. import opponents as opponents_mod
 from ..jsonstore import ConflictError, StoreError
-from .. import backup, blacklist, brackets, carddb, collection, deckedit, deckimport, dropcards, importers, games, glossary, health, precons, printorders, proxy, rule0, scryfall, storage, tablerules
+from .. import backup, blacklist, brackets, buylist, carddb, collection, deckedit, deckimport, dropcards, importers, games, glossary, health, precons, printorders, proxy, rule0, scryfall, storage, tablerules
 from .. import paths
 from .. import settings as settings_mod
 from ..cards import card_text, deck_tokens, resolve
@@ -1176,6 +1176,17 @@ async def api_ownership(slug: str) -> dict[str, Any]:
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     return await collection.deck_ownership(deck)
+
+
+@app.get("/api/decks/{slug}/buylist")
+async def api_buylist(slug: str, owned: bool = True, proxies: bool = True) -> dict[str, Any]:
+    """Einkaufsliste: the cards still to buy (``owned=false``: the whole deck, no collection check; proxies included
+    unless ``proxies=false``), priced at Cardmarket's cheapest printing."""
+    try:
+        deck = storage.load(slug)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    return await buylist.build(deck, use_collection=owned, replace_proxies=proxies)
 
 
 # --- my collection -------------------------------------------------------------------------------

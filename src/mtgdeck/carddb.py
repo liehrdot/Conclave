@@ -74,6 +74,14 @@ CREATE TABLE IF NOT EXISTS card_tags (
 CREATE INDEX IF NOT EXISTS card_tags_tag ON card_tags(tag);
 CREATE TABLE IF NOT EXISTS tag_aliases (alias TEXT PRIMARY KEY, tag TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS cardmarket (  -- Cardmarket product id -> the Scryfall printing (set names for the buy list)
+    id INTEGER PRIMARY KEY,
+    set_code TEXT,
+    set_name TEXT,
+    collector_number TEXT,
+    lang TEXT,
+    playable INTEGER          -- 0 = oversized, gold-bordered or memorabilia (not a deck card)
+);
 """
 
 
@@ -181,6 +189,11 @@ def _printing_score(card: dict[str, Any]) -> int:
     )
 
 
+def playable(card: dict[str, Any]) -> bool:
+    """A printing you can sleeve up: not oversized, not gold-bordered, not memorabilia or a token."""
+    return not (card.get("oversized") or card.get("border_color") == "gold" or card.get("set_type") in ("memorabilia", "token"))
+
+
 def _min_price(current: float | None, *values: Any) -> float | None:
     for v in values:
         if v:
@@ -194,6 +207,7 @@ def _import_cards(conn: sqlite3.Connection, cards: Iterable[dict[str, Any]]) -> 
     best: dict[str, tuple[int, dict[str, Any], bool]] = {}
     cheapest: dict[str, dict[str, float | None]] = {}
     names: set[tuple[str, str, str]] = set()
+    cm: dict[int, tuple[Any, ...]] = {}
 
     for card in cards:
         if card.get("object") != "card" or card.get("layout") in _SKIP_LAYOUTS:
@@ -212,6 +226,9 @@ def _import_cards(conn: sqlite3.Connection, cards: Iterable[dict[str, Any]]) -> 
             names.update((f["printed_name"], lang, oid) for f in faces if f.get("printed_name"))
 
         if not card.get("digital"):
+            cid = card.get("cardmarket_id")
+            if cid and (cid not in cm or (lang == "en" and cm[cid][4] != "en")):
+                cm[cid] = (cid, card.get("set"), card.get("set_name"), card.get("collector_number"), lang, int(playable(card)))
             prices = card.get("prices") or {}
             p = cheapest.setdefault(oid, {"eur": None, "usd": None})
             # non-foil if any, otherwise foil/etched
@@ -224,6 +241,8 @@ def _import_cards(conn: sqlite3.Connection, cards: Iterable[dict[str, Any]]) -> 
 
     conn.execute("DELETE FROM cards")
     conn.execute("DELETE FROM names")
+    conn.execute("DELETE FROM cardmarket")
+    conn.executemany("INSERT INTO cardmarket VALUES (?, ?, ?, ?, ?, ?)", cm.values())
     for oid, (_, c, is_cmdr) in best.items():
         p = cheapest.get(oid, {})
         c["price_eur"] = f"{p['eur']:.2f}" if p.get("eur") is not None else c["price_eur"]
@@ -360,6 +379,21 @@ def lookup(names: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
             card["_query_name"] = name
             found[row["oracle_id"]] = card
     return list(found.values()), missing
+
+
+def cardmarket_prints(ids: list[int]) -> dict[int, dict[str, str]]:
+    """Cardmarket product id -> {set, set_name, collector_number, playable} of the Scryfall printing."""
+    if not ids or not DB_PATH.exists():
+        return {}
+    out: dict[int, dict[str, str]] = {}
+    with closing(_connect()) as conn:
+        for i in range(0, len(ids), 500):
+            chunk = ids[i : i + 500]
+            rows = conn.execute(f"SELECT * FROM cardmarket WHERE id IN ({','.join('?' * len(chunk))})", chunk)
+            for r in rows:
+                out[r["id"]] = {"set": r["set_code"], "set_name": r["set_name"], "collector_number": r["collector_number"],
+                                "playable": bool(r["playable"])}  # fmt: skip
+    return out
 
 
 def search(
