@@ -212,7 +212,7 @@ No linter or formatter is configured. Code uses `# fmt: skip` on some dense lite
 
 ## Configuration
 
-Environment variables (see README for the full table):
+Environment variables (see `docs/technik.md` for the full table):
 - `MTG_BULK_TYPE`, `MTG_BULK_MAX_AGE_DAYS`
 - `MTG_DATA_DIR`, `MTG_CACHE_DIR`, `MTG_CACHE_TTL`
 - `MTG_HOME` (all user data), `MTG_CACHE_HOME`; per file: `MTG_DECKS_DIR`, `MTG_BLACKLIST_FILE`, `MTG_TABLERULES_FILE`, `MTG_BACKUP_DIR`, `MTG_COLLECTION_FILE`, `MTG_PROXIES_DIR`, `MTG_SETTINGS_FILE`, `MTG_SYNC_DIR`, `MTG_SYNC_AUTO`
