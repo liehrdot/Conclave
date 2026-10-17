@@ -1,6 +1,6 @@
 [package]
 name = "mtgdeck-desktop"
-version = "0.1.10"
+version = "0.2.0"
 description = "Conclave – Commander-Decks selbst bauen (Desktop-Hülle um das Python-Backend)"
 authors = ["liehrdot"]
 edition = "2021"
