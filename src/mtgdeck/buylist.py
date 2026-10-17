@@ -7,6 +7,8 @@ Cardmarket's daily price guide (``cardmarket.py``): the playable printing with t
 its cheapest listing as ``low``. Set names and the playable check (no oversized, gold-bordered or
 memorabilia printings) come from the local card DB, else Scryfall.
 Without the price guide (offline, Cardmarket down) Scryfall's cheapest EUR price is the fallback.
+Each row also says where copies already are (``places``: per collection place or deck), so the dialog
+can compare the list with „Bulk“, a binder or other decks.
 
 The list text is plain "N Name" so it can go into a Cardmarket Wants list, whose Shopping Wizard
 then finds the cheapest sellers including shipping – the figures here are only the estimate.
@@ -69,12 +71,43 @@ def _other_decks(usage: dict[str, list[dict[str, Any]]], slug: str | None) -> li
     return out
 
 
+def place_key(e: dict[str, Any]) -> str:
+    """„deck:<slug>“ for copies placed in a deck, „ort:<text>“ for a free-text place (Bulk, a binder …), else ""."""
+    if e.get("place_deck"):
+        return f"deck:{e['place_deck']}"
+    text = " ".join(str(e.get("place") or "").split()).lower()
+    return f"ort:{text}" if text else ""
+
+
+def _copies_by_place(entries: list[dict[str, Any]]) -> dict[str, dict[str, dict[str, int]]]:
+    """Card name (and front face) -> place key -> {"real": n, "proxy": m}."""
+    out: dict[str, dict[str, dict[str, int]]] = {}
+    for e in entries:
+        key = place_key(e)
+        if not key:
+            continue
+        for name in {e["name"], e["name"].split(" // ")[0]}:
+            slot = out.setdefault(name, {}).setdefault(key, {"real": 0, "proxy": 0})
+            slot["proxy" if e.get("proxy") else "real"] += int(e.get("qty") or 0)
+    return out
+
+
+def _places(entries: list[dict[str, Any]], decks: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """What the dialog can compare with: the free-text places of the collection (most cards first),
+    then the other decks (their decklists plus copies placed there)."""
+    out = [{"key": place_key(p), "label": p["place"], "kind": "place"}
+           for p in collection.places(entries) if not p["place_deck"] and p["place"].strip()]  # fmt: skip
+    return out + [{"key": f"deck:{d['slug']}", "label": d["name"], "kind": "deck", "slug": d["slug"]} for d in decks]
+
+
 async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_proxies: bool = True) -> dict[str, Any]:
     """``use_collection``: copies in the collection only count when no other deck uses them (a card
     sleeved up in another deck still has to be bought). Off = the whole deck goes on the list."""
     need = _need(deck)
-    owned = collection.owned_counts() if use_collection else {}
-    usage = collection.decks_by_card()  # also for comparing with other decks in the dialog
+    entries = collection.load()
+    owned = collection.owned_counts(entries) if use_collection else {}
+    usage = collection.decks_by_card()  # also for comparing with other decks and places in the dialog
+    by_place = _copies_by_place(entries)
     rows = []
     for name, n in need.items():
         if name in collection.BASIC_LANDS:
@@ -87,7 +120,8 @@ async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_pr
         if buy:
             rows.append({"name": name, "qty": buy, "need": n, "real": o["real"], "proxy": o["proxy"],
                          "in_decks": [d["name"] for d in others] if have else [],
-                         "decks": [{"slug": d["slug"], "qty": d["qty"]} for d in others]})  # fmt: skip
+                         "decks": [{"slug": d["slug"], "qty": d["qty"]} for d in others],
+                         "places": {k: v for k, v in by_place.get(name, {}).items() if k != f"deck:{deck.get('slug')}"}})  # fmt: skip
 
     error = None
     try:
@@ -125,14 +159,16 @@ async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_pr
         r["total_trend"] = round(r["trend"] * r["qty"], 2) if r["trend"] else None
         r["total_low"] = round((r["low"] or r["trend"] or 0) * r["qty"], 2) if r["trend"] or r["low"] else None
     rows.sort(key=lambda r: (-(r["trend"] or 0), r["name"]))
+    other_decks = _other_decks(usage, deck.get("slug"))
     return {
         "slug": deck.get("slug"),
         "name": deck.get("name"),
         "currency": "eur",
         "use_collection": use_collection,
-        "other_decks": _other_decks(usage, deck.get("slug")),
+        "other_decks": other_decks,
+        "places": _places(entries, other_decks),
         "replace_proxies": replace_proxies,
-        "collection_size": len(collection.load()),
+        "collection_size": len(entries),
         "items": rows,
         "cards": sum(r["qty"] for r in rows),
         "total_trend": round(sum(r["total_trend"] or 0 for r in rows), 2),

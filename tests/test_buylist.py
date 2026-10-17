@@ -81,3 +81,19 @@ async def test_buylist_counts_only_collection_cards_no_other_deck_uses():
     assert {i["name"] for i in whole["items"]} == {"Meren of Clan Nel Toth", "Sol Ring", "Cultivate", "Filler 0"}
     assert whole["use_collection"] is False and whole["other_decks"] == [{"slug": "anderes", "name": "Anderes"}]
     assert {i["name"]: i["decks"] for i in whole["items"]}["Sol Ring"] == [{"slug": "anderes", "qty": 1}]  # also without the collection check
+
+
+async def test_buylist_lists_copies_by_place():
+    await collection.add([{"name": "Sol Ring", "qty": 2}], place="Bulk")
+    await collection.add([{"name": "Sol Ring", "proxy": True}], place="bulk")  # same place, other spelling
+    await collection.add([{"name": "Cultivate"}], place="Ordner rot")
+    await save_deck(name="Anderes", commanders=["Atraxa, Praetors' Voice"], bracket=2, cards=[{"name": "Filler 1", "qty": 1}])
+    await collection.add([{"name": "Filler 1"}], place="Anderes", place_deck="anderes")
+    deck = {**DECK, "cards": DECK["cards"] + [{"name": "Filler 1", "qty": 1}]}
+    r = await buylist.build(deck, use_collection=False)
+    items = {i["name"]: i for i in r["items"]}
+    assert items["Sol Ring"]["places"] == {"ort:bulk": {"real": 2, "proxy": 1}}
+    assert items["Cultivate"]["places"] == {"ort:ordner rot": {"real": 1, "proxy": 0}}
+    assert items["Filler 1"]["places"] == {"deck:anderes": {"real": 1, "proxy": 0}}
+    assert [(p["key"], p["kind"]) for p in r["places"]] == [("ort:bulk", "place"), ("ort:ordner rot", "place"), ("deck:anderes", "deck")]
+    assert r["places"][0]["label"] == "Bulk"
