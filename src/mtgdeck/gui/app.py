@@ -1236,6 +1236,7 @@ class CollectionBulk(BaseModel):
     foil: bool | None = None
     lang: str | None = Field(default=None, pattern=r"^[a-z]{2,3}$")
     delete: bool = False
+    qty: int | None = Field(default=None, ge=1, le=100000)  # only that many copies of each entry
 
 
 @app.get("/api/collection")

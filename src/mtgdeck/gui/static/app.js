@@ -2843,17 +2843,27 @@ function openPlaceDialog(ids) {
   $("#place-input").value = labels.length === 1 ? labels[0] : store.get("collplace") || "";
   const recent = [...new Set([...(coll.places || []).map(placeLabel), ...deckIndex.map((d) => d.name)])].slice(0, 8);
   $("#place-chips").innerHTML = recent.map((n) => `<button type="button" class="chip" data-place="${esc(n)}">${esc(n)}</button>`).join("");
+  // one entry with several copies: move only some of them (one All Is Dust into the deck, the other into the bulk box)
+  const several = entries.length === 1 && entries[0].qty > 1 ? entries[0].qty : 0;
+  $("#place-qty-field").hidden = !several;
+  if (several) {
+    $("#place-qty").max = several;
+    $("#place-qty").value = several;
+    $("#place-qty-hint").textContent = `– von ${several}; der Rest bleibt, wo er ist`;
+  }
   const dlg = $("#place-dialog");
   dlg.onclose = null;
   $("#place-form").onsubmit = async (ev) => {
     ev.preventDefault();
     const p = parsePlace($("#place-input").value);
+    const n = Math.round(Number($("#place-qty").value));
+    if (several && n > 0 && n < several) p.qty = n;
     try {
       const r = await api("/api/collection/bulk", { method: "POST", body: { ids, ...p } });
       if (p.place) store.set("collplace", p.place);
       dlg.close();
       collSel.clear();
-      toast(p.place ? `${r.changed} ${r.changed === 1 ? "Eintrag" : "Einträge"} → ${p.place}` : `Ort bei ${r.changed} ${r.changed === 1 ? "Eintrag" : "Einträgen"} entfernt.`);
+      toast(p.qty ? `${p.qty}× ${entries[0].name} → ${p.place || "kein Ort"}` : p.place ? `${r.changed} ${r.changed === 1 ? "Eintrag" : "Einträge"} → ${p.place}` : `Ort bei ${r.changed} ${r.changed === 1 ? "Eintrag" : "Einträgen"} entfernt.`);
       await loadCollection();
     } catch (err) { fail(err); }
   };
@@ -2876,6 +2886,12 @@ $("#coll-bulk-set").addEventListener("change", async (ev) => {
   ev.target.value = "";
   if (!v || !collSel.size) return;
   const [body, label] = v.startsWith("lang:") ? [{ lang: v.slice(5) }, `auf ${text}`] : BULK_SET[v];
+  const marked = coll.entries.filter((e) => collSel.has(e.id));
+  if (marked.length === 1 && marked[0].qty > 1) {
+    const n = await askCount(marked[0], label);
+    if (!n) return;
+    if (n < marked[0].qty) body.qty = n;
+  }
   try {
     const r = await api("/api/collection/bulk", { method: "POST", body: { ids: [...collSel], ...body } });
     collSel.clear();
@@ -3004,8 +3020,27 @@ $("#coll-list").addEventListener("change", (e) => {
     if (box.checked) collSel.add(row.dataset.id); else collSel.delete(row.dataset.id);
     row.classList.toggle("selected", box.checked);
     renderBulk();
-  } else if (box && row) patchEntry(row.dataset.id, { [box.dataset.act]: box.checked });
+  } else if (box && row) changeCopies(row.dataset.id, box.dataset.act, box.checked);
 });
+
+/** How many copies of ``entry`` a change applies to (all, or a few split off into their own row); null = cancelled. */
+async function askCount(entry, label) {
+  const v = await ask({ title: `Wie viele der ${entry.qty}× ${entry.name} ${label}?`,
+    text: "Die übrigen bleiben, wie sie sind, und stehen dann in einer eigenen Zeile.", value: String(entry.qty), ok: "Ändern" });
+  const n = Math.round(Number(String(v ?? "").replace(",", ".")));
+  return v === null || !(n > 0) ? null : Math.min(n, entry.qty);
+}
+// the Proxy/Foil boxes of a row: with several copies, ask how many of them change
+async function changeCopies(id, field, on) {
+  const entry = coll.entries.find((x) => x.id === id);
+  if (!entry || entry.qty < 2) return patchEntry(id, { [field]: on });
+  const n = await askCount(entry, field === "proxy" ? (on ? "als Proxy" : "als Original") : (on ? "als Foil" : "ohne Foil"));
+  if (!n) return renderCollection();  // the box goes back
+  try {
+    await api("/api/collection/bulk", { method: "POST", body: { ids: [id], [field]: on, ...(n < entry.qty ? { qty: n } : {}) } });
+    await loadCollection();
+  } catch (err) { fail(err); }
+}
 
 // artwork picker: all printings of a card, page by page; resolves with the chosen printing (or null)
 let printsCtx = null;

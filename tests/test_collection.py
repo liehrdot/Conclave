@@ -200,3 +200,25 @@ async def test_bulk_changes_flags_language_and_deletes():
     sol = next(e["id"] for e in entries if e["name"] == "Sol Ring")
     assert client.post("/api/collection/bulk", json={"ids": [sol], "delete": True}).json() == {"changed": 1}
     assert [e["name"] for e in collection.load()] == ["Filler 1"]
+
+
+async def test_bulk_qty_splits_copies_into_their_own_entry():
+    from fastapi.testclient import TestClient
+
+    from mtgdeck.gui.app import app
+
+    await collection.add([{"name": "Sol Ring", "qty": 2}])
+    client = TestClient(app)
+    sol = collection.load()[0]["id"]
+    assert client.post("/api/collection/bulk", json={"ids": [sol], "place": "Bulk", "qty": 1}).json() == {"changed": 1}
+    rows = sorted((e["qty"], e["place"]) for e in collection.load())
+    assert rows == [(1, ""), (1, "Bulk")]  # one copy moved, the other stayed
+    rest = next(e["id"] for e in collection.load() if e["place"] == "")
+    client.post("/api/collection/bulk", json={"ids": [rest], "foil": True, "qty": 5})  # more than there are = all
+    assert sorted((e["qty"], e["foil"], e["place"]) for e in collection.load()) == [(1, False, "Bulk"), (1, True, "")]
+    client.post("/api/collection/bulk", json={"ids": [rest], "foil": False, "place": "Bulk"})  # equal again: merge
+    assert [(e["qty"], e["place"]) for e in collection.load()] == [(2, "Bulk")]
+    whole = collection.load()[0]["id"]
+    assert client.post("/api/collection/bulk", json={"ids": [whole], "delete": True, "qty": 1}).json() == {"changed": 1}
+    assert [e["qty"] for e in collection.load()] == [1]  # deleting one of two copies keeps the other
+    assert client.post("/api/collection/bulk", json={"ids": [whole], "proxy": True, "qty": 0}).status_code == 422

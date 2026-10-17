@@ -1243,6 +1243,9 @@
       <input id="place-input" list="place-options" maxlength="80" placeholder="Kein Ort">
     </label>
     <div id="place-chips" class="chip-row"></div>
+    <label class="field" id="place-qty-field" hidden>Wie viele davon? <span class="muted small" id="place-qty-hint"></span>
+      <input id="place-qty" type="number" min="1" step="1" inputmode="numeric">
+    </label>
     <div class="dialog-actions">
       <button type="button" class="btn" id="place-cancel">Abbrechen</button>
       <button type="submit" class="btn primary">Ort setzen</button>

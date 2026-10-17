@@ -1150,3 +1150,5 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
   .buy-head span:nth-last-child(2), .buy-list .price:not(.strong) { display: none; }
   .buy-list .price.strong { display: block; }
 }
+#place-qty-field { margin-top: var(--space-3); }
+#place-qty { max-width: 8rem; }

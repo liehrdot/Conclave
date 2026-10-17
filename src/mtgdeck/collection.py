@@ -316,17 +316,25 @@ def update(entry_id: str, *, qty: int | None = None, proxy: bool | None = None, 
 
 def bulk_update(entry_ids: list[str], *, place: str | None = None, place_deck: str | None = None,
                 proxy: bool | None = None, foil: bool | None = None, lang: str | None = None,
-                delete: bool = False) -> int:  # fmt: skip
+                delete: bool = False, qty: int | None = None) -> int:  # fmt: skip
     """Change (or delete) several entries at once; fields left at None stay. Equal entries merge afterwards.
-    Returns how many entries were found."""
+    ``qty``: only that many copies of each entry (the rest stays as it was, e.g. one of two copies goes into a
+    deck, the other into the bulk box). Returns how many entries were found."""
     wanted = set(entry_ids)
     if place is not None or place_deck is not None:
         place, place_deck = clean_place(place or "", place_deck or "")
     with locked(COLLECTION_FILE):
         entries = load()
         hits = [e for e in entries if e["id"] in wanted]
+        if qty is not None:  # split the copies off that change; they become an entry of their own
+            for i, e in enumerate(hits):
+                if 0 < qty < e["qty"]:
+                    e["qty"] -= qty
+                    hits[i] = {**e, "id": uuid.uuid4().hex[:12], "qty": qty}
+                    entries.append(hits[i])
         if delete:
-            _write([e for e in entries if e["id"] not in wanted])
+            gone = {id(e) for e in hits}
+            _write([e for e in entries if id(e) not in gone])
             return len(hits)
         for e in hits:
             if place is not None:
