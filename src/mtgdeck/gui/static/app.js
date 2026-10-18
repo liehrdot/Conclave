@@ -1290,9 +1290,12 @@ function ownershipBadge(name, need = 1, commander = false) {
   const o = ownership?.cards?.[name];
   if (!ownership?.collection_size || (!o && !ownership.all)) return "";
   const real = o?.real || 0, prox = o?.proxy || 0;
-  if (real >= need) return '<span class="own ok" title="In deiner Sammlung">✓</span>';
-  if (real + prox >= need) return '<span class="own proxy" title="Als Proxy in deiner Sammlung">P</span>';
-  if (real + prox > 0) return `<span class="own part" title="Nur ${real + prox} von ${need} vorhanden">${real + prox}/${need}</span>`;
+  // where the copies are right now (the Ort of each collection entry), one line per place
+  const where = (o?.places || []).map((p) => `${p.qty}× ${placeLabel(p) || "ohne Ort"}${p.proxy ? " (Proxy)" : ""}`).join("\n");
+  const tip = (head) => esc(where ? `${head}:\n${where}` : head);
+  if (real >= need) return `<span class="own ok" title="${tip("In deiner Sammlung")}">✓</span>`;
+  if (real + prox >= need) return `<span class="own proxy" title="${tip("Als Proxy in deiner Sammlung")}">P</span>`;
+  if (real + prox > 0) return `<span class="own part" title="${tip(`Nur ${real + prox} von ${need} vorhanden`)}">${real + prox}/${need}</span>`;
   return "";  // missing: no badge (the Sammlung panel and "nach Besitz" show them) – keeps the list calm
 }
 
