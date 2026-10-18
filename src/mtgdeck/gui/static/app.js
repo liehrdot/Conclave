@@ -665,6 +665,7 @@ async function openDeck(slug) {
   $("#retune-form").querySelector(`[name="rbracket"][value="${d.bracket || 3}"]`).checked = true;
   setProfile($("#retune-form .profile-fields"), d.power_profile);
   renderPower(d);
+  renderSpeed(d);
   renderHistory(d);
   renderSheetTitle(d);
   loadGames(d);
@@ -682,6 +683,7 @@ function deckFacts(d) {
   const bits = [];
   if (d.proxy) bits.push("Proxy");
   else if (v.price_total != null) bits.push(`${fmtPrice(v.price_total, cur)}${d.budget ? ` / ${fmtPrice(d.budget, cur)}` : ""}`);
+  if (d.speed) bits.push(`Tempo: ${d.speed.label}`);
   if (d.version) bits.push(`v${d.version}`);
   if (d.power_profile?.style) bits.push(d.power_profile.style);
   return bits.filter(Boolean).join(" · ");
@@ -838,6 +840,7 @@ function renderStats(s, v = {}) {
     <dl class="kv">
       <dt>Karten</dt><dd>${s.card_count}</dd>
       <dt>Ø Manawert</dt><dd>${s.avg_cmc_nonland}</dd>
+      ${s.total_mana_value != null ? `<dt>Gesamt-Manawert</dt><dd>${fmtNum(s.total_mana_value)}</dd>` : ""}
       <dt>Typen</dt><dd>${esc(Object.entries(s.types || {}).map(([k, n]) => `${k} ${n}`).join(" · "))}</dd>
       <dt>Rollen</dt><dd>${esc(Object.entries(s.role_counts || {}).map(([k, n]) => `${ROLE_LABELS[k] || k} ${n}`).join(" · "))}</dd>
       <dt>Preis</dt><dd>${priceKey ? `${esc(v.price_total ?? s[priceKey])} ${cur}` : "–"}${v.proxy ? " · Proxy" : v.budget ? ` <span class="muted">/ Budget ${esc(v.budget)}</span>` : ""}</dd>
@@ -1993,6 +1996,31 @@ function renderPower(d) {
     : "Noch keine Power-Einschätzung – „⋯ → Neu prüfen“.<br>")
     + `<span class="legend-dot"></span> Ziel: <b>${esc(levelText(bracket, tier))}</b>${changed ? " – mit „Ziel speichern“ übernehmen" : ""}`;
   syncSaveButtons();
+}
+
+// Tempo from the total mana value (speed.py): slow on the left, fast on the right, like the power scale.
+function renderSpeed(d) {
+  const sp = d?.speed;
+  $("#deck-speed").hidden = !sp;
+  if (!sp) return;
+  const [lo, hi] = sp.scale;
+  const pos = (v) => `${((hi - Math.min(Math.max(v, lo), hi)) / (hi - lo)) * 100}%`;
+  const bounds = sp.tiers.map((t) => t.max).filter((m) => m != null);
+  $("#speed-label").textContent = `${sp.label} · ${sp.total}`;
+  const scale = $("#speed-scale");
+  scale.setAttribute("aria-label", `Gesamt-Manawert ${sp.total}: ${sp.label}`);
+  scale.innerHTML = `<div class="track"></div>
+    ${bounds.map((b) => `<span class="sep" style="left:${pos(b)}"></span><span class="tick" style="left:${pos(b)}">${b}</span>`).join("")}
+    <span class="tick name lo">langsam</span><span class="tick name hi">schnell</span>
+    <div class="mark now" style="left:${pos(sp.total)}" title="Gesamt-Manawert ${sp.total}"></div>`;
+  const avg = sp.average ? ` (Ø ${fmtNum(sp.average)} je Nicht-Land-Karte)` : "";
+  $("#speed-text").innerHTML = `${esc(sp.text)}
+    <details class="more"><summary>Wie kommt der Wert zustande?</summary>
+      Alle Manawerte des Decks zusammengezählt${esc(avg)}: Commander mit, Länder zählen 0, X zählt 0, doppelseitige Karten zählen ihre Vorderseite.
+      Je kleiner die Summe, desto früher liegt das Deck auf dem Tisch. Grenzen: ${sp.tiers.map((t) => `${esc(t.label)} ${t.max == null ? `über ${bounds[bounds.length - 1]}` : `bis ${t.max}`}`).join(" · ")}.
+      ${sp.complete ? "" : `<br><b>Das Deck hat erst ${sp.cards} von 100 Karten</b> – jede weitere Karte macht die Summe größer.`}
+      ${sp.exact ? "" : "<br>Ohne Commander geschätzt – „⋯ → Neu prüfen“ rechnet genau."}
+    </details>`;
 }
 
 $("#retune-form").addEventListener("submit", async (e) => {

@@ -120,6 +120,8 @@ async def validate_deck(
     main_cards = [card_data[e.name] for e in entries if e.name in card_data]
     qty = {e.name: e.qty for e in entries}
     stats = deck_stats(main_cards, qty, currency)
+    stats["commander_mana_value"] = sum(float(card_data[c].get("cmc") or 0) for c in commanders if c in card_data)
+    stats["total_mana_value"] = round(stats["nonland_mana_value"] + stats["commander_mana_value"], 1)
     lands = stats["types"].get("Land", 0)
     if not LAND_RANGE[0] <= lands <= LAND_RANGE[1]:
         warnings.append(f"{lands} Länder – üblich sind {LAND_RANGE[0]}–{LAND_RANGE[1]} (abhängig von Kurve und Ramp)")
