@@ -523,6 +523,33 @@ ul.issues li { margin-bottom: 3px; }
 .hand-card:hover { transform: translateY(-4px); }
 .hand-card.land img { outline: 2px solid var(--ok); outline-offset: 1px; }
 .hint-box { background: var(--accent-soft); color: var(--on-accent-soft); border-radius: var(--radius); padding: 8px 12px; font-size: 14px; }
+#hand-rating-deck b { color: var(--text); }
+.hr-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.hr-verdict { font-weight: 700; font-size: var(--fs-lg); padding: 4px 12px; border-radius: var(--radius); }
+.hr-verdict.keep { background: var(--ok-soft); color: var(--ok); }
+.hr-verdict.border { background: var(--warn-soft); color: var(--warn); }
+.hr-verdict.mulligan { background: var(--bad-soft); color: var(--bad); }
+.hr-meter { flex: 1; min-width: 120px; max-width: 320px; height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.hr-fill { height: 100%; border-radius: 99px; }
+.hr-fill.keep { background: var(--ok); }
+.hr-fill.border { background: var(--warn); }
+.hr-fill.mulligan { background: var(--bad); }
+.hr-score { font-weight: 700; font-variant-numeric: tabular-nums; }
+.hr-where { margin: var(--space-2) 0 var(--space-3); }
+.hr-where .bad { color: var(--bad); }
+.hr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin: var(--space-3) 0; }
+.hr-cols h3 { font-size: var(--fs-sm); margin: 0 0 var(--space-1); }
+.hr-list { margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.hr-list li { padding: 3px 0 3px 20px; position: relative; }
+.hr-list li::before { position: absolute; left: 2px; font-weight: 700; }
+.hr-list.good li::before { content: "+"; color: var(--ok); }
+.hr-list.bad li::before { content: "–"; color: var(--bad); }
+.hr-facts { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: var(--space-3) 0; padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.hr-facts dt { font-size: var(--fs-xs); color: var(--muted); }
+.hr-facts dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+.hand-card.suggest img, .hand-card.suggest .noimg { outline: 3px dashed var(--warn); outline-offset: 2px; }
+#hand-rating .hint-box + .hint-box { margin-top: var(--space-2); }
+@media (max-width: 800px) { .hr-cols { grid-template-columns: 1fr; } }
 .odds-grid { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(280px, 1.3fr); gap: var(--space-6); align-items: start; margin-bottom: var(--space-3); }
 .dist { margin: 0; }
 .dist figcaption { font-size: 14px; margin-bottom: var(--space-3); }
