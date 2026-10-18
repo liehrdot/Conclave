@@ -459,6 +459,11 @@ async def deck_ownership(deck: dict[str, Any], *, card_data: dict[str, dict[str,
     for c in deck.get("cards", []):
         need[c["name"]] += int(c.get("qty", 1))
     usage = decks_by_card() if entries else {}
+    where: dict[str, Counter[tuple[str, str, bool]]] = {}  # card -> (place, deck, proxy) -> copies, for the badge's tooltip
+    for e in entries:
+        k = (e.get("place") or "", e.get("place_deck") or "", bool(e.get("proxy")))
+        for key in {e["name"], e["name"].split(" // ")[0]}:
+            where.setdefault(key, Counter())[k] += int(e["qty"])
     if card_data is None:
         try:
             card_data, _, _ = await resolve(list(need))
@@ -480,6 +485,8 @@ async def deck_ownership(deck: dict[str, Any], *, card_data: dict[str, dict[str,
             "need": n, "real": o["real"], "proxy": o["proxy"], "missing": missing, "basic": basic,
             "other_decks": [d["name"] for d in others],
             "shared_shortage": bool(others) and not basic and o["real"] + o["proxy"] < total_need,
+            "places": [{"place": p, "place_deck": pd, "proxy": px, "qty": q} for (p, pd, px), q
+                       in sorted((where.get(name) or {}).items(), key=lambda i: (i[0][2], (i[0][0] or i[0][1]).lower()))],
         }  # fmt: skip
         totals["need"] += n
         totals["real"] += n if basic else real_used

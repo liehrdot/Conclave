@@ -80,12 +80,19 @@ async def test_deck_ownership_missing_and_shared():
     deck = storage.load("own-a")
     o = await collection.deck_ownership(deck)
     assert o["cards"]["Sol Ring"] == {"need": 1, "real": 1, "proxy": 0, "missing": 0, "basic": False,
-                                      "other_decks": ["Own B"], "shared_shortage": True}  # fmt: skip
+                                      "other_decks": ["Own B"], "shared_shortage": True,
+                                      "places": [{"place": "", "place_deck": "", "proxy": False, "qty": 1}]}  # fmt: skip
     assert o["cards"]["Cultivate"]["proxy"] == 1 and o["cards"]["Forest"]["basic"] and o["cards"]["Forest"]["missing"] == 0
     assert o["cards"]["Filler 0"]["shared_shortage"] is False  # 2 copies for 2 decks
     assert o["have_real"] == 1 + 1 + 36 and o["have_proxy"] == 1  # Sol Ring, Filler 0, basics; Cultivate as proxy
     assert o["missing"] == 100 - 39 and "1 Meren of Clan Nel Toth" in o["shopping_text"]
     assert "Sol Ring" in o["shared_shortages"] and o["missing_price"] > 0
+    await collection.add([{"name": "Sol Ring", "proxy": True}], place="Bulk")
+    await collection.add([{"name": "Sol Ring"}], place="Own A", place_deck="own-a")
+    places = (await collection.deck_ownership(deck))["cards"]["Sol Ring"]["places"]
+    assert places == [{"place": "", "place_deck": "", "proxy": False, "qty": 1},
+                      {"place": "Own A", "place_deck": "own-a", "proxy": False, "qty": 1},
+                      {"place": "Bulk", "place_deck": "", "proxy": True, "qty": 1}]  # where each copy is, for the ✓ tooltip  # fmt: skip
     miss = collection.missing_counts(deck)
     assert miss["Sol Ring"] == 0 and miss["Cultivate"] == 0 and miss["Forest"] == 0 and miss["Filler 1"] == 1
 
