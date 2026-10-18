@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 from .. import opponents as opponents_mod
 from ..jsonstore import ConflictError, StoreError
-from .. import backup, blacklist, brackets, buylist, carddb, collection, deckedit, deckimport, dropcards, importers, games, glossary, health, precons, printorders, proxy, rule0, scryfall, speed, storage, tablerules
+from .. import backup, blacklist, brackets, buylist, carddb, collection, deckedit, deckimport, dropcards, importers, games, glossary, health, openinghand, precons, printorders, proxy, rule0, scryfall, speed, storage, tablerules
 from .. import paths
 from .. import settings as settings_mod
 from ..cards import card_text, deck_tokens, resolve
@@ -1169,6 +1169,38 @@ async def api_tokens(slug: str) -> list[dict[str, Any]]:
         return await deck_tokens(deck.get("commanders", []) + [c["name"] for c in deck.get("cards", [])])
     except HttpError as exc:
         raise HTTPException(502, exc.friendly) from exc
+
+
+class HandIn(BaseModel):
+    cards: list[str] = Field(max_length=20)
+    mulligans: int = Field(0, ge=0, le=7)
+    on_draw: bool = False
+    bottom: int = Field(0, ge=0, le=7)
+
+
+_HAND_DECKS: dict[tuple[Any, ...], tuple[openinghand.Deck, dict[str, Any]]] = {}
+
+
+@app.post("/api/decks/{slug}/hand")
+async def api_rate_hand(slug: str, body: HandIn) -> dict[str, Any]:
+    """Rate a test hand (Testen tab): keep, borderline or mulligan, with the reasons."""
+    try:
+        deck = storage.load(slug)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    validation = deck.get("validation") or {}
+    combos = len((validation.get("combos") or {}).get("included") or [])
+    key = (slug, int(deck.get("version") or 0), (validation.get("stats") or {}).get("total_mana_value"), combos, body.on_draw)
+    if key not in _HAND_DECKS:
+        names = deck.get("commanders", []) + [c["name"] for c in deck.get("cards", [])]
+        card_data, _, _ = await resolve(names)
+        built = openinghand.build_deck(deck, card_data)
+        for old in [k for k in _HAND_DECKS if k[0] == slug]:
+            del _HAND_DECKS[old]
+        _HAND_DECKS[key] = (built, openinghand.deck_profile(built, on_draw=body.on_draw))
+    built, profile = _HAND_DECKS[key]
+    return openinghand.rate(body.cards, built, mulligans=body.mulligans, on_draw=body.on_draw,
+                            to_bottom=body.bottom, profile=profile)  # fmt: skip
 
 
 @app.get("/api/decks/{slug}/ownership")

@@ -319,7 +319,9 @@ Aufbau (bewusst schlicht: eine Hauptaktion pro Seite, Selteneres eingeklappt):
     geprüfte Version.
   - **Testen:** Starthand ziehen, London-Mulligan (der erste ist in Commander frei), Zug für Zug nachziehen,
     auf dem Play oder Draw; dazu exakte Wahrscheinlichkeiten: Länder in der Starthand, Landdrops bis Zug 5,
-    Ramp bis Zug 2, Kartenzug bis Zug 3, Interaktion bis Zug 4.
+    Ramp bis Zug 2, Kartenzug bis Zug 3, Interaktion bis Zug 4. „Bewertung der Starthand“ (`openinghand.py`, ohne KI):
+    Behalten / Grenzfall / Mulligan mit Punkten 0–100, Gründen dafür und dagegen, Landdrop-Chancen, wann der Commander
+    kommt, und dem Vergleich mit 600 Zufallshänden desselben Decks; nach einem Mulligan ein Vorschlag zum Unterlegen.
   - **Partien:** die Bilanz und die gespielten Partien stehen zuerst. „Partie festhalten“ ist zugeklappt, sobald schon Partien da sind – Ergebnis, Gegner-Commander, letzter Zug, was schiefging
     (Schnellwahl wie „zu wenige Länder“, „kein Weg zu gewinnen“), beste Karte, Notiz. Die Bilanz zeigt
     Siegquote, Ø Zug, häufigste Probleme, Ergebnis pro Version, beste Karten und Gegner.

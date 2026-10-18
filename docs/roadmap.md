@@ -45,6 +45,8 @@ Gleicher Name + Druck + Proxy + Foil + Sprache werden zusammengeführt (Anzahl a
 - [x] Tab „Testen“: Starthand ziehen, London-Mulligan, Karten nachziehen (Zug für Zug).
 - [x] Wahrscheinlichkeiten (hypergeometrisch, auf dem Play/Draw): Länder in der Starthand,
       Landdrops bis Zug 2/3/4, Ramp in den ersten Zügen, Kartenzug und Removal bis Zug 4.
+- [x] Bewertung der Starthand (Issue #44): Behalten / Grenzfall / Mulligan nach Regeln (Karsten, EDHREC, cEDH-Guides),
+      gemessen am Tempo und an den Kombos des Decks; Vorschlag, welche Karten nach einem Mulligan unter die Bibliothek gehen.
 
 ## Phase 5 – Kleinere Verbesserungen
 
