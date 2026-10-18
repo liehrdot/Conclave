@@ -188,6 +188,7 @@ def deck_stats(cards: list[dict[str, Any]], qty: dict[str, int], currency: str =
         "types": dict(types.most_common()),
         "mana_curve": {("7+" if k == 7 else str(k)): curve[k] for k in sorted(curve)},
         "avg_cmc_nonland": round(sum(nonland_cmc) / len(nonland_cmc), 2) if nonland_cmc else 0,
+        "nonland_mana_value": round(sum(nonland_cmc), 1),
         "color_pips": dict(pips.most_common()),
         "role_counts": {r: len(v) for r, v in sorted(roles.items())},
         "roles": roles,

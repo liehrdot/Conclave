@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import brackets, storage
+from . import brackets, speed, storage
 
 
 def _names(items: list[str], limit: int = 6) -> str:
@@ -59,7 +59,8 @@ def build(deck: dict[str, Any]) -> dict[str, Any]:
         style = f"{style} Stimmung: {profile['style']}.".strip()
     if style:
         row("Spielweise", style)
-    row("Tempo", f"frühestes Spielende nach Bracket: {rules['earliest_game_end']}")
+    pace = speed.line(deck)
+    row("Tempo", f"{pace + ' · ' if pace else ''}frühestes Spielende nach Bracket: {rules['earliest_game_end']}")
 
     gc = b.get("game_changers") or []
     row("Game Changer", f"{len(gc)}: {_names(gc)}" if gc else "keine", bool(gc))

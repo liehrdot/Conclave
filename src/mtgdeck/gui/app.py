@@ -29,7 +29,7 @@ from pydantic import BaseModel, Field
 
 from .. import opponents as opponents_mod
 from ..jsonstore import ConflictError, StoreError
-from .. import backup, blacklist, brackets, buylist, carddb, collection, deckedit, deckimport, dropcards, importers, games, glossary, health, precons, printorders, proxy, rule0, scryfall, storage, tablerules
+from .. import backup, blacklist, brackets, buylist, carddb, collection, deckedit, deckimport, dropcards, importers, games, glossary, health, precons, printorders, proxy, rule0, scryfall, speed, storage, tablerules
 from .. import paths
 from .. import settings as settings_mod
 from ..cards import card_text, deck_tokens, resolve
@@ -1065,6 +1065,7 @@ async def api_deck(slug: str) -> dict[str, Any]:
     entries = [DeckEntry(c["name"], c.get("qty", 1)) for c in deck.get("cards", [])]
     deck["export_text"] = to_text(deck.get("commanders", []), entries)
     deck["health"] = health.check(deck)
+    deck["speed"] = speed.rate(deck)
     rs = tablerules.get(deck.get("table_rule"))
     deck["table_rule_info"] = {"id": rs["id"], "name": rs["name"], "summary": tablerules.summary_lines(rs)} if rs else None
     against = [opponents_mod.get(i) for i in deck.get("built_against") or []]

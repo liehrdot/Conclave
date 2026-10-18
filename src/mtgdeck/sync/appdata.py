@@ -13,7 +13,7 @@ import re
 from collections import Counter
 from typing import Any
 
-from .. import rule0
+from .. import rule0, speed
 from ..games import HOW, ISSUES, RESULTS
 from ..opponents import TAGS, record as opponent_record, title as opponent_title
 from ..storage import level_text
@@ -34,6 +34,11 @@ def _record(items: list[dict[str, Any]]) -> dict[str, Any]:
             "last": max((g.get("played") or "" for g in items), default=None)}  # fmt: skip
 
 
+def _speed(d: dict[str, Any]) -> dict[str, Any] | None:
+    r = speed.rate(d)
+    return {k: r[k] for k in ("total", "key", "label", "text", "complete", "cards")} if r else None
+
+
 def _deck(slug: str, d: dict[str, Any], games: list[dict[str, Any]]) -> dict[str, Any]:
     v = d.get("validation") or {}
     r0 = rule0.build({**d, "slug": slug})
@@ -44,6 +49,7 @@ def _deck(slug: str, d: dict[str, Any], games: list[dict[str, Any]]) -> dict[str
         "legal": v.get("legal"), "description": rule0._first_sentence(d.get("description") or d.get("strategy") or "", 220),
         "version": d.get("version"), "updated": d.get("updated"), "checking": bool(d.get("needs_revalidation")),
         "rule0": {"rows": r0["rows"], "text": r0["text"]},
+        "speed": _speed(d),
         "cards": [{"name": c["name"], "qty": int(c.get("qty") or 1), "category": c.get("category") or ""}
                   for c in d.get("cards") or [] if isinstance(c, dict) and c.get("name")],
         "maybe": [{"name": m["name"], "category": m.get("category") or ""} for m in d.get("maybe") or [] if isinstance(m, dict) and m.get("name")],

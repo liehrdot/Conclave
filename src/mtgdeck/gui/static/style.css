@@ -992,12 +992,19 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 @media (max-width: 860px) {
   .deck-status { top: 48px; }
 }
-.deck-target, #check-panel .tune-table { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.deck-target, .deck-speed, #check-panel .tune-table { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--border); }
 .tune-head { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-2); }
 .tune-head h3, .tune-head .btn-group { margin: 0; }
 .deck-target .brackets { max-width: none; }
 .deck-target .scale { margin-bottom: var(--space-2); }
 .deck-target .scale .tick { font-size: 10px; }
+.speed-label { font-weight: 600; }
+.speed-scale .tick { font-size: 10px; }
+.speed-scale { margin-top: var(--space-4); }
+.speed-scale .tick.name { top: -12px; transform: none; }
+.speed-scale .tick.lo { left: 0; }
+.speed-scale .tick.hi { right: 0; }
+.deck-speed p { margin: 0; }
 .check-actions { margin-top: var(--space-3); }
 #check-panel .tune-table { padding-bottom: 0; }
 #check-panel .tune-table-row select { min-width: 0; flex: 1 1 140px; }
