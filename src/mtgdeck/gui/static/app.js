@@ -2085,18 +2085,27 @@ function renderSpeed(d) {
   const [lo, hi] = sp.scale;
   const pos = (v) => `${((hi - Math.min(Math.max(v, lo), hi)) / (hi - lo)) * 100}%`;
   const bounds = sp.tiers.map((t) => t.max).filter((m) => m != null);
-  $("#speed-label").textContent = `${sp.label} · ${sp.total}`;
+  const eff = sp.effective ?? sp.total;
+  const cheaper = eff !== sp.total;
+  $("#speed-label").textContent = `${sp.label} · ${eff}`;
   const scale = $("#speed-scale");
-  scale.setAttribute("aria-label", `Gesamt-Manawert ${sp.total}: ${sp.label}`);
+  scale.setAttribute("aria-label", `Gesamt-Manawert ${sp.total}${cheaper ? `, effektiv ${eff}` : ""}: ${sp.label}`);
   scale.innerHTML = `<div class="track"></div>
     ${bounds.map((b) => `<span class="sep" style="left:${pos(b)}"></span><span class="tick" style="left:${pos(b)}">${b}</span>`).join("")}
     <span class="tick name lo">langsam</span><span class="tick name hi">schnell</span>
-    <div class="mark now" style="left:${pos(sp.total)}" title="Gesamt-Manawert ${sp.total}"></div>`;
+    ${cheaper ? `<div class="mark raw" style="left:${pos(sp.total)}" title="Gedruckt ${sp.total}"></div>` : ""}
+    <div class="mark now" style="left:${pos(eff)}" title="Effektiv ${eff}"></div>`;
   const avg = sp.average ? ` (Ø ${fmtNum(sp.average)} je Nicht-Land-Karte)` : "";
-  $("#speed-text").innerHTML = `${esc(sp.text)}
+  const li = (items) => `<ul class="speed-list">${items.map((t) => `<li>${t}</li>`).join("")}</ul>`;
+  const discounts = (sp.discounts || []).map((x) => `<b>${esc(x.name)}</b>: ${fmtNum(x.before)} → ${fmtNum(x.after)} – ${esc(x.why)}`);
+  const reducers = (sp.reducers || []).map((r) => `<b>${esc(r.name)}</b> macht ${esc(r.what)} um ${r.amount} billiger: −${fmtNum(r.saved)} an ${r.cards} ${r.cards === 1 ? "Karte" : "Karten"}`);
+  $("#speed-text").innerHTML = `${cheaper ? `<span class="muted">Gedruckt ${sp.total}, effektiv ${eff}.</span> ` : ""}${esc(sp.text)}
     <details class="more"><summary>Wie kommt der Wert zustande?</summary>
       Alle Manawerte des Decks zusammengezählt${esc(avg)}: Commander mit, Länder zählen 0, X zählt 0, doppelseitige Karten zählen ihre Vorderseite.
       Je kleiner die Summe, desto früher liegt das Deck auf dem Tisch. Grenzen: ${sp.tiers.map((t) => `${esc(t.label)} ${t.max == null ? `über ${bounds[bounds.length - 1]}` : `bis ${t.max}`}`).join(" · ")}.
+      ${discounts.length ? `<br><b>Werden selbst günstiger</b>${li(discounts)}` : ""}
+      ${reducers.length ? `<b>Machen andere Karten günstiger</b> (nie unter die farbigen Symbole)${li(reducers)}` : ""}
+      ${sp.combo ? `<b>Combo:</b> ${esc(sp.combo.cards.join(" + "))} für zusammen ${fmtNum(sp.combo.mana_value)} Mana${sp.combo_lifted ? " – darum mindestens „Schnell“" : ""}.<br>` : ""}
       ${sp.complete ? "" : `<br><b>Das Deck hat erst ${sp.cards} von 100 Karten</b> – jede weitere Karte macht die Summe größer.`}
       ${sp.exact ? "" : "<br>Ohne Commander geschätzt – „⋯ → Neu prüfen“ rechnet genau."}
     </details>`;
