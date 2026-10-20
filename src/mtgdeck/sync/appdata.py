@@ -36,7 +36,7 @@ def _record(items: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _speed(d: dict[str, Any]) -> dict[str, Any] | None:
     r = speed.rate(d)
-    return {k: r[k] for k in ("total", "key", "label", "text", "complete", "cards")} if r else None
+    return {k: r[k] for k in ("total", "effective", "key", "label", "text", "complete", "cards")} if r else None
 
 
 def _deck(slug: str, d: dict[str, Any], games: list[dict[str, Any]]) -> dict[str, Any]:

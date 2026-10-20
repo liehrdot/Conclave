@@ -1065,12 +1065,23 @@ async def api_deck(slug: str) -> dict[str, Any]:
     entries = [DeckEntry(c["name"], c.get("qty", 1)) for c in deck.get("cards", [])]
     deck["export_text"] = to_text(deck.get("commanders", []), entries)
     deck["health"] = health.check(deck)
-    deck["speed"] = speed.rate(deck)
+    deck["speed"] = speed.rate(deck, _tempo_now(deck, card_data))
     rs = tablerules.get(deck.get("table_rule"))
     deck["table_rule_info"] = {"id": rs["id"], "name": rs["name"], "summary": tablerules.summary_lines(rs)} if rs else None
     against = [opponents_mod.get(i) for i in deck.get("built_against") or []]
     deck["built_against_info"] = [{"id": o["id"], "title": opponents_mod.title(o)} for o in against if o]
     return deck
+
+
+def _tempo_now(deck: dict[str, Any], card_data: dict[str, Any]) -> dict[str, Any] | None:
+    """The effective Tempo for a deck checked before ``speed.analyse()`` existed (None: use the stored one)."""
+    v = deck.get("validation") or {}
+    if not card_data or (v.get("stats") or {}).get("tempo") is not None or not v.get("stats"):
+        return None
+    cards = [card_data[c["name"]] for c in deck.get("cards", []) if c["name"] in card_data]
+    qty = {c["name"]: c.get("qty", 1) for c in deck.get("cards", [])}
+    commanders = [card_data[n] for n in deck.get("commanders", []) if n in card_data]
+    return speed.analyse(cards, qty, commanders, (v.get("bracket") or {}).get("two_card_combos"))
 
 
 @app.post("/api/decks/{slug}/validate")

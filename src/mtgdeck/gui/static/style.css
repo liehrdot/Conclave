@@ -1032,6 +1032,8 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .speed-scale .tick.lo { left: 0; }
 .speed-scale .tick.hi { right: 0; }
 .deck-speed p { margin: 0; }
+.speed-scale .mark.raw { background: var(--muted); opacity: .5; }
+.speed-list { margin: var(--space-1) 0 var(--space-2); padding-left: 1.2em; }
 .check-actions { margin-top: var(--space-3); }
 #check-panel .tune-table { padding-bottom: 0; }
 #check-panel .tune-table-row select { min-width: 0; flex: 1 1 140px; }

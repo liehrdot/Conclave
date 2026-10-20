@@ -168,7 +168,7 @@ export function deck(slug, seg = "rule0") {
     <div class="detail-hero" data-bg="${esc(d.colors)}">${art(d.commanders[0])}
       <a class="float-back icon-btn glass" href="#/decks" aria-label="Zurück zu Decks">${icon("chev-l")}</a></div>
     <div class="detail-head"><h1>${esc(d.name)}</h1>
-      <div class="meta">${pips(d.colors)} <span>${esc(d.level)}</span>${d.speed ? ` · <span title="Gesamt-Manawert ${esc(d.speed.total)}">Tempo: ${esc(d.speed.label)} (${esc(d.speed.total)})</span>` : ""}${d.proxy ? ` · <span>Proxy-Deck</span>` : ""}${d.checking ? ` · <span>wird am PC geprüft</span>` : d.legal === false ? ` · <span class="flag">nicht legal</span>` : ""}</div>
+      <div class="meta">${pips(d.colors)} <span>${esc(d.level)}</span>${d.speed ? ` · <span title="Gesamt-Manawert ${esc(d.speed.total)}">Tempo: ${esc(d.speed.label)} (${esc(d.speed.effective ?? d.speed.total)})</span>` : ""}${d.proxy ? ` · <span>Proxy-Deck</span>` : ""}${d.checking ? ` · <span>wird am PC geprüft</span>` : d.legal === false ? ` · <span class="flag">nicht legal</span>` : ""}</div>
       ${d.description ? `<p class="sub muted">${esc(d.description)}</p>` : ""}
       <div class="recordbar"><div class="w"><b>${r.wins}</b><span>Siege</span></div><div class="l"><b>${r.losses}</b><span>Niederlagen</span></div>
         <div><b>${r.games ? Math.round((100 * r.wins) / r.games) : 0} %</b><span>${plural(r.games, "Partie", "Partien")}</span></div></div>

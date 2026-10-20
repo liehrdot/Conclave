@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from . import blacklist, brackets, fmt, spellbook, tablerules
+from . import blacklist, brackets, fmt, speed, spellbook, tablerules
 from .cards import resolve
 from .deck import BASIC_LANDS, DeckEntry, deck_stats, parse_decklist
 from .http import HttpError
@@ -156,6 +156,7 @@ async def validate_deck(
     bracket_result = brackets.evaluate(
         bracket, all_cards, spellbook_estimate=sb_estimate, two_card_combos=two_card, profile=profile
     )
+    stats["tempo"] = speed.analyse(main_cards, qty, [card_data[n] for n in commanders if n in card_data], two_card)
     table_block = None
     if table_rule:
         rs = tablerules.resolve_id(table_rule)
