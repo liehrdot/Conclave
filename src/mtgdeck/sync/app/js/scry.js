@@ -5,9 +5,10 @@
 import { load, save } from "./util.js";
 
 const API = "https://api.scryfall.com";
-const KEY = "amtisch.cards.v1";
+const KEY = "amtisch.cards.v2";  // v1 could hold a foreign printing's image (scanned cards), dropped below
 const KEY_DE = "amtisch.cards.de.v1";
 const cache = load(KEY, {});
+try { localStorage.removeItem("amtisch.cards.v1"); } catch { /* private mode */ }
 const cacheDe = load(KEY_DE, {});
 let saveTimer = null;
 const persist = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { save(KEY, cache); save(KEY_DE, cacheDe); }, 400); };
@@ -28,11 +29,14 @@ function pick(card) {
     cost: card.mana_cost ?? faces.map((f) => f.mana_cost).filter(Boolean).join(" // "),
     text, colors: (card.color_identity || []).join(""), art: uris.art_crop, image: uris.normal, small: uris.small,
     back: faces[1]?.image_uris?.normal || null, pt: card.power != null ? `${card.power}/${card.toughness}` : null,
-    uri: card.scryfall_uri,
+    uri: card.scryfall_uri, lang: card.lang || "en",
   };
 }
+// the name cache shows a card in English: a scanned Japanese printing only fills it until the English one is fetched
+const foreign = (i) => i && i.lang && i.lang !== "en";
 const remember = (card, asked) => {
   const info = pick(card);
+  if (foreign(info) && cache[info.name] && !foreign(cache[info.name])) return info;
   cache[info.name] = info;
   if (asked && asked !== info.name) cache[asked] = info;
   const front = info.name.split(" // ")[0];
@@ -41,14 +45,14 @@ const remember = (card, asked) => {
   return info;
 };
 
-export const cached = (name) => cache[name] || null;
+export const cached = (name) => (cache[name] && !foreign(cache[name]) ? cache[name] : null);
 
 // ---- batched lookups by name ----
 const waiting = new Map();  // name -> [resolve]
 let batchTimer = null;
 export function info(name) {
   if (!name) return Promise.resolve(null);
-  if (cache[name]) return Promise.resolve(cache[name]);
+  if (cached(name)) return Promise.resolve(cache[name]);
   return new Promise((resolve) => {
     if (!waiting.has(name)) waiting.set(name, []);
     waiting.get(name).push(resolve);
@@ -61,15 +65,15 @@ async function flush() {
   while (names.length) {
     const part = names.splice(0, 75);
     let data = null;
-    try { data = await api("/cards/collection", { method: "POST", body: JSON.stringify({ identifiers: part.map((n) => ({ name: n })) }) }); } catch { /* offline */ }
+    try { data = await api("/cards/collection", { method: "POST", body: JSON.stringify({ identifiers: part.map((n) => ({ name: n.split(" // ")[0] })) }) }); } catch { /* offline */ }
     const byName = {};
-    for (const card of data?.data || []) {
+    for (const card of data?.data || []) {  // asked by the front face: Scryfall does not find "Front // Back" by its whole name
       const info = pick(card);
       byName[info.name.toLowerCase()] = card;
       byName[info.name.split(" // ")[0].toLowerCase()] = card;
     }
     for (const n of part) {
-      const card = byName[n.toLowerCase()];
+      const card = byName[n.toLowerCase()] || byName[n.split(" // ")[0].toLowerCase()];
       const result = card ? remember(card, n) : null;
       for (const r of waiting.get(n) || []) r(result);
       waiting.delete(n);
@@ -107,7 +111,7 @@ export async function searchCards(q) {
   ]);
   const out = new Map();
   for (const c of ok(multi).slice(0, 10)) { const i = remember(c); out.set(i.name, { name: i.name, de: c.printed_name && c.lang === "de" ? c.printed_name : null, type: i.type }); }
-  for (const n of auto?.data || []) if (!out.has(n)) out.set(n, { name: n, type: cache[n]?.type || "" });
+  for (const n of auto?.data || []) if (!out.has(n)) out.set(n, { name: n, type: cached(n)?.type || "" });
   return exactFirst([...out.values()], q).slice(0, 15);
 }
 

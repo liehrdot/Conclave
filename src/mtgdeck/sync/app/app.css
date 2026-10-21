@@ -429,6 +429,14 @@ body.sheet-open .toasts { bottom: calc(max(env(safe-area-inset-bottom), 12px) + 
 /* card sheet */
 .card-image { width: min(78%, 300px); aspect-ratio: 63 / 88; margin: 4px auto 0; border-radius: 4.75% / 3.4%; background: var(--surface-2) center/cover; box-shadow: 0 12px 34px rgb(0 0 0 / .28); overflow: hidden; }
 .card-image img { width: 100%; height: 100%; object-fit: cover; }
+/* a double-faced card: both faces stacked, turned in 3D by „Umdrehen“ or a tap on the card */
+.card-image.two { position: relative; overflow: visible; background: none; box-shadow: none; perspective: 1400px; cursor: pointer; }
+.card-image.two img { position: absolute; inset: 0; border-radius: 4.75% / 3.4%; background: var(--surface-2); box-shadow: 0 12px 34px rgb(0 0 0 / .28);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden; transition: transform .5s cubic-bezier(.3, .7, .3, 1); }
+.card-image.two img.back, .card-image.two.turned img.front { transform: rotateY(180deg); }
+.card-image.two.turned img.back { transform: rotateY(360deg); }
+.flip-row { display: flex; justify-content: center; margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) { .card-image.two img { transition: none; } }
 .card-text { background: var(--surface); border-radius: var(--r-row); padding: 14px 16px; margin-top: 12px; }
 .card-text .tl { font-size: var(--t-sub); color: var(--text-2); margin: 2px 0 8px; }
 .card-text p { font-size: var(--t-sub); line-height: 1.45; white-space: pre-line; }
@@ -511,15 +519,23 @@ input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; a
 .sheet-body { padding-top: 3px; }
 .present .r0 { margin-top: 18px; }
 .present .level { margin-bottom: 4px; }
-/* mana symbols */
-.ms { display: inline-flex; align-items: center; justify-content: center; width: 1.05em; height: 1.05em; border-radius: 50%; margin-left: 2px; font-size: .9em; font-weight: 700; line-height: 1; vertical-align: middle; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .15); color: #222; }  /* middle: same height with or without a number inside */
-.ms.W { background: var(--mana-w); } .ms.U { background: var(--mana-u); } .ms.B { background: var(--mana-b); }
-.ms.R { background: var(--mana-r); } .ms.G { background: var(--mana-g); } .ms.C, .ms.n { background: #cfcac1; }
-.ms span[aria-hidden] { font-size: .72em; line-height: 1; }
-.ms.hy { background: linear-gradient(135deg, var(--a, #ccc) 50%, var(--b, #999) 50%); }
-.ms.hy.WU { --a: var(--mana-w); --b: var(--mana-u); } .ms.hy.UB { --a: var(--mana-u); --b: var(--mana-b); } .ms.hy.BR { --a: var(--mana-b); --b: var(--mana-r); }
-.ms.hy.RG { --a: var(--mana-r); --b: var(--mana-g); } .ms.hy.GW { --a: var(--mana-g); --b: var(--mana-w); } .ms.hy.WB { --a: var(--mana-w); --b: var(--mana-b); }
-.ms.hy.UR { --a: var(--mana-u); --b: var(--mana-r); } .ms.hy.BG { --a: var(--mana-b); --b: var(--mana-g); } .ms.hy.RW { --a: var(--mana-r); --b: var(--mana-w); } .ms.hy.GU { --a: var(--mana-g); --b: var(--mana-u); }
+/* mana symbols: card colours (the same in light and dark, like on the cards), glyphs from the sprite's #m-* */
+.ms { --ms-W: #fffbd5; --ms-U: #aae0fa; --ms-B: #cbc2bf; --ms-R: #f9aa8f; --ms-G: #9bd3ae; --ms-C: #cbc2bf; --ms-N: #cbc2bf;
+  position: relative; display: inline-flex; align-items: center; justify-content: center; width: 1.1em; height: 1.1em; border-radius: 50%; margin: 0 1px;
+  font-size: .9em; font-weight: 700; line-height: 1; vertical-align: middle; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .18); color: #0d0f0f; background: var(--ms-N); }
+.ms.W { background: var(--ms-W); } .ms.U { background: var(--ms-U); } .ms.B { background: var(--ms-B); } .ms.R { background: var(--ms-R); } .ms.G { background: var(--ms-G); }
+.ms.Q { background: #0d0f0f; color: #fff; }
+.ms-in { display: contents; }
+.ms .num { font-size: .72em; line-height: 1; transform: translateY(-.03em); }
+.ms .mg { width: .74em; height: .74em; fill: currentColor; }
+.ms.T .mg, .ms.Q .mg { width: .8em; height: .8em; }
+.ms.hy { background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%); }
+.ms.ha-W { --a: var(--ms-W); } .ms.ha-U { --a: var(--ms-U); } .ms.ha-B { --a: var(--ms-B); } .ms.ha-R { --a: var(--ms-R); } .ms.ha-G { --a: var(--ms-G); } .ms.ha-C, .ms.ha-N { --a: var(--ms-N); }
+.ms.hb-W { --b: var(--ms-W); } .ms.hb-U { --b: var(--ms-U); } .ms.hb-B { --b: var(--ms-B); } .ms.hb-R { --b: var(--ms-R); } .ms.hb-G { --b: var(--ms-G); } .ms.hb-C, .ms.hb-N { --b: var(--ms-N); }
+.ms .half { position: absolute; width: .5em; height: .5em; }
+.ms .half.num { width: auto; height: auto; font-size: .5em; }
+.ms .half.a { left: .1em; top: .1em; } .ms .half.b { right: .1em; bottom: .1em; }
+.card-text .ms { font-size: 1em; }
 .btn-row-end { gap: 8px; }
 #note-open { margin-top: 2px; }
 .row .subtitle.wrap { white-space: normal; }
