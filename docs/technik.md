@@ -19,7 +19,7 @@ GUI (Browser / Desktop-App) ──► FastAPI ──► Scryfall API + Bulk-Date
 
 ## Voraussetzungen
 
-- [uv](https://docs.astral.sh/uv/) (Python-Paketmanager; installiert Python 3.10+ bei Bedarf selbst)
+- [uv](https://docs.astral.sh/uv/) (Python-Paketmanager; installiert Python 3.11+ bei Bedarf selbst)
 
 ## Einrichtung
 

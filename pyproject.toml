@@ -3,10 +3,10 @@ name = "mtgdeck"
 version = "0.2.0"
 description = "Conclave, a Commander deckbuilder: a local app with Scryfall, EDHREC, Commander Spellbook and Archidekt data, printing and sync"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "httpx>=0.27",
-    "pillow>=10",
+    "pillow>=13",
 ]
 
 [project.optional-dependencies]
