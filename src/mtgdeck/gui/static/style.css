@@ -1231,3 +1231,46 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 }
 #place-qty-field { margin-top: var(--space-3); }
 #place-qty { max-width: 8rem; }
+
+/* ---------- desktop update view: steps, progress, errors ---------- */
+.update-view { width: min(520px, 92vw); }
+.uv-head { display: flex; align-items: center; gap: var(--space-3); }
+.uv-head h2 { margin: 0; font-size: var(--fs-lg); }
+.uv-head p { margin: 2px 0 0; }
+.uv-logo { width: 40px; height: 40px; }
+.uv-steps { list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); margin: var(--space-5) 0 var(--space-4); padding: 0; counter-reset: none; }
+.uv-steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--muted); text-align: center; }
+.uv-steps li + li::before { content: ""; position: absolute; top: 7px; right: 50%; width: 100%; height: 2px; background: var(--border-strong); z-index: 0; }
+.uv-steps li.done::before, .uv-steps li.current::before { background: var(--accent); }
+.uv-dot { position: relative; z-index: 1; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border-strong); background: var(--surface); box-sizing: border-box; }
+.uv-steps li.done .uv-dot { border-color: var(--accent); background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px no-repeat; }
+.uv-steps li.current { color: var(--text); font-weight: 650; }
+.uv-steps li.current .uv-dot { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); animation: uv-pulse 1.4s ease-in-out infinite; }
+.uv-steps li.failed { color: var(--bad); font-weight: 650; }
+.uv-steps li.failed .uv-dot { border-color: var(--bad); background: var(--bad); box-shadow: 0 0 0 4px var(--bad-soft); }
+@keyframes uv-pulse { 50% { box-shadow: 0 0 0 7px var(--accent-soft); } }
+.uv-figures { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); min-height: 34px; }
+.uv-percent { font: 700 var(--fs-xl) / 1 var(--mono); font-variant-numeric: tabular-nums; }
+.uv-detail { font: var(--fs-sm) var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.uv-bar { position: relative; height: 8px; margin-top: var(--space-2); border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.uv-bar div { height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .3s ease-out; }
+.uv-bar.indeterminate div { width: 35% !important; animation: uv-slide 1.3s ease-in-out infinite; }
+.uv-bar.working div { width: 100% !important; animation: uv-breathe 1.6s ease-in-out infinite; }
+@keyframes uv-breathe { 50% { opacity: .55; } }
+@keyframes uv-slide { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+.uv-status { margin: var(--space-3) 0 0; font-size: var(--fs-sm); }
+.uv-error { display: flex; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--bad-soft); color: var(--bad); }
+.uv-error .icon { flex: none; width: 20px; height: 20px; }
+.uv-error p { margin: 0; color: var(--text); }
+.uv-error details { margin-top: var(--space-2); color: var(--muted); }
+.uv-error pre { white-space: pre-wrap; word-break: break-word; font: var(--fs-xs) var(--mono); margin: var(--space-2) 0 0; }
+.update-indicator { width: 100%; border: none; font: inherit; font-size: var(--fs-sm); font-weight: 550; cursor: pointer; text-align: left; }
+.update-indicator.failed { background: var(--bad-soft); color: var(--bad); }
+.uv-ring { flex: none; width: 16px; height: 16px; border-radius: 50%; background: conic-gradient(var(--accent) calc(var(--p, 0) * 1%), var(--border-strong) 0);
+  -webkit-mask: radial-gradient(circle, transparent 4px, #000 5px); mask: radial-gradient(circle, transparent 4px, #000 5px); }
+.update-indicator.failed .uv-ring { background: var(--bad); }
+@media (prefers-reduced-motion: reduce) {
+  .uv-steps li.current .uv-dot { animation: none; }
+  .uv-bar.indeterminate div { animation: none; width: 100% !important; opacity: .45; }
+  .uv-bar.working div { animation: none; }
+}

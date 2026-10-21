@@ -253,8 +253,9 @@ class DesktopPoll(BaseModel):
     visible: bool = True
     autostart: bool | None = None
     version: str | None = None
-    update: dict[str, Any] | None = None  # the shell's update state: state, current, version, notes, progress, error
+    update: dict[str, Any] | None = None  # the shell's update state: state, rev, current, version, notes, progress, downloaded, total, speed, error, failed_step
     features: list[str] | None = None  # what this shell can do, e.g. "moxfield" (opens moxfield.com links in its own window)
+    wait: float = 0  # long poll: hold the answer up to this many seconds until a notice or command comes up
 
 
 class DesktopCommand(BaseModel):
@@ -308,7 +309,19 @@ async def api_desktop() -> dict[str, Any]:
 
 @app.post("/api/desktop/poll")
 async def api_desktop_poll(req: DesktopPoll) -> dict[str, Any]:
-    return {**desktop.poll(req.model_dump(exclude_none=True), req.since), "tooltip": _desktop_tooltip()}
+    info = req.model_dump(exclude_none=True)
+    if req.wait > 0:
+        answer = await asyncio.to_thread(desktop.poll, info, req.since, req.wait)
+    else:
+        answer = desktop.poll(info, req.since)
+    return {**answer, "tooltip": _desktop_tooltip()}
+
+
+@app.post("/api/desktop/update")
+async def api_desktop_update(update: dict[str, Any]) -> dict[str, Any]:
+    """The shell's update state while it downloads and installs (pushed a few times a second)."""
+    desktop.report_update(update)
+    return {"ok": True}
 
 
 @app.post("/api/desktop/command")

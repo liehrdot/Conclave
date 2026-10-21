@@ -52,6 +52,8 @@
     <a class="brand" href="#/"><span class="logo" aria-hidden="true"></span>Conclave</a>
     <a class="btn block" id="nav-new" href="#/new" data-nav="new"><svg class="icon"><use href="#i-plus"/></svg>Neues Deck</a>
     <button type="button" class="search-btn" id="palette-btn"><svg class="icon"><use href="#i-search"/></svg><span>Suchen …</span><kbd>Strg K</kbd></button>
+    <button type="button" id="update-indicator" class="job-indicator update-indicator" hidden>
+      <span class="uv-ring" aria-hidden="true"></span><span id="update-indicator-text">Update …</span></button>
     <a id="job-indicator" class="job-indicator" href="#/new" hidden>
       <span class="spinner" aria-hidden="true"></span><span id="job-indicator-text">Auftrag läuft …</span></a>
 
@@ -1152,6 +1154,42 @@
   </table>
   <p class="muted small">Auf dem Mac steht ⌘ für Strg. Im Browser kann Strg+N vom Browser belegt sein – in der Desktop-App nicht.</p>
   <div class="dialog-actions"><button type="button" class="btn primary" id="shortcuts-close">Schließen</button></div>
+</dialog>
+
+<dialog id="update-view" class="dialog update-view" aria-labelledby="uv-title">
+  <div class="uv-head">
+    <span class="logo uv-logo" aria-hidden="true"></span>
+    <div>
+      <h2 id="uv-title">Update</h2>
+      <p id="uv-sub" class="muted small"></p>
+    </div>
+  </div>
+  <ol class="uv-steps" id="uv-steps">
+    <li data-step="preparing"><span class="uv-dot" aria-hidden="true"></span>Vorbereiten</li>
+    <li data-step="downloading"><span class="uv-dot" aria-hidden="true"></span>Herunterladen</li>
+    <li data-step="verifying"><span class="uv-dot" aria-hidden="true"></span>Prüfen</li>
+    <li data-step="installing"><span class="uv-dot" aria-hidden="true"></span>Installieren</li>
+    <li data-step="restarting"><span class="uv-dot" aria-hidden="true"></span>Neustart</li>
+  </ol>
+  <div class="uv-figures">
+    <span id="uv-percent" class="uv-percent"></span>
+    <span id="uv-detail" class="uv-detail"></span>
+  </div>
+  <div id="uv-bar" class="uv-bar" role="progressbar" aria-labelledby="uv-status" aria-valuemin="0" aria-valuemax="100"><div></div></div>
+  <p id="uv-status" class="uv-status" role="status" aria-live="polite"></p>
+  <div id="uv-error" class="uv-error" hidden>
+    <svg class="icon" aria-hidden="true"><use href="#i-alert"/></svg>
+    <div>
+      <p id="uv-error-text"></p>
+      <details class="more"><summary>Technische Details</summary><pre id="uv-error-raw"></pre></details>
+    </div>
+  </div>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="uv-log" hidden>Protokoll öffnen</button>
+    <button type="button" class="btn" id="uv-hide">Im Hintergrund weiter</button>
+    <button type="button" class="btn" id="uv-close" hidden>Schließen</button>
+    <button type="button" class="btn primary" id="uv-retry" hidden>Erneut versuchen</button>
+  </div>
 </dialog>
 
 <dialog id="ask-dialog" class="dialog small-dialog">

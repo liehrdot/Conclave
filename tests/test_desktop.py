@@ -154,3 +154,35 @@ def test_feed_falls_back_to_stable_when_github_is_unreachable(monkeypatch):
     assert client.get("/api/desktop/feed").json() == {"feed": releases.STABLE_FEED, "preview": False}
     r = client.get("/api/desktop/feed", params={"version": "0.1.7"})
     assert r.status_code == 502 and "GitHub" in r.json()["detail"]
+
+
+def test_a_long_poll_returns_as_soon_as_a_command_is_queued():
+    import threading
+
+    client = TestClient(gui.app)
+    client.post("/api/desktop/poll", json={})
+    t0 = time.monotonic()
+    assert client.post("/api/desktop/poll", json={"wait": 0.3}).json()["commands"] == []  # nothing: held, then empty
+    assert time.monotonic() - t0 >= 0.25
+    threading.Timer(0.2, lambda: desktop.command("install_update")).start()
+    t0 = time.monotonic()
+    r = client.post("/api/desktop/poll", json={"wait": 10}).json()
+    assert r["commands"] == [{"type": "install_update"}] and time.monotonic() - t0 < 5
+    desktop.command("open_log")  # already queued: no waiting at all
+    assert client.post("/api/desktop/poll", json={"wait": 10}).json()["commands"] == [{"type": "open_log"}]
+
+
+def test_install_progress_is_pushed_between_polls_and_the_newest_state_wins():
+    client = TestClient(gui.app)
+    client.post("/api/desktop/update", json={"state": "downloading", "rev": 1})
+    assert client.get("/api/desktop").json()["shell"] is None  # no shell polled yet: nothing to show
+    client.post("/api/desktop/poll", json={"update": {"state": "available", "rev": 3, "version": "0.3.0"}})
+    client.post("/api/desktop/update", json={"state": "downloading", "rev": 5, "downloaded": 1_000_000, "total": 4_000_000,
+                                             "progress": 25, "speed": 500_000})  # fmt: skip
+    u = client.get("/api/desktop").json()["shell"]["update"]
+    assert u["state"] == "downloading" and u["downloaded"] == 1_000_000 and u["total"] == 4_000_000
+    client.post("/api/desktop/poll", json={"update": {"state": "available", "rev": 4}})  # built before the push
+    assert client.get("/api/desktop").json()["shell"]["update"]["rev"] == 5
+    client.post("/api/desktop/update", json={"state": "error", "rev": 9, "failed_step": "verifying", "error": "signature"})
+    u = client.get("/api/desktop").json()["shell"]["update"]
+    assert u["state"] == "error" and u["failed_step"] == "verifying"
