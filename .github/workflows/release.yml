@@ -6,6 +6,7 @@
 # (e.g. 0.1.9), or by pushing a bare tag v<version>. Never publish the release by hand first: it stays empty.
 # Secrets: TAURI_SIGNING_PRIVATE_KEY (the key whose public part is in desktop/src-tauri/tauri.conf.json),
 # TAURI_SIGNING_PRIVATE_KEY_PASSWORD (empty if the key has none).
+# Release notes (also shown in the app's update notice) come from docs/releases/<version>.md, else a default text.
 name: Release
 
 on:
@@ -77,6 +78,15 @@ jobs:
           $state = gh release view $env:TAG --json isDraft --jq .isDraft 2>$null
           if ($state -eq "false") { throw "release $env:TAG is already published, and immutable releases take no files - bump to the next version" }
           exit 0  # gh exits 1 when there is no release yet, which is fine
+      - name: Release notes
+        id: notes
+        shell: pwsh
+        run: |
+          $file = "docs/releases/$($env:TAG.TrimStart('v')).md"
+          $body = if (Test-Path $file) { Get-Content $file -Raw -Encoding utf8 } else { "Windows-Installer (pro Benutzer, ohne Adminrechte). Eine installierte App holt sich diese Version von selbst: Einstellungen → Desktop-App." }
+          Write-Host "notes from $(if (Test-Path $file) { $file } else { 'the default text' })"
+          $eof = "NOTES_$([guid]::NewGuid().ToString('N'))"
+          "body<<$eof`n$($body.Trim())`n$eof" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
       - name: Build, sign and upload into a draft
         uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
         env:
@@ -89,7 +99,7 @@ jobs:
           tagName: ${{ env.TAG }}
           releaseCommitish: ${{ github.sha }}
           releaseName: "Conclave ${{ env.TAG }}"
-          releaseBody: "Windows-Installer (pro Benutzer, ohne Adminrechte). Eine installierte App holt sich diese Version von selbst: Einstellungen → Desktop-App."
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: true
           prerelease: false
           updaterJsonPreferNsis: true
