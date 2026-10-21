@@ -75,15 +75,26 @@ export function vibrate(ms = 12) {
 // German genitive of a name: "Tims", "Jonas’", "Max’"
 export const genitive = (name) => (/[sßxz]$/i.test(name) ? `${name}’` : `${name}s`);
 
-// "{2}{B}{G}" -> small mana symbols
-const MANA_NAMES = { W: "Weiß", U: "Blau", B: "Schwarz", R: "Rot", G: "Grün", C: "farblos", X: "X", T: "tappen" };
+// "{2}{B}{G}" -> small mana symbols, drawn like on the cards (glyphs: the sprite's #m-* from the Mana font)
+const MANA_NAMES = { W: "Weiß", U: "Blau", B: "Schwarz", R: "Rot", G: "Grün", C: "farblos", X: "X", T: "tappen", Q: "enttappen", E: "Energie", S: "Schnee", P: "phyrexanisch" };
+const glyph = (k, cls = "") => `<svg class="mg${cls}" aria-hidden="true"><use href="#m-${k}"/></svg>`;
+function symbol(sym) {
+  const parts = sym.toUpperCase().split("/");
+  const colors = parts.filter((x) => "WUBRG".includes(x));
+  const label = parts.map((x) => MANA_NAMES[x] || x).join("/");
+  let cls = "ms n", inner = `<span class="num">${esc(sym)}</span>`;
+  if (parts.includes("P")) { cls = `ms ${colors[0] || "C"}`; inner = glyph("P"); }  // phyrexian: the colour with the Φ
+  else if (parts.length === 2) {  // hybrid ({B/R}, {2/W}, {G/C}): split circle, a small glyph or number per half
+    const half = (x, side) => ("WUBRGC".includes(x) ? glyph(x, ` half ${side}`) : `<span class="half num ${side}">${esc(x)}</span>`);
+    const k = (x) => ("WUBRGC".includes(x) ? x : "N");
+    cls = `ms hy ha-${k(parts[0])} hb-${k(parts[1])}`;
+    inner = half(parts[0], "a") + half(parts[1], "b");
+  } else if (sym.length === 1 && "WUBRGCTQES".includes(sym)) { cls = `ms ${sym}`; inner = glyph(sym); }
+  return `<span class="${cls}" title="${esc(label)}"><span class="sr">${esc(label)}</span><span class="ms-in" aria-hidden="true">${inner}</span></span>`;
+}
 export function mana(cost) {
   if (!cost) return "";
-  return String(cost).split(" // ").map((part) => part.replace(/\{([^}]+)\}/g, (_, sym) => {
-    const parts = sym.split("/");
-    const colors = parts.filter((x) => "WUBRGC".includes(x));
-    const cls = colors.length === 2 ? `ms hy ${colors[0]}${colors[1]}` : colors.length ? `ms ${colors[0]}` : "ms n";
-    const label = parts.map((x) => MANA_NAMES[x] || x).join("/");
-    return `<span class="${cls}" title="${label}"><span class="sr">${label}</span><span aria-hidden="true">${colors.length ? "" : esc(sym === "T" ? "↷" : sym)}</span></span>`;
-  })).join(" // ");
+  return String(cost).split(" // ").map((part) => part.replace(/\{([^}]+)\}/g, (_, sym) => symbol(sym))).join(" // ");
 }
+/** Rules text with its {T}, {2}{R} … as symbols (everything else escaped). */
+export const rulesText = (text) => esc(text || "").replace(/\{([^}]+)\}/g, (_, sym) => symbol(sym));

@@ -6,7 +6,7 @@ import * as scry from "./scry.js";
 import { roundLogPage, roundSummary } from "./round.js";
 import { art, paint, rememberCard } from "./screens.js";
 import { closeSheet, openSheet, popPage, pushPage, redraw, toast } from "./ui.js";
-import { $, $$, RESULT_TEXT, ago, dateLong, debounce, esc, genitive, icon, load, mana, pips, plural, save, uid, vibrate } from "./util.js";
+import { $, $$, RESULT_TEXT, ago, dateLong, debounce, esc, genitive, icon, load, mana, pips, plural, rulesText, save, uid, vibrate } from "./util.js";
 
 const KEY_DRAFT = "amtisch.draft.game";
 const REMATCH_HOURS = 8;  // within this time the last game's opponents are taken over
@@ -530,17 +530,19 @@ export function cardSheet(name, action = null) {
   rememberCard(name);
   let lang = "de";
   let de;  // undefined = loading, null = no German printing
+  let turned = false;  // a double-faced card shows its back
   const page = () => {
     const c = scry.cached(name);
     const showDe = lang === "de" && de;
     return {
       title: showDe ? de.name : name, left: "", right: `<button class="btn plain" type="button" data-sheet-close><b>Fertig</b></button>`,
-      body: `<div class="card-image">${c?.image ? `<img src="${esc(c.image)}" alt="${esc(name)}">` : ""}</div>
+      body: `<div class="card-image${c?.back ? ` two${turned ? " turned" : ""}` : ""}" id="card-img">${c?.image ? `<img class="front" src="${esc(c.image)}" alt="${esc(name)}">` : ""}${c?.back ? `<img class="back" src="${esc(c.back)}" alt="${esc(name)}, Rückseite">` : ""}</div>
+        ${c?.back ? `<div class="flip-row"><button class="btn tint small" type="button" id="card-flip" aria-pressed="${turned}">${icon("swap", "xs")}Umdrehen</button></div>` : ""}
         ${de ? `<div class="segmented lang" role="tablist"><button type="button" data-lang="de" aria-pressed="${lang === "de"}">Deutsch</button><button type="button" data-lang="en" aria-pressed="${lang === "en"}">Original</button></div>` : ""}
         <div class="card-text">
           <div class="card-title-line"><b>${esc(showDe ? de.name : c?.name || name)}</b> <span class="mana">${mana(c?.cost || "")}</span></div>
           <div class="tl">${esc(showDe ? de.type : c?.type || "")}${c?.pt ? ` · ${esc(c.pt)}` : ""}</div>
-          <p>${esc(showDe ? de.text : c?.text || (c ? "" : "Lade Kartendaten …"))}</p>
+          <p>${showDe ? rulesText(de.text) : c?.text ? rulesText(c.text) : c ? "" : "Lade Kartendaten …"}</p>
           ${showDe ? `<p class="note">Gedruckter deutscher Text – der aktuelle Regeltext steht unter „Original“.</p>` : ""}
           ${de === undefined && c ? `<p class="note">Suche deutschen Text …</p>` : ""}
         </div>`,
@@ -548,6 +550,9 @@ export function cardSheet(name, action = null) {
         ${action.label ? `<button class="btn primary big" type="button" id="card-action">${icon("plus", "sm")}${esc(action.label)}</button>` : ""}</div>` : "",
       bind(el) {
         for (const b of $$("[data-lang]", el)) b.addEventListener("click", () => { lang = b.dataset.lang; redraw(); });
+        const flip = () => { turned = !turned; $("#card-img", el).classList.toggle("turned", turned); $("#card-flip", el).setAttribute("aria-pressed", turned); };
+        $("#card-flip", el)?.addEventListener("click", flip);
+        if (c?.back) $("#card-img", el).addEventListener("click", flip);
         $("#card-action", el)?.addEventListener("click", action?.run);
         $("#card-alt", el)?.addEventListener("click", action?.alt?.run);
       },
