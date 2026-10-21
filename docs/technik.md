@@ -239,13 +239,13 @@ liegen unter [Releases](https://github.com/liehrdot/Conclave/releases) (`Conclav
 pro Benutzer, ohne Adminrechte); jeder Push baut außerdem einen Test-Installer als Artefakt `mtgdeck-desktop-windows-setup`
 des Workflows „Desktop“.
 
-- **Aufbau:** Eine kleine Tauri-2-Hülle (Rust, WebView2) startet das mitgelieferte Backend (`mtgdeck-backend.exe`,
+- **Aufbau:** Eine kleine Tauri-2-Hülle (Rust, WebView2) startet das mitgelieferte Backend (`conclave-backend.exe`,
   ein PyInstaller-Ordner mit den statischen Dateien) auf einem freien
   Port mit zufälligem Token und zeigt es im Fenster. Stirbt das Backend, startet die Hülle es neu; klappt das
   fünfmal nicht, zeigt die Startseite das Protokoll und bietet einen neuen Versuch an.
 - **Daten:** `%APPDATA%\MTG Deckbuilder` (Decks, Sammlung, Blacklist, Tischregeln, Sicherungen, Sync-Zustand),
   Cache in `%LOCALAPPDATA%\app.mtgdeck.desktop\cache` (das Programm selbst liegt in `%LOCALAPPDATA%\Conclave`; der Datenordner behält den alten Namen,
-  und der erste Conclave-Installer entfernt das alte Programm „MTG Deckbuilder“ samt Startmenü-Eintrag),
+  und der erste Conclave-Installer entfernt das alte Programm „MTG Deckbuilder“ samt Startmenü-Eintrag; ein Update legt den Startmenü-Eintrag „Conclave“ an, falls er fehlt, damit die Windows-Suche die App findet; das Programm heißt `Conclave.exe`),
   Protokoll `%APPDATA%\MTG Deckbuilder\logs\backend.log`.
   Bestehende Daten aus einem Projektordner kommen per Sync (siehe oben) oder über Einstellungen → Sicherung
   hochladen in die App.
@@ -258,7 +258,7 @@ des Workflows „Desktop“.
   einem Hinweis; Einstellungen → Desktop-App zeigt sie und installiert sie auf Knopfdruck (die App beendet erst ihr
   Backend, dann läuft der Installer im Hintergrund durch und startet sie neu). Updates sind signiert – der öffentliche Schlüssel steckt in
   `desktop/src-tauri/tauri.conf.json`, nur damit signierte Pakete werden angenommen.
-- **Entwicklung:** `uv run pyinstaller desktop/sidecar/backend.spec` baut das Backend nach `dist/mtgdeck-backend/`;
+- **Entwicklung:** `uv run pyinstaller desktop/sidecar/backend.spec` baut das Backend nach `dist/conclave-backend/`;
   `cd desktop && npx @tauri-apps/cli@^2 dev` startet die Hülle damit (oder mit `MTGDECK_BACKEND=<Pfad zur Exe>`).
   `cargo check --target x86_64-pc-windows-msvc` prüft den Rust-Teil auch unter Linux. Die fertige Exe kennt
   `--selftest` (startet das Backend, liest `/api/health`, Exit-Code 0 = in Ordnung) und `--hidden` (nur in den Tray).

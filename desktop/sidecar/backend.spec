@@ -2,7 +2,7 @@
 """PyInstaller build of the desktop backend: one folder (``--onedir`` – starts faster than a single file and
 does not unpack to %TEMP%, which virus scanners dislike).
 
-    uv run pyinstaller desktop/sidecar/backend.spec            → dist/mtgdeck-backend/
+    uv run pyinstaller desktop/sidecar/backend.spec            → dist/conclave-backend/
 
 Bundled besides the code: the GUI's static files. The sync server, its phone app and the test helpers are left out."""
 
@@ -45,7 +45,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="mtgdeck-backend",
+    name="conclave-backend",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -54,4 +54,4 @@ exe = EXE(
     disable_windowed_traceback=False,
     icon=str(ROOT / "desktop/icon.ico") if (ROOT / "desktop/icon.ico").exists() else None,
 )
-coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="mtgdeck-backend")
+coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="conclave-backend")

@@ -1,4 +1,4 @@
-# The Windows desktop app: the PyInstaller folder build of the backend (mtgdeck-backend.exe), smoke-tested (starts
+# The Windows desktop app: the PyInstaller folder build of the backend (conclave-backend.exe), smoke-tested (starts
 # on a free port with a token, answers /api/health, refuses requests without the token, bundles no Agent SDK),
 # then the Tauri shell around it, self-tested (`--selftest` starts the backend from the shell and
 # reads /api/health), and the NSIS installer as the artifact. See docs/plan-desktop-app.md.
@@ -30,7 +30,7 @@ jobs:
         shell: pwsh
         run: |
           $data = Join-Path $env:RUNNER_TEMP "mtgdata"
-          $p = Start-Process -FilePath "dist/mtgdeck-backend/mtgdeck-backend.exe" -ArgumentList "--data", $data, "--port", "0", "--token", "auto" -RedirectStandardOutput out.txt -RedirectStandardError err.txt -PassThru -NoNewWindow
+          $p = Start-Process -FilePath "dist/conclave-backend/conclave-backend.exe" -ArgumentList "--data", $data, "--port", "0", "--token", "auto" -RedirectStandardOutput out.txt -RedirectStandardError err.txt -PassThru -NoNewWindow
           $url = $null
           for ($i = 0; $i -lt 120 -and -not $url; $i++) {
             Start-Sleep -Milliseconds 500
@@ -46,10 +46,10 @@ jobs:
           if ($code -ne 401) { throw "without token: expected 401, got $code" }
           $token = $url.Split('=')[1]
           $decks = Invoke-RestMethod "${base}api/decks" -Headers @{ Authorization = "Bearer $token" }
-          if (Get-ChildItem dist/mtgdeck-backend -Recurse -Directory -Filter claude_agent_sdk) { throw "the Claude Agent SDK must not be bundled" }
+          if (Get-ChildItem dist/conclave-backend -Recurse -Directory -Filter claude_agent_sdk) { throw "the Claude Agent SDK must not be bundled" }
           Write-Host "decks: $($decks.Count), url: $base"
           Stop-Process -Id $p.Id -Force
-          '"backend: {0:N0} MB" -f ((Get-ChildItem dist/mtgdeck-backend -Recurse | Measure-Object Length -Sum).Sum / 1MB)' | Invoke-Expression
+          '"backend: {0:N0} MB" -f ((Get-ChildItem dist/conclave-backend -Recurse | Measure-Object Length -Sum).Sum / 1MB)' | Invoke-Expression
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
         with:
