@@ -383,6 +383,40 @@ details.more[open] > summary { margin-bottom: var(--space-3); }
 .cards .card .qty { color: var(--muted); font-variant-numeric: tabular-nums; }
 .cards .card .gc { color: var(--warn); font-size: 11px; font-weight: 700; margin-left: 5px; }
 .cards .card .dfc { color: var(--accent-text); font-size: 12px; margin-left: 4px; }
+/* foil copies (Ort = this deck): a rainbow tag in the list, a slow holo sheen on the image, a tilt in the big view */
+.cards .card .foil-tag { font-size: 10.5px; font-weight: 700; margin-left: 6px; padding: 0 6px; border-radius: 99px; color: #1a1a1a;
+  background: linear-gradient(100deg, #ffd6e7, #fff1b8 30%, #c9f7d4 55%, #bfe6ff 75%, #e3d1ff); vertical-align: 1px; }
+.holo { position: relative; display: block; }
+.foil-sheen { display: none; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; mix-blend-mode: color-dodge;
+  background:
+    linear-gradient(115deg, transparent 18%, rgb(255 90 140 / .5) 30%, rgb(255 225 90 / .5) 38%, rgb(90 255 160 / .5) 46%,
+      rgb(90 190 255 / .5) 54%, rgb(190 120 255 / .5) 62%, transparent 76%),
+    repeating-linear-gradient(55deg, rgb(255 255 255 / .06) 0 2px, transparent 2px 7px);
+  background-size: 300% 300%, auto; opacity: .55; animation: foil-drift 7s ease-in-out infinite alternate; }
+@keyframes foil-drift { from { background-position: 0% 0%, 0 0; } to { background-position: 100% 100%, 0 0; } }
+.cards.grid .card.foil .foil-sheen { display: block; bottom: auto; aspect-ratio: 488 / 680; border-radius: 6%/4.4%; transition: transform .12s; }
+.cards.grid .card.foil:hover .foil-sheen { transform: translateY(-2px); opacity: .75; }
+.cards.grid .card.foil img { box-shadow: 0 0 0 1px rgb(190 160 255 / .55), var(--shadow-sm); }
+.card-preview.foil .foil-sheen { display: block; border-radius: 12px; }
+/* the big view's 3D card: front and the Magic card back, turned by --rx/--ry (set while leaning or dragging) */
+.card3d-wrap { perspective: 1200px; }
+.card3d { position: relative; transform-style: preserve-3d; transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform .5s cubic-bezier(.2, .8, .2, 1); cursor: grab; touch-action: none; user-select: none; }
+.card3d.leaning { transition: transform .08s linear; }
+.card3d.dragging { transition: none; cursor: grabbing; }
+.card3d .holo { border-radius: 16px; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden;
+  box-shadow: 0 18px 40px -18px rgb(0 0 0 / .55); }
+.card3d .backside { position: absolute; inset: 0; transform: rotateY(180deg); }
+.card3d .backside img { width: 100%; height: 100%; object-fit: cover; }
+.card3d .glare { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), rgb(255 255 255 / .28), transparent 55%); mix-blend-mode: overlay; }
+.card3d.leaning .glare, .card3d.dragging .glare { opacity: 1; }
+.card3d-wrap.foil .foil-sheen { display: block; border-radius: 16px; }
+.card3d-wrap.foil .card3d.leaning .foil-sheen, .card3d-wrap.foil .card3d.dragging .foil-sheen { animation: none; opacity: .75;
+  background-position: var(--mx, 50%) var(--my, 50%), 0 0; }
+.card-view-under { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); margin-top: var(--space-3); }
+.card-view-copies { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; font-size: var(--fs-sm); max-width: 760px; }
+@media (prefers-reduced-motion: reduce) { .foil-sheen { animation: none !important; background-position: 40% 40%, 0 0; } }
 .cards .card .price { color: var(--muted); font-size: var(--fs-xs); white-space: nowrap; font-variant-numeric: tabular-nums; }
 /* image grid */
 .cards.grid { columns: auto; }
@@ -394,7 +428,7 @@ details.more[open] > summary { margin-bottom: var(--space-3); }
 .cards.grid .card .noimg { aspect-ratio: 488 / 680; border-radius: 8px; border: 1px dashed var(--border-strong); display: grid; place-items: center; text-align: center; font-size: var(--fs-xs); padding: 6px; }
 .cards.grid .qty-badge { position: absolute; top: 6px; right: 6px; background: rgb(0 0 0 / .75); color: #fff; font-size: var(--fs-xs); font-weight: 700; padding: 1px 7px; border-radius: 99px; }
 .card-preview { position: fixed; pointer-events: none; z-index: 50; display: flex; gap: 8px; }
-.card-preview img { width: 240px; border-radius: 12px; box-shadow: var(--shadow-lg); }
+.card-preview img { display: block; width: 240px; border-radius: 12px; box-shadow: var(--shadow-lg); }
 
 /* card tools + edit mode */
 .card-tools { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }

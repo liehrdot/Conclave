@@ -681,7 +681,9 @@ function deckFacts(d) {
   const v = d.validation || {};
   const cur = (d.currency || "eur").toUpperCase();
   const bits = [];
+  const val = deckValue(d);
   if (d.proxy) bits.push("Proxy");
+  else if (val) bits.push(`Wert ${fmtPrice(val.total, cur)}${d.budget ? ` / ${fmtPrice(d.budget, cur)}` : ""}`);
   else if (v.price_total != null) bits.push(`${fmtPrice(v.price_total, cur)}${d.budget ? ` / ${fmtPrice(d.budget, cur)}` : ""}`);
   if (d.speed) bits.push(`Tempo: ${d.speed.label}`);
   if (d.version) bits.push(`v${d.version}`);
@@ -724,11 +726,12 @@ function deckMark(bracket) {
 function renderDeckHead(d) {
   const fits = deckFits(d);
   $("#deck-name").innerHTML = `${esc(d.name)}${fits ? deckMark(d.bracket) : ""}`;
-  const thumb = d.card_data?.[d.commanders[0]]?.image;
+  const thumb = shownCopy(d.commanders[0])?.image || d.card_data?.[d.commanders[0]]?.image;
   $("#deck-thumb").hidden = !thumb;
   if (thumb) $("#deck-thumb").src = thumb;
   $("#deck-commanders").textContent = d.commanders.join(" + ");
   $("#deck-facts").textContent = deckFacts(d);
+  $("#deck-facts").title = deckValueTip(d);
   const verdict = deckVerdict(d);
   const line = $("#deck-verdict");
   line.hidden = fits;
@@ -996,15 +999,18 @@ function renderCards(d) {
     const html = items.sort(cmp).map((c) => {
       const cd = c.cd;
       const own = ownershipBadge(c.name, c.qty, c.commander);
-      const data = `data-img="${esc(cd.image || "")}" data-img-back="${esc(cd.image_back || "")}" data-name="${esc(c.name)}"`;
-      const label = `${c.qty > 1 ? c.qty + "× " : ""}${c.name}`;
+      const copy = c.status === "new" ? null : shownCopy(c.name);  // the copy whose Ort is this deck
+      const img = copy?.image || cd.image, back = copy?.image ? copy.image_back || "" : cd.image_back || "";
+      const data = `data-img="${esc(img || "")}" data-img-back="${esc(back)}" data-name="${esc(c.name)}"${copy?.foil ? ' data-foil="1"' : ""}`;
+      const label = `${c.qty > 1 ? c.qty + "× " : ""}${c.name}${copy?.foil ? " (Foil)" : ""}`;
       if (grid) {
-        return `<div class="card" role="button" tabindex="0" ${data} aria-label="${esc(label)} – große Ansicht">
-          ${cd.image ? `<img src="${esc(cd.image)}" alt="" loading="lazy">` : `<div class="noimg">${esc(c.name)}</div>`}
+        return `<div class="card${copy?.foil ? " foil" : ""}" role="button" tabindex="0" ${data} aria-label="${esc(label)} – große Ansicht">
+          ${img ? `<img src="${esc(img)}" alt="" loading="lazy">${copy?.foil ? '<span class="foil-sheen" aria-hidden="true"></span>' : ""}` : `<div class="noimg">${esc(c.name)}</div>`}
           ${c.qty > 1 ? `<span class="qty-badge">${c.qty}×</span>` : ""}${own ? `<span class="own-badge">${own}</span>` : ""}</div>`;
       }
-      const name = `${esc(c.name)}${cd.image_back ? '<span class="dfc" title="doppelseitig">⇄</span>' : ""}${cd.game_changer ? '<span class="gc" title="Game Changer">GC</span>' : ""}`;
-      const price = `<span class="price">${priceOf(cd, d) ? esc(fmtNum(priceOf(cd, d), "", 2)) : ""}</span>`;
+      const name = `${esc(c.name)}${cd.image_back ? '<span class="dfc" title="doppelseitig">⇄</span>' : ""}${cd.game_changer ? '<span class="gc" title="Game Changer">GC</span>' : ""}${copy?.foil ? '<span class="foil-tag" title="Foil – liegt so im Deck">Foil</span>' : ""}`;
+      const unit = copy && !copy.proxy && copy.price ? copy.price : priceOf(cd, d);
+      const price = `<span class="price"${unit !== priceOf(cd, d) ? ' title="Preis deiner Ausgabe"' : ""}>${unit ? esc(fmtNum(unit, "", 2)) : ""}</span>`;
       if (!editing || c.commander) {
         return `<div class="card" role="button" tabindex="0" ${data} aria-label="${esc(label)} – große Ansicht">
           <span>${c.qty > 1 ? `<span class="qty">${c.qty}× </span>` : ""}${name}${own}</span>${price}</div>`;
@@ -1300,6 +1306,30 @@ function ownershipBadge(name, need = 1, commander = false) {
   if (real + prox >= need) return `<span class="own proxy" title="${tip("Als Proxy in deiner Sammlung")}">P</span>`;
   if (real + prox > 0) return `<span class="own part" title="${tip(`Nur ${real + prox} von ${need} vorhanden`)}">${real + prox}/${need}</span>`;
   return "";  // missing: no badge (the Sammlung panel and "nach Besitz" show them) – keeps the list calm
+}
+
+// the copies whose Ort is this deck (printing, foil, proxy): the deck view shows them instead of the default printing
+const deckCopies = (name) => (ownership && ownership.slug === currentDeck?.slug && ownership.cards?.[name]?.copies) || [];
+const shownCopy = (name) => deckCopies(name)[0] || null;
+// the deck's value with its own printings, only once at least one copy lies in the deck
+function deckValue(d) {
+  const v = ownership?.slug === d?.slug ? ownership.value : null;
+  return v && v.own + v.proxy > 0 ? v : null;
+}
+function deckValueTip(d) {
+  const v = deckValue(d);
+  if (!v) return "";
+  const cur = (d.currency || "eur").toUpperCase();
+  return [`Wert mit deinen Karten aus der Sammlung (Ort: dieses Deck):`,
+    `${v.own} eigene Karten mit dem Preis ihrer Ausgabe${v.foil ? `, davon ${v.foil} Foil` : ""}`,
+    v.proxy ? `${v.proxy} Proxies zählen 0` : "",
+    v.rest ? `${v.rest} weitere zur günstigsten Ausgabe` : "",
+    `Günstigste Ausgaben für alles: ${fmtPrice(v.cheapest, cur)}`].filter(Boolean).join("\n");
+}
+function copyLabel(c) {
+  const lang = c.lang && c.lang !== "en" ? (LANG_NAMES[c.lang] || c.lang.toUpperCase()) : "";
+  return [c.set_name || (c.set || "").toUpperCase(), c.collector_number ? `#${c.collector_number}` : "", c.foil ? "Foil" : "", lang, c.proxy ? "Proxy" : ""]
+    .filter(Boolean).join(" · ");
 }
 
 // ---------- test hand (London mulligan, first mulligan free) ----------
@@ -1760,7 +1790,8 @@ document.addEventListener("mouseover", (e) => {
   if (!el || !el.dataset.img || el.closest(".cards.grid")) return;
   const [front, back] = preview.querySelectorAll("img");
   front.src = el.dataset.img;
-  back.hidden = !el.dataset.imgBack;  // double-faced: both sides side by side
+  back.hidden = back.parentElement.hidden = !el.dataset.imgBack;  // double-faced: both sides side by side
+  preview.classList.toggle("foil", !!el.dataset.foil);
   if (el.dataset.imgBack) back.src = el.dataset.imgBack;
   preview.hidden = false;
 });
@@ -1805,7 +1836,9 @@ function openCardFromEvent(e) {
   const row = e.target.closest(".card[data-name]");
   // arrows step through the list the card is in: the deck, or the maybe list
   const rows = [...$("#cards").querySelectorAll(`.card[data-name]:not(.removed)${row.dataset.maybe ? "[data-maybe]" : ":not([data-maybe])"}`)];
-  showCardView(name, cdOf(name), rows.map((el) => ({ name: el.dataset.name, cd: cdOf(el.dataset.name) })), rows.indexOf(row));
+  const copiesOf = (el) => (el.dataset.maybe ? [] : deckCopies(el.dataset.name));
+  const list = rows.map((el) => ({ name: el.dataset.name, cd: cdOf(el.dataset.name), copies: copiesOf(el) }));
+  showCardView(name, cdOf(name), list, rows.indexOf(row), copiesOf(row));
 }
 $("#cards").addEventListener("click", openCardFromEvent);
 $("#cards").addEventListener("keydown", (e) => {
@@ -1815,17 +1848,15 @@ $("#cards").addEventListener("keydown", (e) => {
 let cardViewCard = null;  // { name, cd } of the open card view
 let cardViewList = null;  // [{name, cd}] frozen when the view opened
 let cardViewIndex = -1;
+let cardViewCopies = [];  // the deck's own copies of the open card (Ort = this deck)
 
-function showCardView(name, cd, list, index) {
+function showCardView(name, cd, list, index, copies = []) {
   cardViewCard = { name, cd: cd || {} };
   cardViewList = list || null;
   cardViewIndex = list ? index : -1;
-  const faces = name.split(" // ");
-  const imgs = [[cd.image, faces[0]], ...(cd.image_back ? [[cd.image_back, faces[1] || "Rückseite"]] : [])].filter(([u]) => u);
+  cardViewCopies = copies || [];
+  renderCardViewFaces(0);
   $("#card-view-title").textContent = name + (cd.image_back ? " – doppelseitig" : "");
-  $("#card-view-faces").innerHTML = imgs.map(([u, label]) =>
-    `<figure><img src="${esc(u.replace("/normal/", "/large/"))}" alt="${esc(label)}">${imgs.length > 1 ? `<figcaption>${esc(label)}</figcaption>` : ""}</figure>`).join("")
-    || '<p class="muted">Kein Bild verfügbar.</p>';
   $("#card-view-link").href = cd.scryfall_uri || `https://scryfall.com/search?q=${enc('!"' + name + '"')}`;
   const prev = cardViewList && cardViewIndex > 0 ? cardViewList[cardViewIndex - 1] : null;
   const next = cardViewList && cardViewIndex < cardViewList.length - 1 ? cardViewList[cardViewIndex + 1] : null;
@@ -1843,8 +1874,106 @@ function stepCardView(dir) {
   const i = cardViewIndex + dir;
   if (i < 0 || i >= cardViewList.length) return;
   const item = cardViewList[i];
-  showCardView(item.name, item.cd, cardViewList, i);
+  showCardView(item.name, item.cd, cardViewList, i, item.copies);
 }
+
+// the faces of the open card: the picked own copy (its printing, foil look) or the default printing
+function renderCardViewFaces(pick) {
+  const { name, cd } = cardViewCard;
+  const copy = cardViewCopies[pick] || null;
+  const front = copy?.image || cd.image, back = copy?.image ? copy.image_back : cd.image_back;
+  const faces = name.split(" // ");
+  const imgs = [[front, faces[0]], ...(back ? [[back, faces[1] || "Rückseite"]] : [])].filter(([u]) => u);
+  const big = (u) => u.replace("/normal/", "/large/").replace("/small/", "/large/");
+  // each face is a 3D card: front (with the foil sheen and a glare) and the Magic card back behind it
+  $("#card-view-faces").innerHTML = imgs.map(([u, label]) =>
+    `<figure class="card3d-wrap${copy?.foil ? " foil" : ""}"><div class="card3d" title="Ziehen zum Drehen, Doppelklick dreht um">
+      <span class="holo front"><img src="${esc(big(u))}" alt="${esc(label)}" draggable="false">${copy?.foil ? '<span class="foil-sheen" aria-hidden="true"></span>' : ""}<span class="glare" aria-hidden="true"></span></span>
+      <span class="holo backside" aria-hidden="true"><img src="${CARD_BACK}" alt="" draggable="false" loading="lazy"></span></div>
+      ${imgs.length > 1 ? `<figcaption>${esc(label)}</figcaption>` : ""}</figure>`).join("")
+    || '<p class="muted">Kein Bild verfügbar.</p>';
+  const box = $("#card-view-copies");
+  box.hidden = !cardViewCopies.length;
+  if (!cardViewCopies.length) { box.innerHTML = ""; return; }
+  const one = (c, i) => `${c.qty > 1 ? `${c.qty}× ` : ""}${copyLabel(c)}`;
+  box.innerHTML = cardViewCopies.length === 1
+    ? `<span class="muted">Liegt im Deck:</span> ${esc(one(cardViewCopies[0]))}`
+    : `<span class="muted">Liegt im Deck:</span> ${cardViewCopies.map((c, i) =>
+      `<button type="button" class="chip${i === pick ? " on" : ""}" data-copy="${i}" aria-pressed="${i === pick}">${esc(one(c, i))}</button>`).join("")}`;
+}
+$("#card-view-copies").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-copy]");
+  if (b) renderCardViewFaces(Number(b.dataset.copy));
+});
+// 3D card in the big view: it leans towards the pointer, a drag turns it (let go: it settles on the nearer side),
+// a double click turns it over; the foil sheen and the glare follow the angle
+const CARD_BACK = "https://backs.scryfall.io/large/0/a/0aeebaf5-8c7d-4636-9e82-8c27447861f7.jpg";
+const calmMotion = matchMedia("(prefers-reduced-motion: reduce)");
+const card3d = new WeakMap();  // .card3d -> { side: 0|180, rx, ry, drag }
+function pose(el, rx, ry, px = 0.5, py = 0.5) {
+  const st = card3d.get(el) || { side: 0 };
+  st.rx = rx; st.ry = ry;
+  card3d.set(el, st);
+  el.style.setProperty("--rx", `${rx.toFixed(2)}deg`);
+  el.style.setProperty("--ry", `${ry.toFixed(2)}deg`);
+  const turn = ((ry % 360) + 540) % 360 - 180;  // -180..180, 0 = front
+  const lean = Math.max(-1, Math.min(1, (Math.abs(turn) > 90 ? -1 : 1) * Math.sin((turn * Math.PI) / 180) * 2));
+  el.style.setProperty("--mx", `${(50 + lean * 45 + (px - 0.5) * 40).toFixed(1)}%`);
+  el.style.setProperty("--my", `${(50 - rx * 2.5 + (py - 0.5) * 40).toFixed(1)}%`);
+  el.style.setProperty("--gx", `${(px * 100).toFixed(1)}%`);
+  el.style.setProperty("--gy", `${(py * 100).toFixed(1)}%`);
+}
+function settle(el, side) {
+  const st = card3d.get(el) || {};
+  st.side = side; st.drag = null;
+  el.classList.remove("dragging", "leaning");
+  pose(el, 0, side);
+}
+function flipCard(el) {
+  const st = card3d.get(el) || { side: 0 };
+  settle(el, (st.side || 0) + 180);
+}
+const faces3d = $("#card-view-faces");
+faces3d.addEventListener("pointerdown", (e) => {
+  const el = e.target.closest(".card3d");
+  if (!el || e.button !== 0) return;
+  e.preventDefault();
+  const st = card3d.get(el) || { side: 0, rx: 0, ry: 0 };
+  st.drag = { x: e.clientX, y: e.clientY, ry: st.ry ?? st.side, moved: false };
+  card3d.set(el, st);
+  el.setPointerCapture(e.pointerId);
+  el.classList.add("dragging");
+});
+faces3d.addEventListener("pointermove", (e) => {
+  const el = e.target.closest(".card3d");
+  if (!el) return;
+  const st = card3d.get(el) || { side: 0 };
+  const r = el.getBoundingClientRect();
+  const px = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), py = Math.max(0, Math.min(1, (e.clientY - r.top) / r.height));
+  if (st.drag) {
+    const dx = e.clientX - st.drag.x, dy = e.clientY - st.drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) st.drag.moved = true;
+    return pose(el, Math.max(-30, Math.min(30, -dy * 0.35)), st.drag.ry + dx * 0.6, px, py);
+  }
+  if (calmMotion.matches || e.pointerType !== "mouse") return;
+  el.classList.add("leaning");
+  pose(el, (0.5 - py) * 16, (st.side || 0) + (px - 0.5) * 22, px, py);
+});
+function endDrag(e) {
+  const el = e.target.closest(".card3d");
+  const st = el && card3d.get(el);
+  if (!st?.drag) return;
+  // settle on the side that faces the viewer, a quick flick past 60° turns it over
+  const base = st.side || 0, moved = st.ry - base;
+  settle(el, Math.abs(moved) > 60 ? base + Math.sign(moved) * 180 * Math.max(1, Math.round(Math.abs(moved) / 180)) : base);
+}
+faces3d.addEventListener("pointerup", endDrag);
+faces3d.addEventListener("pointercancel", endDrag);
+faces3d.addEventListener("pointerleave", (e) => {
+  for (const el of faces3d.querySelectorAll(".card3d.leaning")) if (!card3d.get(el)?.drag) settle(el, card3d.get(el)?.side || 0);
+});
+faces3d.addEventListener("dblclick", (e) => { const el = e.target.closest(".card3d"); if (el) flipCard(el); });
+$("#card-view-flip").addEventListener("click", () => faces3d.querySelectorAll(".card3d").forEach(flipCard));
 $("#card-view-prev").addEventListener("click", () => stepCardView(-1));
 $("#card-view-next").addEventListener("click", () => stepCardView(1));
 $("#card-view").addEventListener("keydown", (e) => {
@@ -3312,6 +3441,9 @@ async function loadOwnership(d) {
   try { ownership = { ...(await api(`/api/decks/${enc(d.slug)}/ownership`)), slug: d.slug }; } catch { return; }
   if (currentDeck?.slug !== d.slug) return;
   renderCards(currentDeck);
+  $("#deck-facts").textContent = deckFacts(currentDeck);
+  $("#deck-facts").title = deckValueTip(currentDeck);
+  if (shownCopy(currentDeck.commanders[0])?.image) $("#deck-thumb").src = shownCopy(currentDeck.commanders[0]).image;
   const o = ownership;
   const pct = (n) => `${(n / Math.max(o.need, 1)) * 100}%`;
   const cur = o.currency === "usd" ? "USD" : "EUR";

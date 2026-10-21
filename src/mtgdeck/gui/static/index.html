@@ -1356,6 +1356,10 @@
   <div class="card-view-body">
     <div class="card-view-stage">
       <div id="card-view-faces" class="card-view-faces"></div>
+      <div class="card-view-under">
+        <p id="card-view-copies" class="card-view-copies" hidden></p>
+        <button type="button" class="btn small ghost" id="card-view-flip"><svg class="icon"><use href="#i-swap"/></svg>Umdrehen</button>
+      </div>
       <button type="button" class="icon-btn card-view-nav prev" id="card-view-prev" hidden><svg class="icon"><use href="#i-back"/></svg></button>
       <button type="button" class="icon-btn card-view-nav next" id="card-view-next" hidden><svg class="icon"><use href="#i-forward"/></svg></button>
     </div>
@@ -1515,7 +1519,7 @@
   <option value="Casual / Kitchen Table"><option value="kompetitiv angehaucht"><option value="Group Hug">
 </datalist>
 
-<div id="preview" class="card-preview" hidden><img alt=""><img alt="" class="back" hidden></div>
+<div id="preview" class="card-preview" hidden><span class="holo"><img alt=""><span class="foil-sheen" aria-hidden="true"></span></span><span class="holo" hidden><img alt="" class="back" hidden><span class="foil-sheen" aria-hidden="true"></span></span></div>
 
 <script src="/static/vendor/xterm/xterm.js"></script>
 <script src="/static/app.js"></script>

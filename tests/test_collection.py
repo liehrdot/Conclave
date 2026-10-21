@@ -81,7 +81,7 @@ async def test_deck_ownership_missing_and_shared():
     o = await collection.deck_ownership(deck)
     assert o["cards"]["Sol Ring"] == {"need": 1, "real": 1, "proxy": 0, "missing": 0, "basic": False,
                                       "other_decks": ["Own B"], "shared_shortage": True,
-                                      "places": [{"place": "", "place_deck": "", "proxy": False, "qty": 1}]}  # fmt: skip
+                                      "places": [{"place": "", "place_deck": "", "proxy": False, "qty": 1}], "copies": []}  # fmt: skip
     assert o["cards"]["Cultivate"]["proxy"] == 1 and o["cards"]["Forest"]["basic"] and o["cards"]["Forest"]["missing"] == 0
     assert o["cards"]["Filler 0"]["shared_shortage"] is False  # 2 copies for 2 decks
     assert o["have_real"] == 1 + 1 + 36 and o["have_proxy"] == 1  # Sol Ring, Filler 0, basics; Cultivate as proxy
@@ -95,6 +95,38 @@ async def test_deck_ownership_missing_and_shared():
                       {"place": "Bulk", "place_deck": "", "proxy": True, "qty": 1}]  # where each copy is, for the ✓ tooltip  # fmt: skip
     miss = collection.missing_counts(deck)
     assert miss["Sol Ring"] == 0 and miss["Cultivate"] == 0 and miss["Forest"] == 0 and miss["Filler 1"] == 1
+
+
+async def test_deck_copies_and_value():
+    """Copies whose Ort is the deck: their printing and foil look, priced with today's price of that printing."""
+    await save_deck(name="Own A", commanders=["Meren of Clan Nel Toth"], bracket=2,
+                    cards=[{"name": l.split(" ", 1)[1], "qty": int(l.split(" ", 1)[0])} for l in deck_lines()])  # fmt: skip
+    deck = storage.load("own-a")
+    plain = await collection.deck_ownership(deck)
+    assert plain["value"]["own"] == 0 and plain["value"]["total"] == plain["value"]["cheapest"]
+    sid = "5a1c0de0-0000-4000-8000-00000000c0de"
+    await collection.add([{"name": "Sol Ring", "scryfall_id": sid, "foil": True}], place="Own A", place_deck="own-a")
+    await collection.add([{"name": "Cultivate", "proxy": True}], place="Own A", place_deck="own-a")
+    await collection.add([{"name": "Forest", "qty": 3}], place="Own A", place_deck="own-a")
+    await collection.add([{"name": "Swamp"}], place="Bulk")  # elsewhere: not shown in the deck
+    o = await collection.deck_ownership(deck)
+    sol = o["cards"]["Sol Ring"]["copies"]
+    assert sol == [{"id": sol[0]["id"], "qty": 1, "proxy": False, "foil": True, "lang": "en", "set": "ltc", "set_name": "Set LTC",
+                    "collector_number": "284", "image": f"https://cards.scryfall.io/normal/front/{sid}.jpg", "image_back": None,
+                    "price": 4.0}]  # the foil price of that printing  # fmt: skip
+    assert o["cards"]["Cultivate"]["copies"][0]["proxy"] and o["cards"]["Swamp"]["copies"] == []
+    assert o["cards"]["Forest"]["copies"][0]["qty"] == 3 and o["cards"]["Forest"]["copies"][0]["price"] is None
+    v = o["value"]
+    assert (v["own"], v["foil"], v["proxy"], v["rest"]) == (4, 1, 1, 95)
+    cheap = {n: float((await cards_price(n)) or 0) for n in ("Sol Ring", "Cultivate")}
+    # Sol Ring at its foil price, the proxy at 0, the Forests (no price known) like every other card at the cheapest
+    assert v["total"] == round(v["cheapest"] - cheap["Sol Ring"] + 4.0 - cheap["Cultivate"], 2)
+
+
+async def cards_price(name):
+    from mtgdeck.cards import resolve
+    data, _, _ = await resolve([name])
+    return data[name].get("price_eur")
 
 
 async def test_search_owned_filters_identity():

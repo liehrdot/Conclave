@@ -8,7 +8,9 @@ quantity are merged; the same card in two places stays two entries.
 
 Imports understand the CSV exports of ManaBox, Moxfield (incl. its Proxy column) and Archidekt as
 well as plain lists ("2 Sol Ring (C21) 263 *F*"). ``deck_ownership`` compares a deck with the
-collection (real / proxy / missing, shopping list, cards shared by several decks).
+collection (real / proxy / missing, shopping list, cards shared by several decks) and lists the copies whose Ort is
+the deck itself (``copies``: their printing, foil, proxy and today's price), which the deck view shows instead of the
+default printing and which ``value`` prices.
 """
 
 from __future__ import annotations
@@ -496,6 +498,7 @@ async def deck_ownership(deck: dict[str, Any], *, card_data: dict[str, dict[str,
             price = float((card_data.get(name) or {}).get(f"price_{cur}") or 0)
             shopping.append({"name": name, "qty": missing, "price": round(price * missing, 2) if price else None})
     shopping.sort(key=lambda s: s["name"])
+    value = await _deck_value(deck, need, cards, entries, card_data, cur)
     return {
         "collection_size": len(entries),
         "currency": cur,
@@ -508,7 +511,73 @@ async def deck_ownership(deck: dict[str, Any], *, card_data: dict[str, dict[str,
         "shopping": shopping,
         "shopping_text": "\n".join(f"{s['qty']} {s['name']}" for s in shopping),
         "shared_shortages": sorted(n for n, c in cards.items() if c["shared_shortage"]),
+        "value": value,
     }
+
+
+_SCRYFALL_ID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def _scan(scryfall_id: str, face: str = "front") -> str:
+    return f"https://cards.scryfall.io/normal/{face}/{scryfall_id[0]}/{scryfall_id[1]}/{scryfall_id}.jpg"
+
+
+async def _deck_value(deck: dict[str, Any], need: Counter, cards: dict[str, dict[str, Any]], entries: list[dict[str, Any]],
+                      card_data: dict[str, dict[str, Any]], cur: str) -> dict[str, Any]:  # fmt: skip
+    """Fill ``cards[name]["copies"]`` with the collection copies placed in this deck (real before proxy, at most as many
+    as the deck needs) and price the deck the way it is: a real placed copy at its own printing's price (foil price
+    for foils, today's Scryfall price, else the one stored at import), a placed proxy at 0, every other copy at the
+    cheapest printing (``price_total``'s rule)."""
+    slug = deck.get("slug") or ""
+    placed: dict[str, list[dict[str, Any]]] = {}
+    for e in entries if slug else []:
+        if e.get("place_deck") != slug:
+            continue
+        name = e["name"] if e["name"] in need else e["name"].split(" // ")[0]
+        name = name if name in need else next((n for n in need if n.split(" // ")[0] == name), "")
+        if name:
+            placed.setdefault(name, []).append(e)
+    ids = sorted({e["scryfall_id"] for es in placed.values() for e in es if _SCRYFALL_ID.match(e.get("scryfall_id") or "")})
+    prices: dict[str, dict[str, Any]] = {}
+    if ids:
+        try:
+            found, _ = await scryfall.by_identifiers([{"id": i} for i in ids])
+            prices = {c["id"]: c.get("prices") or {} for c in found if c}
+        except Exception:  # offline: the prices stored at import
+            prices = {}
+    total = default = 0.0
+    counts = Counter()
+    for name, n in need.items():
+        unit = float((card_data.get(name) or {}).get(f"price_{cur}") or 0)
+        default += unit * n
+        left, copies = n, []
+        for e in sorted(placed.get(name, []), key=lambda e: (bool(e.get("proxy")), not e.get("foil"))):
+            if left <= 0:
+                break
+            q = min(int(e["qty"]), left)
+            left -= q
+            sid = e.get("scryfall_id") if _SCRYFALL_ID.match(e.get("scryfall_id") or "") else ""
+            p = prices.get(sid) or {}
+            foil = bool(e.get("foil"))
+            price = (p.get(f"{cur}_foil") or p.get(cur)) if foil else (p.get(cur) or p.get(f"{cur}_foil"))
+            price = float(price or e.get(f"price_{cur}") or 0) or None
+            back = e.get("image_back") or (_scan(sid, "back") if sid and (card_data.get(name) or {}).get("image_back") else None)
+            copies.append({
+                "id": e["id"], "qty": q, "proxy": bool(e.get("proxy")), "foil": foil, "lang": e.get("lang") or "en",
+                "set": e.get("set"), "set_name": e.get("set_name"), "collector_number": e.get("collector_number"),
+                "image": e.get("image") or (_scan(sid) if sid else None), "image_back": back, "price": price,
+            })  # fmt: skip
+            if e.get("proxy"):
+                counts["proxy"] += q
+            else:
+                total += (price if price is not None else unit) * q
+                counts["own"] += q
+                counts["foil"] += q if foil else 0
+        total += unit * left
+        counts["rest"] += left
+        cards[name]["copies"] = copies
+    return {"total": round(total, 2), "cheapest": round(default, 2), "own": counts["own"], "foil": counts["foil"],
+            "proxy": counts["proxy"], "rest": counts["rest"]}  # fmt: skip
 
 
 def missing_counts(deck: dict[str, Any]) -> dict[str, int]:
