@@ -226,6 +226,7 @@ fn run_once(app: &AppHandle, backend: &Backend, d: &Dirs, generation: u64) -> Re
                 s.log.clear();
             });
             let _ = app.emit("backend-ready", serde_json::json!({ "url": url }));
+            follow(app, &url);
         }
     }
     // stdout closed: the process ended (or is being stopped)
@@ -235,6 +236,18 @@ fn run_once(app: &AppHandle, backend: &Backend, d: &Dirs, generation: u64) -> Re
         let _ = append_log(&d.log, &format!("[shell] Backend beendet (code {code:?})\n"));
     }
     Ok(())
+}
+
+/// A restarted backend has a new port and token: a window still showing the old one (after a crash, or an update
+/// that failed after the backend was stopped) goes to the new address and keeps its place in the app (the hash).
+fn follow(app: &AppHandle, url: &str) {
+    let Some(w) = app.get_webview_window("main") else { return };
+    let (Ok(current), Ok(mut next)) = (w.url(), tauri::Url::parse(url)) else { return };
+    if current.host_str() != Some("127.0.0.1") || current.port() == next.port() {
+        return; // the start page navigates by itself; the same backend needs nothing
+    }
+    next.set_fragment(current.fragment());
+    let _ = w.navigate(next);
 }
 
 /// Connect until the server accepts connections (the socket is bound before the line is printed, listening
@@ -259,9 +272,14 @@ fn host_port(url: &str) -> Option<String> {
 /// A tiny HTTP client (no dependency): `GET` or `POST` to `base + path`, with the app's token and a JSON body if
 /// given; the body of a 200 answer. Used by the self-test (`/api/health`) and the bridge (`/api/desktop/poll`).
 pub fn http_request(base: &str, method: &str, path: &str, token: Option<&str>, body: Option<&str>) -> Result<String, String> {
+    http_request_within(base, method, path, token, body, Duration::from_secs(5))
+}
+
+/// Like `http_request`, for an answer that may take up to `wait` (the bridge's long poll).
+pub fn http_request_within(base: &str, method: &str, path: &str, token: Option<&str>, body: Option<&str>, wait: Duration) -> Result<String, String> {
     let addr = host_port(base).ok_or("keine Adresse")?;
     let mut s = TcpStream::connect_timeout(&addr.parse().map_err(|e| format!("{e}"))?, Duration::from_secs(3)).map_err(|e| e.to_string())?;
-    s.set_read_timeout(Some(Duration::from_secs(5))).ok();
+    s.set_read_timeout(Some(wait)).ok();
     let mut req = format!("{method} {path} HTTP/1.0\r\nHost: {addr}\r\nConnection: close\r\n");
     if let Some(t) = token {
         req.push_str(&format!("Authorization: Bearer {t}\r\n"));
