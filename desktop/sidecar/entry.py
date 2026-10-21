@@ -1,6 +1,6 @@
-"""Entry point of the packaged backend (``mtgdeck-backend[.exe]``): the same launcher as ``mtg-gui``.
+"""Entry point of the packaged backend (``conclave-backend[.exe]``): the same launcher as ``mtg-gui``.
 
-``mtgdeck-backend --data <folder> --port 0 --token auto`` serves the GUI and prints ``MTGDECK_URL=…``."""
+``conclave-backend --data <folder> --port 0 --token auto`` serves the GUI and prints ``MTGDECK_URL=…``."""
 
 import multiprocessing
 import sys

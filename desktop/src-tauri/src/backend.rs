@@ -1,6 +1,6 @@
 //! The Python backend as a supervised child process.
 //!
-//! The packaged backend (`resources/backend/mtgdeck-backend[.exe]`, a PyInstaller folder build) is started with
+//! The packaged backend (`resources/backend/conclave-backend[.exe]`, a PyInstaller folder build) is started with
 //! its own data folder, a free port and a fresh access token. It prints one line `MTGDECK_URL=…`; the window
 //! navigates there. If it dies, it is restarted with a short backoff (1, 2, 5, 5, 5 s); after five failures in a
 //! row the start page shows what went wrong (the log's tail) and offers a retry. Its stdout/stderr go to
@@ -72,9 +72,9 @@ pub fn dirs(app: &AppHandle) -> Dirs {
 }
 
 /// The backend executable: `MTGDECK_BACKEND` (development), the bundled resource, or the PyInstaller output
-/// next to the repository (`dist/mtgdeck-backend/`) when running from `cargo tauri dev`.
+/// next to the repository (`dist/conclave-backend/`) when running from `cargo tauri dev`.
 pub fn executable(app: &AppHandle) -> Option<PathBuf> {
-    let name = if cfg!(windows) { "mtgdeck-backend.exe" } else { "mtgdeck-backend" };
+    let name = if cfg!(windows) { "conclave-backend.exe" } else { "conclave-backend" };
     if let Some(p) = std::env::var_os("MTGDECK_BACKEND") {
         return Some(PathBuf::from(p));
     }
@@ -86,7 +86,7 @@ pub fn executable(app: &AppHandle) -> Option<PathBuf> {
         let mut dir = exe.parent().map(Path::to_path_buf);
         for _ in 0..5 {
             if let Some(d) = dir {
-                candidates.push(d.join("dist").join("mtgdeck-backend").join(name));
+                candidates.push(d.join("dist").join("conclave-backend").join(name));
                 candidates.push(d.join("resources").join("backend").join(name));
                 dir = d.parent().map(Path::to_path_buf);
             }
@@ -180,7 +180,7 @@ fn append_log(path: &Path, text: &str) -> std::io::Result<()> {
 }
 
 fn run_once(app: &AppHandle, backend: &Backend, d: &Dirs, generation: u64) -> Result<(), String> {
-    let exe = executable(app).ok_or_else(|| "Backend nicht gefunden (resources/backend/mtgdeck-backend)".to_string())?;
+    let exe = executable(app).ok_or_else(|| "Backend nicht gefunden (resources/backend/conclave-backend)".to_string())?;
     // one log per run, the previous one kept
     if d.log.exists() {
         let _ = fs::rename(&d.log, d.log.with_extension("1.log"));

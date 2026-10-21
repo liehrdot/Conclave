@@ -51,7 +51,7 @@ jobs:
         shell: pwsh
         run: |
           $data = Join-Path $env:RUNNER_TEMP "mtgdata"
-          $p = Start-Process -FilePath "dist/mtgdeck-backend/mtgdeck-backend.exe" -ArgumentList "--data", $data, "--port", "0", "--token", "auto" -RedirectStandardOutput out.txt -RedirectStandardError err.txt -PassThru -NoNewWindow
+          $p = Start-Process -FilePath "dist/conclave-backend/conclave-backend.exe" -ArgumentList "--data", $data, "--port", "0", "--token", "auto" -RedirectStandardOutput out.txt -RedirectStandardError err.txt -PassThru -NoNewWindow
           $url = $null
           for ($i = 0; $i -lt 120 -and -not $url; $i++) {
             Start-Sleep -Milliseconds 500

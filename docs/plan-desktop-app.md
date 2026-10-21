@@ -124,10 +124,10 @@ desktop/                      Tauri-2-Projekt (Rust-Hülle, rund 450 Zeilen)
     src/backend.rs            Backend starten, überwachen, neu starten, Protokoll
     icons/
   ui/index.html               lokale Startseite (Gerüst), springt zur Adresse des Backends
-  sidecar/                    PyInstaller-Spec: mtgdeck-backend als Ordner-Build
+  sidecar/                    PyInstaller-Spec: conclave-backend als Ordner-Build
 ```
 
-- **Start:** Tauri startet `mtgdeck-backend.exe --data … --cache … --port 0 --token auto` (Port 0 bindet einen
+- **Start:** Tauri startet `conclave-backend.exe --data … --cache … --port 0 --token auto` (Port 0 bindet einen
   freien Port, der Token schützt die lokale API; das Backend meldet `MTGDECK_URL=…` auf stdout). Das Fenster zeigt
   die lokale Startseite mit Gerüst und springt zur gemeldeten Adresse; der erste Aufruf mit `?token=` setzt das
   Cookie. Stirbt das Backend, startet die Hülle es nach 1, 2, 5, 5, 5 s neu; danach zeigt die Startseite das Ende
@@ -164,7 +164,7 @@ desktop/                      Tauri-2-Projekt (Rust-Hülle, rund 450 Zeilen)
 | Schritt | Inhalt | fertig, wenn |
 |---|---|---|
 | **5a – Aufräumen** ✅ | Deskmat-Studio und die Online-Exporte entfernt; Seitenleiste und Einstellungen gestrafft. KI-Hochskalierung und das Browser-Terminal bleiben auf Wunsch | Tests grün, Oberfläche ohne Leerstellen, alte Daten übernommen |
-| **5b – Backend als Programm** ✅ | `mtg-gui --data … --port 0 --token auto` (Launcher `mtgdeck.launch`, Datenordner `paths.home()`, Token-Schutz, `/api/health`), PyInstaller-Ordner-Build (`desktop/sidecar/backend.spec`), Workflow „Desktop“ baut und prüft die Windows-Exe | `mtgdeck-backend.exe` startet ohne Python |
+| **5b – Backend als Programm** ✅ | `mtg-gui --data … --port 0 --token auto` (Launcher `mtgdeck.launch`, Datenordner `paths.home()`, Token-Schutz, `/api/health`), PyInstaller-Ordner-Build (`desktop/sidecar/backend.spec`), Workflow „Desktop“ baut und prüft die Windows-Exe | `conclave-backend.exe` startet ohne Python |
 | **5c – Tauri-Hülle** ✅ | Fenster, Sidecar-Aufsicht mit Neustart und Protokoll, Single Instance, Fensterzustand, Tray, Autostart-Option, Hinweis beim Schließen, `--selftest`; der Workflow baut Backend und Hülle, prüft beide und lädt den NSIS-Installer hoch | Installer aus GitHub Actions läuft auf einem frischen Windows |
 | **5d – Desktop-Feinschliff** ✅ | Tastenkürzel (Strg+K/N/,/S, `?` Übersicht), Tray-Tooltip mit Zustand, Benachrichtigungen bei verstecktem Fenster, Einstellungen „Desktop-App“ (Autostart, Benachrichtigungen, Ordner, Protokoll) | die zehn Regeln oben erfüllt |
 | **5e – Updates** ✅ | Signaturschlüssel (öffentlicher Teil in `tauri.conf.json`), `latest.json`, Release-Workflow bei Tag mit Versionsprüfung, `scripts/bump_version.py`, Update-Prüfung und -Installation aus der App | ein Update von v0.1 auf v0.2 läuft durch – steht noch aus: braucht die Secrets im Repository und zwei Tags |
@@ -189,7 +189,7 @@ und Befehle gehen über die lokale API.
 **v0.1.0 auf einem echten Windows:** Das Fenster zeigte nur das 401-JSON der Token-Sperre. Das Cookie war `SameSite=Strict`, und WebView2 schickt ein Strict-Cookie nicht auf der Navigation, die auf die Weiterleitung von `/?token=` folgt, weil die Startseite der Hülle auf `tauri.localhost` liegt (anderer Site). Mit `Lax` lädt die App; fremde Seiten bleiben durch Origin-Prüfung und CORS draußen (in Chromium nachgestellt, `test_launch.py`). Behoben in v0.1.1.
 
 **v0.1.1 → v0.1.2 auf einem echten Windows:** Download und Start des Installers liefen, das Kopieren scheiterte mit
-„Schreiben nicht möglich“. Der Tauri-Updater beendet nur das Hauptprogramm; `mtgdeck-backend.exe` samt Kindprozessen lief
+„Schreiben nicht möglich“. Der Tauri-Updater beendet nur das Hauptprogramm; `mtgdeck-backend.exe` (heute `conclave-backend.exe`) samt Kindprozessen lief
 weiter und hielt die Dateien in `resources\backend` offen. Behoben doppelt: die Hülle beendet vor
 dem Installieren den ganzen Prozessbaum (`taskkill /T`), und ein NSIS-Hook (`hooks.nsh`, `installerHooks`) tut das
 vor dem Kopieren noch einmal – so klappt auch das Update aus einer älteren App und eine Installation über eine
