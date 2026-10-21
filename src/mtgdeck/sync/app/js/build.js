@@ -310,7 +310,7 @@ async function search(d, query, extra = {}) {
     if (!page.total && extra.broader) { page = await scry.searchQuery(extra.broader); query = extra.broader; extra.wider = true; }
     if (!page.total && extra.multilingual) page = await scry.searchQuery(query, 1, { multilingual: true });
     if (mine !== S.seq) return;
-    S.result = { query, cards: page.cards, total: page.total, next: page.next, show: SHOW_STEP, explain: extra.explain || "", wider: !!extra.wider, title: extra.title || "" };
+    S.result = { query, cards: extra.first ? scry.exactFirst(page.cards, extra.first) : page.cards, total: page.total, next: page.next, show: SHOW_STEP, explain: extra.explain || "", wider: !!extra.wider, title: extra.title || "" };
   } catch (e) {
     if (mine !== S.seq) return;
     S.error = e;
@@ -325,7 +325,7 @@ function runName(d) {
   // typed name: everything with that name (cards outside the colours are shown, but greyed out); else the colours
   const query = q ? `${q} ${S.filter} f:commander` : `${S.filter} f:commander id<=${identity(d)} -t:basic`;
   const title = q ? "Treffer" : S.filter ? `${label} in deinen Farben` : "Beliebt in deinen Farben";
-  return search(d, query.replace(/\s+/g, " ").trim(), { title, multilingual: !!q });
+  return search(d, query.replace(/\s+/g, " ").trim(), { title, multilingual: !!q, first: q });
 }
 
 async function runDescribe(d, text) {

@@ -120,6 +120,20 @@ async def search_page(query: str, *, page: int = 1, order: str = "released", uni
     return {"total": data.get("total_cards", 0), "cards": data.get("data", []), "has_more": bool(data.get("has_more"))}
 
 
+def same_card(card: dict[str, Any], name: str) -> bool:
+    """Is this the card ``name`` (or its front face) itself? Scryfall's ``!"name"`` also finds cards that
+    only carry the name on a later face, like Studious First-Year // Rampant Growth (a prepared spell)."""
+    full, name = (card.get("name") or "").lower(), name.strip().lower()
+    return full == name or full.startswith(f"{name} // ")
+
+
+async def exact_page(name: str, extra: str = "", *, page: int = 1, order: str = "released", unique: str = "prints") -> dict[str, Any]:
+    """``search_page`` for the printings of exactly this card, without cards that only carry the name on another face."""
+    result = await search_page(f'!"{name}" {extra}'.strip(), page=page, order=order, unique=unique)
+    cards = [c for c in result["cards"] if same_card(c, name)]
+    return {**result, "cards": cards, "total": max(len(cards), result["total"] - (len(result["cards"]) - len(cards)))}
+
+
 async def named(name: str, *, fuzzy: bool = True) -> dict[str, Any]:
     return await get_json(f"{BASE}/cards/named", {"fuzzy" if fuzzy else "exact": name})
 
@@ -216,7 +230,7 @@ async def by_identifiers(idents: list[dict[str, str]]) -> tuple[list[dict[str, A
 async def prints(name: str, *, page: int = 1) -> dict[str, Any]:
     """Paper printings of a card, newest first, one Scryfall page (175) at a time:
     ``{"prints": [printing()...], "total", "has_more", "page"}``."""
-    result = await search_page(f'!"{name}" game:paper', page=page)
+    result = await exact_page(name, "game:paper", page=page)
     return {"prints": [printing(c) for c in result["cards"]], "total": result["total"], "has_more": result["has_more"], "page": page}
 
 

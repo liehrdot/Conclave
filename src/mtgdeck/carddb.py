@@ -360,16 +360,22 @@ async def refresh(force: bool = False, with_tags: bool = True) -> dict[str, Any]
 # --- queries ----------------------------------------------------------------------------------
 
 
+# the card named exactly like that, then a card whose name has no faces (a German name of a whole card), then the rest
+_WHOLE_NAME_FIRST = "c.name != ? COLLATE NOCASE, instr(c.name, ' // ') > 0"
+
+
 def lookup(names: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
     """Exact (case-insensitive) name lookup incl. single faces of DFCs/split cards."""
     found: dict[str, dict[str, Any]] = {}
     missing: list[str] = []
     with closing(_connect()) as conn:
         for name in dict.fromkeys(n.strip() for n in names if n.strip()):
+            # a name can be a whole card and a face of another (Rampant Growth is also the prepared spell
+            # of Studious First-Year): the card of that name wins over the one that only carries it
             row = conn.execute(
                 "SELECT c.oracle_id, c.data, n.lang FROM names n JOIN cards c USING (oracle_id) "
-                "WHERE n.name = ? ORDER BY n.lang != 'en' LIMIT 1",
-                (name,),
+                f"WHERE n.name = ? ORDER BY {_WHOLE_NAME_FIRST}, n.lang != 'en' LIMIT 1",
+                (name, name),
             ).fetchone()
             if row is None:
                 missing.append(name)
@@ -379,6 +385,17 @@ def lookup(names: list[str]) -> tuple[list[dict[str, Any]], list[str]]:
             card["_query_name"] = name
             found[row["oracle_id"]] = card
     return list(found.values()), missing
+
+
+def name_matches(name: str, limit: int = 6) -> list[dict[str, Any]]:
+    """Every card that has this name, whole or as one face (any language), the whole card first."""
+    with closing(_connect()) as conn:
+        rows = conn.execute(
+            "SELECT c.data FROM names n JOIN cards c USING (oracle_id) WHERE n.name = ? "
+            f"GROUP BY c.oracle_id ORDER BY {_WHOLE_NAME_FIRST}, c.edhrec_rank IS NULL, c.edhrec_rank LIMIT ?",
+            (name.strip(), name.strip(), limit),
+        )
+        return [json.loads(r[0]) for r in rows]
 
 
 def cardmarket_prints(ids: list[int]) -> dict[int, dict[str, str]]:

@@ -89,3 +89,35 @@ async def test_old_db_without_back_faces_is_completed_live(tmp_path):
         carddb._set_meta(conn, "schema_version", str(carddb.SCHEMA_VERSION))
         carddb._set_meta(conn, "last_refresh_epoch", "9999999999")
     assert not carddb.status()["schema_outdated"] and not carddb.needs_refresh()
+
+
+def build_prepared_db(tmp_path):
+    """Rampant Growth and a creature that has it as its prepared spell (imported first, so the old LIMIT 1 picked it)."""
+    growth = card("Rampant Growth", ci="G", type_line="Sorcery")
+    growth_de = dict(growth, lang="de", printed_name="Wucherndes Wachstum")
+    bear = dict(card("Studious First-Year // Rampant Growth", ci="G"), layout="prepare", oracle_id="0-bear")
+    bear["card_faces"] = [{"name": "Studious First-Year", "type_line": "Creature"}, {"name": "Rampant Growth", "type_line": "Sorcery"}]
+    bear_de = dict(bear, lang="de", card_faces=[{**bear["card_faces"][0], "printed_name": "Fleißige Erstsemester"},
+                                                {**bear["card_faces"][1], "printed_name": "Wucherndes Wachstum"}])  # fmt: skip
+    path = tmp_path / "prepared.jsonl.gz"
+    with gzip.open(path, "wt") as fh:
+        for c in [bear, bear_de, growth, growth_de]:
+            fh.write(json.dumps(c) + "\n")
+    with closing(carddb._connect()) as conn, conn:
+        carddb._import_cards(conn, carddb._iter_jsonl_gz(path))
+
+
+async def test_spell_name_means_the_spell_not_the_prepared_creature(tmp_path):
+    from mtgdeck.cards import name_choices
+
+    build_prepared_db(tmp_path)
+    found, _ = carddb.lookup(["Rampant Growth", "wucherndes wachstum", "Studious First-Year"])
+    assert [c["name"] for c in found] == ["Rampant Growth", "Studious First-Year // Rampant Growth"]
+    # typed the spell's name: ask, the spell itself first
+    choices = await name_choices("Rampant Growth")
+    assert [c["name"] for c in choices] == ["Rampant Growth", "Studious First-Year // Rampant Growth"]
+    assert choices[1]["layout"] == "prepare"
+    assert [c["name"] for c in await name_choices("Wucherndes Wachstum")][0] == "Rampant Growth"
+    # a name that means one card asks nothing
+    assert await name_choices("Studious First-Year") == []
+    assert await name_choices("Studious First-Year // Rampant Growth") == []

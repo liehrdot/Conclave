@@ -759,6 +759,15 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .small-dialog h2 { margin-bottom: var(--space-2); }
 .small-dialog input { margin-top: var(--space-2); }
 .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-5); }
+.card-choice-dialog { width: min(560px, 94vw); }
+.card-choice-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); }
+.card-choice { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  background: var(--surface); color: var(--text); text-align: left; font: inherit; cursor: pointer; }
+.card-choice:hover, .card-choice:focus-visible { border-color: var(--accent-text); }
+.card-choice img { width: 100%; aspect-ratio: 488 / 680; object-fit: cover; border-radius: 4.75% / 3.5%; background: var(--border); }
+.card-choice b { font-weight: 600; font-size: var(--fs-sm); }
+.card-choice small { color: var(--muted); font-size: var(--fs-xs); }
+.card-choice .pill { align-self: flex-start; height: auto; min-height: 24px; white-space: normal; }
 .picker-bar { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin: var(--space-2) 0 var(--space-3); }
 .picker-bar input { flex: 0 1 280px; }
 .picker-bar p { margin: 0; }

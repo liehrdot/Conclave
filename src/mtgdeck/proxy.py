@@ -527,8 +527,7 @@ async def alternatives(deck: dict[str, Any], card_name: str, side: str = "front"
             options += [mpc.option(i, details.get(i, {}), face) for i in ids]
         except Exception:
             pass
-    query = f'!"{parts[0]}" t:token include:extras' if token else f'!"{parts[0]}" game:paper'
-    prints = await scryfall.search_page(query, page=page)
+    prints = await scryfall.exact_page(parts[0], "t:token include:extras" if token else "game:paper", page=page)
     for raw in prints["cards"]:
         c = scryfall.compact(raw)
         c["set_name"] = raw.get("set_name")

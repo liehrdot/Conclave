@@ -108,7 +108,15 @@ export async function searchCards(q) {
   const out = new Map();
   for (const c of ok(multi).slice(0, 10)) { const i = remember(c); out.set(i.name, { name: i.name, de: c.printed_name && c.lang === "de" ? c.printed_name : null, type: i.type }); }
   for (const n of auto?.data || []) if (!out.has(n)) out.set(n, { name: n, type: cache[n]?.type || "" });
-  return [...out.values()].slice(0, 15);
+  return exactFirst([...out.values()], q).slice(0, 15);
+}
+
+/** The card named exactly ``q`` before cards that only carry it on a face (Rampant Growth before
+ * Studious First-Year // Rampant Growth, the creature with it as its prepared spell); otherwise the order stays. */
+export function exactFirst(list, q) {
+  const k = q.trim().toLowerCase();
+  const rank = (c) => (c.name.toLowerCase() === k || c.de?.toLowerCase() === k ? 0 : c.name.toLowerCase().startsWith(`${k} // `) ? 1 : 2);
+  return list.map((c, i) => [rank(c), i, c]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map((x) => x[2]);
 }
 
 // any Scryfall query (the AI card search): one page of up to 175 cards, most played in Commander first
@@ -123,13 +131,16 @@ export async function searchQuery(q, page = 1, { multilingual = false } = {}) { 
   return { cards, total: data?.total_cards || 0, next: data?.has_more ? page + 1 : null };
 }
 
+// !"Rampant Growth" also finds Studious First-Year // Rampant Growth (its prepared spell): keep only the card itself
+const sameCard = (c, name) => { const n = c.name.toLowerCase(), q = name.toLowerCase(); return n === q || n.startsWith(`${q} // `); };
+
 // German printed name/type/text of a card (null when there is no German printing)
 export async function german(name) {
   if (name in cacheDe) return cacheDe[name];
   let de = null;
   try {
     const d = await api(`/cards/search?q=${encodeURIComponent(`!"${name}" lang:de`)}&unique=prints&order=released&dir=desc&include_multilingual=true`);
-    const c = ok(d)[0];
+    const c = ok(d).find((x) => sameCard(x, name));
     if (c) {
       const f = c.card_faces || [];
       de = { name: c.printed_name || f.map((x) => x.printed_name).filter(Boolean).join(" // "),
