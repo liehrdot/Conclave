@@ -32,7 +32,7 @@ from ..jsonstore import ConflictError, StoreError
 from .. import backup, blacklist, brackets, buylist, carddb, collection, deckedit, deckimport, dropcards, importers, games, glossary, health, openinghand, precons, printorders, proxy, rule0, scryfall, speed, storage, tablerules
 from .. import paths
 from .. import settings as settings_mod
-from ..cards import card_text, deck_tokens, resolve
+from ..cards import card_text, deck_tokens, name_choices, resolve
 from ..deck import DeckEntry, to_text
 from ..http import HttpError
 from ..power import TIER_LABELS, PowerProfile
@@ -381,14 +381,17 @@ async def api_autocomplete(q: str) -> list[str]:
 
 
 @app.get("/api/card")
-async def api_card(name: str) -> dict[str, Any]:
+async def api_card(name: str, choices: bool = False) -> dict[str, Any]:
+    """One card by name; ``choices=1`` adds ``choices`` when the name also is a face of another card
+    (a prepared spell), so the GUI can ask which one is meant."""
     try:
         cards, _, missing = await resolve([name])
     except Exception as exc:
         raise HTTPException(502, f"Kartendaten nicht erreichbar: {_error_text(exc)}") from exc
     if missing or not cards:
         raise HTTPException(404, f"Karte nicht gefunden: {name}")
-    return next(iter(cards.values()))
+    card = next(iter(cards.values()))
+    return {**card, "choices": await name_choices(name)} if choices else card
 
 
 class DropRequest(BaseModel):

@@ -35,6 +35,25 @@ async def resolve(names: list[str]) -> tuple[dict[str, dict[str, Any]], dict[str
     return by_name, renames, missing
 
 
+async def name_choices(name: str) -> list[dict[str, Any]]:
+    """The cards a typed name can mean when it is a whole card and also a face of another one
+    (Rampant Growth and Studious First-Year // Rampant Growth, the creature that has it as its
+    prepared spell), the card of that name first. Empty when the name is clear."""
+    name = name.strip()
+    if carddb.available():
+        found = carddb.name_matches(name)
+    else:
+        try:
+            raw = (await scryfall.search(f'!"{name}"', max_results=6))["cards"]
+        except Exception:  # offline: the plain lookup still adds the card itself
+            return []
+        found = list({c["name"]: scryfall.compact(c, with_text=False) for c in raw}.values())
+        found.sort(key=lambda c: (c["name"].lower() != name.lower(), " // " in c["name"]))
+    if len(found) < 2 or any(c["name"].lower() == name.lower() and " // " in c["name"] for c in found):
+        return []  # one card, or the full name of a two-part card was typed
+    return [{"name": c["name"], "type_line": c.get("type_line", ""), "image": c.get("image"), "layout": c.get("layout")} for c in found]
+
+
 async def deck_tokens(names: list[str]) -> list[dict[str, Any]]:
     """Tokens, emblems and markers the given cards create, merged by name and type:
     ``[{"name", "type_line", "id", "image", "from": [card names]}]``."""
@@ -77,7 +96,7 @@ async def card_text(name: str, lang: str = "de") -> dict[str, Any] | None:
     printed: dict[str, Any] | None = None
     if lang and lang != "en":
         try:
-            page = await scryfall.search_page(f'!"{c["name"]}" lang:{lang}', order="released", unique="prints")
+            page = await scryfall.exact_page(c["name"], f"lang:{lang}")
         except Exception:  # offline: English only
             page = {"cards": []}
         for r in page["cards"]:

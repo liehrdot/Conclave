@@ -72,6 +72,16 @@ CARDS = {
                  "image_uris": {"normal": "https://cards.scryfall.io/normal/back/delver.jpg"}},
             ],
         },
+        card("Rampant Growth", ci="G", type_line="Sorcery", cmc=2,
+             text="Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle."),
+        {   # a creature that carries Rampant Growth as its prepared spell (layout "prepare")
+            **card("Studious First-Year // Rampant Growth", ci="G", type_line="Creature — Bear Wizard // Sorcery", cmc=1),
+            "layout": "prepare",
+            "card_faces": [
+                {"name": "Studious First-Year", "type_line": "Creature — Bear Wizard", "oracle_text": "Prepared"},
+                {"name": "Rampant Growth", "type_line": "Sorcery", "oracle_text": "Search your library for a basic land card."},
+            ],
+        },
     ]
 }
 for _c in CARDS.values():  # drop None image_uris (DFC) so compact() falls back to the faces
@@ -212,6 +222,11 @@ def handler(request: httpx.Request) -> httpx.Response:
                 ids = range((page - 1) * 175, min(page * 175, total))
                 data = [{**base, "set_name": f"Set {i}", "collector_number": str(i),
                          "image_uris": {"normal": f"https://cards.scryfall.io/normal/front/p{i}.jpg"}} for i in ids]  # fmt: skip
+                # like Scryfall, !"name" also finds cards that carry the name on a later face (newest first)
+                faces = [c for c in CARDS.values() if c is not base and any(f["name"].lower() == name.lower() for f in c.get("card_faces", [])[1:])]
+                if page == 1 and faces:
+                    data = [{**c, "set_name": "Set new", "collector_number": "1"} for c in faces] + data
+                    total += len(faces)
                 return httpx.Response(200, json={"total_cards": total, "has_more": page * 175 < total, "data": data})
             if "t:token" in q:  # token search for collective print orders
                 tokens = [{"object": "card", "id": f"7c0d0000-0000-0000-0000-00000000000{i}", "name": "Treasure",

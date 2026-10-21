@@ -57,6 +57,7 @@ No linter or formatter is configured. Code uses `# fmt: skip` on some dense lite
 - **`cards.resolve()`** is the one entry point for turning names into card data.
   - It tries the local DB first, then falls back to Scryfall `/cards/collection`, then fuzzy `/cards/named`.
   - It returns `renames` (query → English name). Callers must apply these renames to decklists.
+  - A name can be a whole card and a face of another one (Rampant Growth is also the prepared spell of „Studious First-Year // Rampant Growth“, layout `prepare`; adventures likewise): `carddb.lookup()` prefers the card of that exact name, then one without faces. `name_choices(name)` (DB `carddb.name_matches()`, else Scryfall `!"name"`) lists every card the name can mean, the whole card first (empty when clear or a full two-part name was typed); `GET /api/card?choices=1` adds it, and the GUI's typed adds (Karten tab „Hinzufügen“/„Vielleicht“, Sammelbestellung, Sammlung) ask via `chooseCard()` → dialog `#card-choice`. Scryfall's `!"name"` also finds such cards, so printings/artwork/German text go through `scryfall.exact_page()` (`same_card()`: the name or its front face); the phone's `scry.german()` filters the same way and `scry.exactFirst()` sorts name searches (Karten tab, iPad builder).
 - **`deck.py`**
   - Decklist parsing: plain text, Moxfield/Archidekt exports and `*CMDR*` markers.
   - Role detection: Tagger tags when a card has any (`ROLE_TAGS`), otherwise oracle-text regexes.

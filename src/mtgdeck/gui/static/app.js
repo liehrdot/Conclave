@@ -1133,12 +1133,42 @@ function removeMaybe(name) {
   if ((currentDeck.maybe || []).some((m) => m.name === name)) edit.maybeRemove.add(name);
 }
 
+/** A typed name can be a card and also a face of another one (Rampant Growth is the prepared spell of
+ * Studious First-Year): ask which one is meant, the card of that name first. → the name, or null (cancelled). */
+async function chooseCard(name, { deck = true } = {}) {
+  const known = deck && [...currentDeck?.cards || [], ...currentDeck?.maybe || [], ...edit?.add.keys() || []]
+    .some((c) => (c.name || c).toLowerCase() === name.toLowerCase());
+  if (!name || known) return name;
+  const { choices } = await api(`/api/card?name=${enc(name)}&choices=1`);
+  if (!choices?.length) return name;
+  const dlg = $("#card-choice");
+  const what = (c) => c.name.toLowerCase() === name.toLowerCase() ? ["Die Karte selbst", "accent"]
+    : c.layout === "prepare" ? ["Als vorbereiteter Zauber", ""] : c.layout === "adventure" ? ["Als Abenteuer", ""] : ["Als Kartenseite", ""];
+  $("#card-choice-text").textContent = `„${name}“ gibt es als eigene Karte und auf einer anderen Karte.`;
+  $("#card-choice-list").innerHTML = choices.map((c) => {
+    const [label, kind] = what(c);
+    return `<button type="button" class="card-choice" data-name="${esc(c.name)}">
+      ${c.image ? `<img src="${esc(c.image)}" alt="" loading="lazy">` : ""}
+      <span class="pill ${kind}">${esc(label)}</span><b>${esc(c.name)}</b><small>${esc(c.type_line || "")}</small></button>`;
+  }).join("");
+  return new Promise((resolve) => {
+    const done = (v) => { resolve(v); if (dlg.open) dlg.close(); };
+    $("#card-choice-list").onclick = (e) => { const b = e.target.closest(".card-choice"); if (b) done(b.dataset.name); };
+    $("#card-choice-cancel").onclick = () => done(null);
+    dlg.onclose = () => resolve(null);
+    dlg.showModal();
+    $("#card-choice-list .card-choice").focus();
+  });
+}
+
 wireAutocomplete($("#add-card-name"), $("#ac-add"));
 $("#add-card-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const name = $("#add-card-name").value.trim();
-  if (!name || !edit) return;
+  const typed = $("#add-card-name").value.trim();
+  if (!typed || !edit) return;
   try {
+    const name = await chooseCard(typed);
+    if (!name) return;
     const added = await addCard(name, Math.max(1, Number($("#add-card-qty").value) || 1), $("#add-card-cat").value);
     $("#add-card-name").value = "";
     $("#add-card-qty").value = 1;
@@ -1151,7 +1181,9 @@ $("#add-card-maybe").addEventListener("click", async () => {
   if (!edit) return;
   if (!name) { $("#add-card-name").focus(); return toast("Gib zuerst einen Kartennamen ein."); }
   try {
-    const added = await addMaybe(name, $("#add-card-cat").value);
+    const picked = await chooseCard(name);
+    if (!picked) return;
+    const added = await addMaybe(picked, $("#add-card-cat").value);
     $("#add-card-name").value = "";
     renderCards(currentDeck);
     toast(`${added} kommt auf die Vielleicht-Liste – mit „Speichern & prüfen“ übernehmen.`);
@@ -3385,6 +3417,8 @@ $("#coll-add-form").addEventListener("submit", async (e) => {
     ...(addPrinting ? { printing: addPrinting } : {}),
   };
   try {
+    if (!addPrinting) item.name = await chooseCard(item.name, { deck: false });  // a picked printing is clear
+    if (item.name === null) return;
     const where = parsePlace($("#coll-add-place").value);
     store.set("collplace", where.place);
     const r = await api("/api/collection", { method: "POST", body: { items: [item], ...where } });
@@ -4464,7 +4498,9 @@ $("#oadd-card").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = e.target.elements;
   try {
-    await addToOrder({ items: [{ kind: "card", name: f.name.value.trim(), qty: Number(f.qty.value) || 1, source: "Einzelkarten" }] });
+    const name = await chooseCard(f.name.value.trim(), { deck: false });
+    if (name === null) return;
+    await addToOrder({ items: [{ kind: "card", name, qty: Number(f.qty.value) || 1, source: "Einzelkarten" }] });
     e.target.reset();
     f.name.focus();
   } catch (err) { fail(err); }
