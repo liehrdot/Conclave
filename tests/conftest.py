@@ -101,6 +101,7 @@ PRINTINGS = {
     "a1b2-sol": _printing("Sol Ring", "a1b2-sol", "c21", "263"),
     "c21/263": _printing("Sol Ring", "a1b2-sol", "c21", "263"),
     "d3e4-cult": _printing("Cultivate", "d3e4-cult", "m21", "177", "de"),
+    "5a1c0de0-0000-4000-8000-00000000c0de": _printing("Sol Ring", "5a1c0de0-0000-4000-8000-00000000c0de", "ltc", "284"),
 }
 
 PRINT_COUNTS = {"Forest": 250}
