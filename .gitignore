@@ -6,6 +6,9 @@
 .cache/
 .env
 .pytest_cache/
+.scannerwork/
+.coverage
+coverage.xml
 .sync/
 .venv/
 __pycache__/
