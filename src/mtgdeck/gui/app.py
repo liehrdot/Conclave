@@ -103,7 +103,9 @@ async def _guard(request: Request, call_next: Any) -> Any:
             # Lax, not Strict: the shell's start page lives on another site (tauri.localhost), and a Strict cookie
             # is not sent on the navigation that follows this redirect – the window would show the 401 JSON. Lax
             # still keeps the cookie out of cross-site POSTs and embedded requests; the Origin check covers the rest.
-            response.set_cookie(TOKEN_COOKIE, GUI_TOKEN, httponly=True, samesite="lax", path="/")  # NOSONAR: plain HTTP on 127.0.0.1, a Secure cookie would never be sent
+            # Secure whenever the page itself came over HTTPS; the desktop backend on 127.0.0.1 is plain HTTP, where a
+            # Secure cookie would never be sent back
+            response.set_cookie(TOKEN_COOKIE, GUI_TOKEN, httponly=True, samesite="lax", path="/", secure=request.url.scheme == "https")
             return response
         if not _token_ok(request):
             return JSONResponse({"detail": "Kein Zugriff: Die Oberfläche gehört zur Desktop-App. Bitte dort öffnen."}, status_code=401)
