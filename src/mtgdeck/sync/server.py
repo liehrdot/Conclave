@@ -568,6 +568,18 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
     return app
 
 
+def _find_backup(folder: Path, given: str) -> Path:
+    """The backup ``given`` (a file name, or a path into ``folder``) among the backups in ``folder``: only those can
+    be restored, so the path handed to SQLite is always one of the server's own files."""
+    wanted = Path(given)
+    if wanted.parent != Path(".") and wanted.resolve().parent != folder.resolve():
+        raise SystemExit(f"Sicherungen werden aus {folder} zurückgespielt – die Datei bitte dorthin kopieren.")
+    found = next((p for p in sorted(folder.glob("*.sqlite")) if p.name == wanted.name), None) if folder.is_dir() else None
+    if found is None:
+        raise SystemExit(f"Keine Sicherung „{wanted.name}“ in {folder}.")
+    return found
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="mtg-sync-server", description="Sync-Server von Conclave")
     sub = parser.add_subparsers(dest="cmd")
@@ -579,7 +591,7 @@ def main(argv: list[str] | None = None) -> None:
     rev.add_argument("device_id")
     sub.add_parser("backup", help="jetzt eine Sicherung anlegen")
     res = sub.add_parser("restore", help="eine Sicherung zurückspielen (die Geräte gleichen danach alles neu ab)")
-    res.add_argument("datei")
+    res.add_argument("datei", help="Dateiname einer Sicherung in <Daten>/backups/")
     args = parser.parse_args(argv)
     folder = data_dir()
     db_file = folder / "sync.sqlite"
@@ -601,8 +613,9 @@ def main(argv: list[str] | None = None) -> None:
         target = folder / "backups" / f"manuell-{time.strftime('%Y%m%d-%H%M%S')}.sqlite"  # not pruned
         print(SyncStore(db_file).backup(target))
     elif args.cmd == "restore":
-        safety = SyncStore(db_file).restore_from(Path(args.datei))
-        print(f"Zurückgespielt: {args.datei}. Der vorherige Stand liegt in {safety}.")
+        backup = _find_backup(folder / "backups", args.datei)
+        safety = SyncStore(db_file).restore_from(backup)
+        print(f"Zurückgespielt: {backup.name}. Der vorherige Stand liegt in {safety}.")
         print("Die Geräte merken das beim nächsten Abgleich und führen ihre Daten neu zusammen.")
     else:
         import uvicorn

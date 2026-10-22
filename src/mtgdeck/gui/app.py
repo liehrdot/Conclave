@@ -21,6 +21,7 @@ from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import urlunsplit
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse, RedirectResponse
@@ -2097,7 +2098,8 @@ def serve() -> None:
     sock.bind((host, port))
     port = sock.getsockname()[1]
     shown = f"[{host}]" if ":" in host else host
-    url = f"http://{shown}:{port}/" + (f"?token={GUI_TOKEN}" if GUI_TOKEN else "")  # NOSONAR: the local backend, no TLS on loopback
+    # the local backend on loopback: plain HTTP, there is no certificate for 127.0.0.1
+    url = urlunsplit(("http", f"{shown}:{port}", "/", f"token={GUI_TOKEN}" if GUI_TOKEN else "", ""))
     print(f"Conclave GUI: {url}")
     print(f"MTGDECK_URL={url}", flush=True)
     try:

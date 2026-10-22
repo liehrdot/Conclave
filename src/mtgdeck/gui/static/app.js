@@ -2881,7 +2881,11 @@ $("#picker-all-btn").addEventListener("click", async () => {
   const ctx = pickerCtx;
   if (!ctx) return;
   // loadPickerPage() sets ctx.hasMore; another face opened meanwhile replaces pickerCtx
-  while (pickerCtx === ctx && ctx.hasMore && $("#picker").open) await loadPickerPage();
+  let more = ctx.hasMore && $("#picker").open;
+  while (more) {
+    await loadPickerPage();
+    more = pickerCtx === ctx && ctx.hasMore && $("#picker").open;
+  }
 });
 
 async function pick(option) {
@@ -3440,7 +3444,11 @@ $("#prints-all-btn").addEventListener("click", async () => {
   const ctx = printsCtx;
   if (!ctx) return;
   // loadPrintsPage() sets ctx.hasMore; another card opened meanwhile replaces printsCtx
-  while (printsCtx === ctx && ctx.hasMore && $("#prints-dialog").open) await loadPrintsPage();
+  let more = ctx.hasMore && $("#prints-dialog").open;
+  while (more) {
+    await loadPrintsPage();
+    more = printsCtx === ctx && ctx.hasMore && $("#prints-dialog").open;
+  }
 });
 
 function pickPrinting(name) {

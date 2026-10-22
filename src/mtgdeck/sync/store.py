@@ -55,8 +55,7 @@ class SyncStore:
             """)
 
     def _db(self) -> sqlite3.Connection:
-        # a plain file path (no ``uri=True``), so nothing in it is read as connection options
-        db = sqlite3.connect(self.path, timeout=30)  # NOSONAR: the path comes from the server's own data folder or the admin's restore argument
+        db = sqlite3.connect(self.path, timeout=30)
         db.row_factory = sqlite3.Row
         return db
 
