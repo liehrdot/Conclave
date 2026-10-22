@@ -6,7 +6,7 @@ An operation is ``{"id", "type", "payload", "at"}``; ``apply(op, docs)`` takes t
 remembers applied ids, so an operation sent twice (the phone retries after a lost answer) changes nothing.
 
 Types: ``game.add`` · ``game.delete`` · ``opponent.add`` · ``opponent.update`` · ``opponent.note`` ·
-``opponent.note_delete`` · ``opponent.delete`` · ``deck.new`` · ``deck.edit`` · ``deck.flags`` · ``collection.add`` · ``collection.update``.
+``opponent.note_delete`` · ``opponent.delete`` · ``deck.new`` · ``deck.edit`` · ``deck.flags`` · ``deck.pin_order`` · ``collection.add`` · ``collection.update``.
 
 Decks built on the phone or tablet are saved like ``storage.save`` does it: a new version with a history entry and a
 full snapshot (``decks/.versions/<slug>/vNNNN.json``, returned by ``apply`` next to the deck). Card data never reaches
@@ -27,7 +27,7 @@ from typing import Any
 from .. import maybe as maybe_list
 from ..games import HOW, ISSUES, RESULTS
 from ..opponents import MAX_NOTES, TAGS
-from ..storage import FLAGS, _metrics, diff, level_text
+from ..storage import FLAGS, PIN_RANK, _metrics, diff, level_text
 from .files import snapshot_path
 
 OPPONENTS = "decks/.opponents.json"
@@ -36,12 +36,13 @@ SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]{0,80}")
 ID_RE = re.compile(r"[A-Za-z0-9_-]{1,40}")
 ISO_RE = re.compile(r"\d{4}-\d\d-\d\dT[\d:.]+(Z|[+-]\d\d:\d\d)?")
 TYPES = ("game.add", "game.delete", "opponent.add", "opponent.update", "opponent.note", "opponent.note_delete", "opponent.delete",
-         "deck.new", "deck.edit", "deck.flags", "collection.add", "collection.update")  # fmt: skip
+         "deck.new", "deck.edit", "deck.flags", "deck.pin_order", "collection.add", "collection.update")  # fmt: skip
 ROUND_KINDS = ("life", "cmd", "poison", "turn", "note")  # entries in the Runden-Helfer's log (js/round.js)
 ROUND_EVENTS_MAX = 400
 CATEGORIES = ("Ramp", "Draw", "Removal", "Board Wipe", "Counterspell", "Tutor", "Protection", "Synergy", "Win Condition", "Utility", "Land")
 DECK_CARDS_MAX = 250  # distinct cards in one deck (a Commander deck has at most 99)
 EDIT_MAX = 200  # changes in one deck.edit
+PIN_ORDER_MAX = 100  # decks in one deck.pin_order
 COLLECTION_MAX = 50000  # entries in the collection
 LANGS = ("en", "de", "fr", "it", "es", "pt", "ja", "ko", "ru", "zhs", "zht", "ph")
 UUID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
@@ -82,6 +83,11 @@ def paths(op: dict[str, Any]) -> list[str]:
         return [f"decks/{_deck_slug(p.get('deck') or {}, 'slug')}.json"]
     if t in ("deck.edit", "deck.flags"):
         return [f"decks/{_deck_slug(p)}.json"]
+    if t == "deck.pin_order":
+        slugs = p.get("slugs")
+        if not isinstance(slugs, list) or not 0 < len(slugs) <= PIN_ORDER_MAX:
+            raise OpError("Ungültige Daten")
+        return [f"decks/{s}.json" for s in dict.fromkeys(_deck_slug({"deck": s}) for s in slugs)]
     if t.startswith("collection."):
         return [COLLECTION]
     return [OPPONENTS]
@@ -300,7 +306,19 @@ def _deck_flags(p: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
             deck[key] = True
         else:
             deck.pop(key, None)
+    if not deck.get("pinned"):
+        deck.pop(PIN_RANK, None)
     return {} if deck == old else {f"decks/{slug}.json": deck}
+
+
+def _pin_order(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
+    """Like ``storage.set_pin_order``: the pinned decks get their place in ``slugs`` as ``pin_rank``."""
+    out = {}
+    for rank, path in enumerate(paths(op)):
+        deck = docs.get(path)
+        if isinstance(deck, dict) and deck.get("pinned") and deck.get(PIN_RANK) != rank:
+            out[path] = {**deck, PIN_RANK: rank}
+    return out
 
 
 def _coll_key(e: dict[str, Any]) -> tuple[Any, ...]:  # like collection._key (that module needs the network stack)
@@ -417,6 +435,8 @@ def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
         return _deck_edit(p, docs, at)
     if t == "deck.flags":
         return _deck_flags(p, docs)
+    if t == "deck.pin_order":
+        return _pin_order(op, docs)
     if t == "collection.add":
         return _collection_add(p, docs, at)
     if t == "collection.update":

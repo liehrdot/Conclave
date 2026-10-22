@@ -98,3 +98,40 @@ def test_flags_sync_without_a_new_version(world):  # noqa: F811
         use(roots)
         deck = storage.load("meren")
         assert deck["pinned"] and deck["shelved"] and deck["version"] == 1 and "needs_revalidation" not in deck
+
+
+def test_pinned_decks_keep_the_dragged_order():
+    for name in ("Alpha", "Beta", "Gamma", "Delta"):
+        _plain(name)
+        storage.set_flags(name.lower(), pinned=True)
+    storage.set_flags("delta", pinned=False)
+    client = TestClient(app)
+    assert client.put("/api/decks/pin-order", json={"slugs": ["gamma", "alpha", "beta", "delta"]}).json() == {"changed": ["gamma", "alpha", "beta"]}
+    assert [d["slug"] for d in storage.list_decks()] == ["gamma", "alpha", "beta", "delta"]
+    assert storage.set_pin_order(["gamma", "alpha", "beta"]) == []  # nothing changed, nothing written
+    storage.set_flags("delta", pinned=True)  # newly pinned: on top until it gets dragged
+    assert [d["slug"] for d in storage.list_decks()][:2] == ["delta", "gamma"]
+    storage.set_flags("alpha", pinned=False)
+    assert "pin_rank" not in storage.load("alpha") and "pin_rank" not in storage.copy("gamma")
+
+
+def test_phone_orders_pinned_decks():
+    from mtgdeck.sync.appdata import snapshot
+    from mtgdeck.sync.appops import OpError, apply, paths
+
+    def deck(slug, **extra):
+        return {"slug": slug, "name": slug.title(), "commanders": ["Meren of Clan Nel Toth"], "version": 1, "history": [], "cards": [], **extra}
+
+    docs = {"decks/a.json": deck("a", pinned=True), "decks/b.json": deck("b", pinned=True), "decks/c.json": deck("c")}
+    op = _op("deck.pin_order", {"slugs": ["b", "a", "c"], "prev": ["a", "b"]})
+    assert paths(op) == ["decks/b.json", "decks/a.json", "decks/c.json"]
+    out = apply(op, docs)
+    assert set(out) == {"decks/a.json", "decks/b.json"} and out["decks/b.json"]["pin_rank"] == 0 and out["decks/a.json"]["pin_rank"] == 1
+    assert [d["slug"] for d in snapshot({**docs, **out})["decks"]] == ["b", "a", "c"]
+    assert apply(op, {**docs, **out}) == {}
+    unpinned = apply(_op("deck.flags", {"deck": "a", "pinned": False}), {"decks/a.json": out["decks/a.json"]})["decks/a.json"]
+    assert "pin_rank" not in unpinned
+    with pytest.raises(OpError):
+        paths(_op("deck.pin_order", {"slugs": []}))
+    with pytest.raises(OpError):
+        paths(_op("deck.pin_order", {"slugs": ["../x"]}))

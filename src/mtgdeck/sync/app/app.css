@@ -776,6 +776,11 @@ body.wide .screen { max-width: 1320px; }
 .deck-flags { margin-top: 12px; }
 .shelved-note { margin: 8px 0 0; }
 .row .title .pin { width: 14px; height: 14px; color: var(--accent-text); vertical-align: -1px; }
+.row .grip { flex: none; display: grid; place-items: center; width: 44px; height: 44px; margin: -8px -10px -8px 0; color: var(--text-3); touch-action: none; cursor: grab; -webkit-touch-callout: none; user-select: none; }
+.row[data-pinned] { position: relative; transition: transform .18s ease; }
+.row.dragging { z-index: 2; transition: none; background: var(--surface); box-shadow: 0 8px 24px rgb(0 0 0 / .18); border-radius: var(--r-row, 10px); }
+.row.dragging .grip { cursor: grabbing; color: var(--accent-text); }
+.hint-small .icon { width: 13px; height: 13px; vertical-align: -2px; }
 .row.shelved .thumb { opacity: .45; filter: grayscale(.6); }
 .row.shelved .title { color: var(--text-2); }
 .draft-note {

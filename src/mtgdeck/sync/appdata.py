@@ -16,7 +16,7 @@ from typing import Any
 from .. import rule0, speed
 from ..games import HOW, ISSUES, RESULTS
 from ..opponents import TAGS, record as opponent_record, title as opponent_title
-from ..storage import level_text
+from ..storage import level_text, list_rank
 from .files import DECK_RE
 
 GAMES_RE = re.compile(r"decks/\.games/([^/.][^/]*)\.json")
@@ -54,6 +54,7 @@ def _deck(slug: str, d: dict[str, Any], games: list[dict[str, Any]]) -> dict[str
                   for c in d.get("cards") or [] if isinstance(c, dict) and c.get("name")],
         "maybe": [{"name": m["name"], "category": m.get("category") or ""} for m in d.get("maybe") or [] if isinstance(m, dict) and m.get("name")],
         "record": _record(games), "pinned": bool(d.get("pinned")), "shelved": bool(d.get("shelved")),
+        "pin_rank": d.get("pin_rank") if d.get("pinned") else None,
     }  # fmt: skip
 
 
@@ -83,7 +84,7 @@ def snapshot(docs: dict[str, Any]) -> dict[str, Any]:
 
     decks = [_deck(slug, d, [g for g in games if g["deck"] == slug]) for slug, d in decks_raw.items()]
     decks.sort(key=lambda d: (d["record"]["last"] or "", d["updated"] or ""), reverse=True)
-    decks.sort(key=lambda d: (bool(d["shelved"]), not d["pinned"]))  # pinned first, shelved last (storage.list_rank)
+    decks.sort(key=list_rank)  # pinned first (in the dragged order), shelved last
 
     names = {d["slug"]: d["name"] for d in decks}
     all_games = [(g["deck"], names.get(g["deck"], g["deck"]), g) for g in games]

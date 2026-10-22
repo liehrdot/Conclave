@@ -7,7 +7,7 @@ import { cardSheet, editOpponentSheet, gameDetailSheet, gameSheet, newDeckSheet,
 import { addByName } from "./scan.js";
 import * as scry from "./scry.js";
 import { present, toast } from "./ui.js";
-import { $, $$, RESULT_TEXT, ago, artFallback, debounce, esc, icon, mana, pips, plural, recordText, reducedMotion, uid } from "./util.js";
+import { $, $$, RESULT_TEXT, ago, artFallback, debounce, esc, icon, mana, pips, plural, recordText, reducedMotion, uid, vibrate } from "./util.js";
 
 // ---------- shared pieces ----------
 export const art = (name, kind = "art", cls = "") => `<img data-card="${esc(name)}" data-kind="${kind}" alt="" class="${cls}" loading="lazy">`;
@@ -145,17 +145,67 @@ export function showRule0(d) {
 export function decks() {
   const list = state.snap.decks;
   const played = list.filter((d) => !d.shelved), shelved = list.filter((d) => d.shelved);
-  const row = (d) => `<a class="row${d.shelved ? " shelved" : ""}" href="#/decks/${esc(d.slug)}">
+  const sortable = played.filter((d) => d.pinned).length > 1;  // pinned decks can be dragged into the user's order
+  const row = (d) => `<a class="row${d.shelved ? " shelved" : ""}" href="#/decks/${esc(d.slug)}"${sortable && d.pinned && !d.shelved ? ` data-pinned="${esc(d.slug)}"` : ""}>
         ${thumb(d.commanders[0], d.colors)}
         <span class="main"><span class="title">${d.pinned ? `${icon("pin", "xs pin")}<span class="sr-only">Angeheftet:</span> ` : ""}${esc(d.name)}</span>
-          <span class="subtitle">${pips(d.colors)} ${esc(d.level)} · ${esc(recordText(d.record))}</span></span>${icon("chev-r", "sm chev")}</a>`;
+          <span class="subtitle">${pips(d.colors)} ${esc(d.level)} · ${esc(recordText(d.record))}</span></span>${sortable && d.pinned && !d.shelved
+          ? `<span class="grip" data-grip role="button" aria-label="${esc(d.name)} verschieben">${icon("grip", "sm")}</span>` : icon("chev-r", "sm chev")}</a>`;
   const html = `<div class="large-title"><h1>Decks</h1></div>
-    ${list.length ? `${played.length ? `<div class="group">${played.map(row).join("")}</div>` : ""}
+    ${list.length ? `${played.length ? `<div class="group" id="played-decks">${played.map(row).join("")}</div>` : ""}
+      ${sortable ? `<p class="hint-small">Angeheftete Decks am Griff ${icon("grip", "xs")} in deine Reihenfolge ziehen.</p>` : ""}
       ${shelved.length ? `<div class="section-head"><h2>Pausiert</h2></div>
         <p class="hint-small">Spielst du gerade nicht – Karten daraus kannst du für andere Decks nehmen.</p>
         <div class="group">${shelved.map(row).join("")}</div>` : ""}`
       : empty("decks", "Noch keine Decks", tabletSized() ? "Leg hier ein neues an – oder baue und importiere Decks am PC, nach dem Abgleich erscheinen sie hier." : "Baue Decks am PC oder auf dem iPad – nach dem Abgleich erscheinen sie hier.")}`;
-  return { html, fab: tabletSized() ? { label: "Neues Deck", run: newDeckSheet } : null, bar: { title: "Decks", watch: ".large-title h1" } };
+  return { html, fab: tabletSized() ? { label: "Neues Deck", run: newDeckSheet } : null, bar: { title: "Decks", watch: ".large-title h1" }, bind: bindPinDrag };
+}
+
+/** Drag a pinned deck by its grip into a new place among the pinned decks; sent as one "deck.pin_order". */
+function bindPinDrag(el) {
+  for (const grip of $$("[data-grip]", el)) {
+    grip.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); });  // the grip never opens the deck
+    grip.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      const row = grip.closest("[data-pinned]");
+      const rows = $$("[data-pinned]", el);
+      const from = rows.indexOf(row);
+      const tops = rows.map((r) => r.getBoundingClientRect().top);
+      const h = row.getBoundingClientRect().height;
+      const startY = e.clientY;
+      let to = from;
+      grip.setPointerCapture(e.pointerId);
+      row.classList.add("dragging");
+      vibrate(8);
+      const move = (ev) => {
+        const dy = Math.max(tops[0] - tops[from], Math.min(tops[rows.length - 1] - tops[from], ev.clientY - startY));
+        row.style.transform = `translateY(${dy}px)`;
+        const next = Math.max(0, Math.min(rows.length - 1, Math.round((tops[from] + dy - tops[0]) / h)));
+        if (next !== to) { to = next; vibrate(4); }
+        rows.forEach((r, i) => {
+          if (r === row) return;
+          const shift = from < to && i > from && i <= to ? -h : from > to && i < from && i >= to ? h : 0;
+          r.style.transform = shift ? `translateY(${shift}px)` : "";
+        });
+      };
+      const end = () => {
+        grip.removeEventListener("pointermove", move);
+        grip.removeEventListener("pointerup", end);
+        grip.removeEventListener("pointercancel", end);
+        for (const r of rows) r.style.transform = "";
+        row.classList.remove("dragging");
+        if (to === from) return;
+        const before = rows.map((r) => r.dataset.pinned);
+        const slugs = [...before];
+        slugs.splice(to, 0, ...slugs.splice(from, 1));
+        const entry = op("deck.pin_order", { slugs, prev: before });
+        toast("Reihenfolge gespeichert", { ok: true, ms: 2200, action: { label: "Rückgängig", run: () => undo(entry) } });
+      };
+      grip.addEventListener("pointermove", move);
+      grip.addEventListener("pointerup", end);
+      grip.addEventListener("pointercancel", end);
+    });
+  }
 }
 
 /** Pin the deck (listed first) or shelve it (not played at the moment); a toast offers to take it back. */

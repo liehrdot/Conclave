@@ -39,6 +39,7 @@ _CONTENT_KEYS = ("name", "commanders", "cards", "bracket", "power_profile", "pro
 _PER_SAVE_KEYS = {"slug", "history", "version", "created", "updated", "validation", "change_note", "needs_revalidation"}
 TRASH_DIRNAME = ".trash"
 FLAGS = ("pinned", "shelved")  # per-deck marks outside the content (``set_flags``)
+PIN_RANK = "pin_rank"  # the user's order of the pinned decks (``set_pin_order``), 0 = on top
 
 
 def _now() -> str:
@@ -196,8 +197,28 @@ def set_flags(deck_slug: str, **flags: bool) -> dict[str, Any]:
                 deck[key] = True
             else:
                 deck.pop(key, None)
+        if not deck.get("pinned"):
+            deck.pop(PIN_RANK, None)
         _write_current(deck)
     return deck
+
+
+def set_pin_order(slugs: list[str]) -> list[str]:
+    """Order the pinned decks as dragged: each gets its place in ``slugs`` as ``pin_rank`` (decks that are not
+    pinned are skipped). Only changed files are written; returns their slugs."""
+    changed = []
+    for rank, s in enumerate(dict.fromkeys(slug(x) for x in slugs)):
+        with locked(_path(s)):
+            try:
+                deck = load(s)
+            except FileNotFoundError:
+                continue
+            if not deck.get("pinned") or deck.get(PIN_RANK) == rank:
+                continue
+            deck[PIN_RANK] = rank
+            _write_current(deck)
+            changed.append(s)
+    return changed
 
 
 def load(deck_slug: str) -> dict[str, Any]:
@@ -268,7 +289,7 @@ def copy(deck_slug: str, new_name: str | None = None, version: int | None = None
     """Duplicate a deck (optionally from an old version) as a new deck with its own history."""
     src = load_version(deck_slug, version)
     name = new_name or f"{src.get('name', deck_slug)} (Kopie)"
-    new = {k: v for k, v in src.items() if k not in {"history", "version", "created", "updated", "slug", *FLAGS}}
+    new = {k: v for k, v in src.items() if k not in {"history", "version", "created", "updated", "slug", *FLAGS, PIN_RANK}}
     new["name"] = name
     new["slug"] = unique_slug(name)
     new["copied_from"] = {"slug": slug(deck_slug), "version": src.get("version")}
@@ -390,12 +411,16 @@ def list_decks() -> list[dict[str, Any]]:
                 "needs_revalidation": bool(d.get("needs_revalidation")),  # merged by the sync, check pending
                 "pinned": bool(d.get("pinned")),
                 "shelved": bool(d.get("shelved")),
+                "pin_rank": d.get(PIN_RANK) if d.get("pinned") else None,
             }
         )
     out.sort(key=list_rank)  # stable: newest first inside each group
     return out
 
 
-def list_rank(d: dict[str, Any]) -> int:
-    """Pinned decks first, shelved ones last (a deck can be both: then it leads the shelved ones)."""
-    return (2 if d.get("shelved") else 0) + (0 if d.get("pinned") else 1)
+def list_rank(d: dict[str, Any]) -> tuple[int, int, float]:
+    """Pinned decks first (newly pinned ones, without a dragged place yet, on top, then by ``pin_rank``), shelved
+    ones last (a deck can be both: then it leads the shelved ones)."""
+    rank = d.get(PIN_RANK) if d.get("pinned") else None
+    group = (2 if d.get("shelved") else 0) + (0 if d.get("pinned") else 1)
+    return group, 0 if not isinstance(rank, (int, float)) else 1, rank if isinstance(rank, (int, float)) else 0
