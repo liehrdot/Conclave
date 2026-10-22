@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 import pytest
 
-from mtgdeck import backup, blacklist, cardmarket, carddb, collection, http, proxy, settings, storage, tablerules
+from mtgdeck import backup, blacklist, cardmarket, carddb, collection, http, proxy, selling, settings, storage, tablerules
 
 
 def card(name: str, *, ci: str = "", type_line: str = "Creature — Human", text: str = "", cmc: float = 2,
@@ -108,8 +108,8 @@ def _printing(name: str, sid: str, set_code: str, cn: str, lang: str = "en") -> 
 
 
 PRINTINGS = {
-    "a1b2-sol": _printing("Sol Ring", "a1b2-sol", "c21", "263"),
-    "c21/263": _printing("Sol Ring", "a1b2-sol", "c21", "263"),
+    "a1b2-sol": {**_printing("Sol Ring", "a1b2-sol", "c21", "263"), "cardmarket_id": 101},
+    "c21/263": {**_printing("Sol Ring", "a1b2-sol", "c21", "263"), "cardmarket_id": 101},
     "d3e4-cult": _printing("Cultivate", "d3e4-cult", "m21", "177", "de"),
     "5a1c0de0-0000-4000-8000-00000000c0de": _printing("Sol Ring", "5a1c0de0-0000-4000-8000-00000000c0de", "ltc", "284"),
 }
@@ -327,6 +327,7 @@ def offline(tmp_path, monkeypatch):
     monkeypatch.setattr(tablerules, "TABLERULES_FILE", tmp_path / "tablerules.json")
     monkeypatch.setattr(backup, "BACKUP_DIR", tmp_path / "backups")
     monkeypatch.setattr(collection, "COLLECTION_FILE", tmp_path / "collection.json")
+    monkeypatch.setattr(selling, "SALES_FILE", tmp_path / "sales.json")
     monkeypatch.setattr(settings, "SETTINGS_FILE", tmp_path / "settings.json")
     from mtgdeck.gui import desktop as gui_desktop
 

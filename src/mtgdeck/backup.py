@@ -39,10 +39,11 @@ _SKIP = re.compile(r"(^|/)\.[^/]+\.(lock|tmp)$|\.tmp$|\.lock$")
 
 def _files() -> dict[str, Path]:
     """Single files: name inside the zip -> path on disk (read at call time, so tests/env can redirect)."""
-    from . import blacklist, collection, settings, tablerules
+    from . import blacklist, collection, selling, settings, tablerules
 
     return {"collection.json": collection.COLLECTION_FILE, "blacklist.txt": blacklist.BLACKLIST_FILE,
-            "tablerules.json": tablerules.TABLERULES_FILE, "mtgdeck.settings.json": settings.SETTINGS_FILE}  # fmt: skip
+            "tablerules.json": tablerules.TABLERULES_FILE, "mtgdeck.settings.json": settings.SETTINGS_FILE,
+            "sales.json": selling.SALES_FILE}  # fmt: skip
 
 
 def _members() -> list[tuple[str, Path]]:

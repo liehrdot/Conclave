@@ -24,6 +24,9 @@ GUIDE_TTL = 6 * 3600  # refreshed daily; check a few times a day
 PRODUCTS_TTL = 3 * 24 * 3600  # changes only with new releases
 PRODUCT_URL = "https://www.cardmarket.com/en/Magic/Products?idProduct={id}"
 SEARCH_URL = "https://www.cardmarket.com/en/Magic/Products/Search?searchString={q}"
+# the sell form's values: our language codes -> Cardmarket's language ids, conditions best first
+LANGUAGES = {"en": 1, "fr": 2, "de": 3, "es": 4, "it": 5, "zhs": 6, "ja": 7, "pt": 8, "ru": 9, "ko": 10, "zht": 11}
+CONDITIONS = {"MT": "Mint", "NM": "Near Mint", "EX": "Excellent", "GD": "Good", "LP": "Light Played", "PL": "Played", "PO": "Poor"}
 
 _memo: dict[str, Any] = {}
 
@@ -63,7 +66,7 @@ def build_index(guide: Any, products: Any) -> dict[str, Any]:
         by_name.setdefault(key, []).append(entry)
         if "/" in key:  # also findable by the front face
             by_name.setdefault(key.split("/")[0].strip(), []).append(entry)
-    return {"date": _iso((guide or {}).get("createdAt")), "cards": by_name}
+    return {"date": _iso((guide or {}).get("createdAt")), "cards": by_name, "ids": prices}
 
 
 def _iso(stamp: Any) -> str | None:
@@ -88,6 +91,15 @@ async def index() -> dict[str, Any]:
 def _price(p: dict[str, Any], kind: str) -> float | None:
     """Non-foil if listed, else foil (some printings only exist as foil)."""
     return p.get(kind) or p.get(f"{kind}_foil")
+
+
+def product_price(idx: dict[str, Any], product_id: int | None, *, foil: bool = False) -> dict[str, float | None]:
+    """``{trend, low}`` of one printing (foil figures for a foil, else the other kind when one is missing)."""
+    p = (idx.get("ids") or {}).get(product_id) if product_id else None
+    if not p:
+        return {"trend": None, "low": None}
+    a, b = ("_foil", "") if foil else ("", "_foil")
+    return {k: p.get(k + a) or p.get(k + b) for k in ("trend", "low")}
 
 
 def candidates(idx: dict[str, Any], name: str) -> list[dict[str, Any]]:

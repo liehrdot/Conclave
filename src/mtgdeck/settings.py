@@ -43,6 +43,8 @@ DEFAULTS: dict[str, Any] = {
     "font": "cascadia",  # cascadia | inter — the UI face; code and the console stay Cascadia
     # floating card image that follows the pointer over list rows (hand, tokens, collection thumbs too)
     "hover_preview": True,
+    # Verkaufsliste: the suggested price from Cardmarket's price guide: trend | trend95 | trend90 | low
+    "sale_price": "trend",
 }
 _ENV = {
     "autofill_path": "MTG_AUTOFILL_PATH",

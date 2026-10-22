@@ -391,6 +391,15 @@ def _update(entry_id: str, *, qty: int | None, proxy: bool | None, foil: bool | 
     return next((e for e in merged if _key(e) == _key(entry)), None)
 
 
+def restore_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    """Put a removed entry back (e.g. „Rückgängig“ after a card was sold); it merges with an equal one."""
+    back = {**entry, "id": uuid.uuid4().hex[:12]}
+    with locked(COLLECTION_FILE):
+        merged = _merge(load() + [back])
+        _write(merged)
+    return next((e for e in merged if _key(e) == _key(back)), back)
+
+
 def delete(entry_id: str | None = None) -> int:
     """Delete one entry, or everything when ``entry_id`` is None. Returns the number removed."""
     with locked(COLLECTION_FILE):
