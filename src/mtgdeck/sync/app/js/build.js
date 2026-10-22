@@ -194,8 +194,8 @@ function discard(d) {
 const S = { slug: null, pane: "search", mode: "name", q: "", filter: "", desc: "", result: null, busy: false, error: null, seq: 0 };
 let mounted = null;  // the slug of the builder on screen
 
-export function builder(slug) {
-  const d = deckBy(slug);
+export function builder(wanted) {
+  const d = deckBy(wanted);
   if (!tabletSized()) {
     mounted = null;
     return { html: `<div class="empty">${icon("decks")}<h3>Decks baust du auf dem iPad</h3><p>Auf dem Handy siehst du deine Decks – bauen geht auf dem iPad oder am PC.</p>
@@ -206,6 +206,7 @@ export function builder(slug) {
     return { html: `<div class="empty">${icon("decks")}<h3>Deck nicht gefunden</h3><p>Vielleicht wurde es am PC gelöscht.</p></div>`,
       bar: { title: "Deck bauen", back: { href: "#/decks", label: "Decks" }, always: true } };
   }
+  const slug = d.slug;  // the deck's own slug, not the text from the address
   if (S.slug !== slug) Object.assign(S, { slug, pane: "search", q: "", filter: "", desc: "", result: null, busy: false, error: null });
   const html = `
     <div class="build-head">
@@ -239,7 +240,7 @@ export function builder(slug) {
     <div class="build-bar" id="b-bar" hidden></div>`;
   return {
     html, immersive: true, wide: true,
-    bar: { title: d.name, back: { href: `#/decks/${slug}/karten`, label: "Deck" }, watch: ".build-title" },
+    bar: { title: d.name, back: { href: `#/decks/${encodeURIComponent(slug)}/karten`, label: "Deck" }, watch: ".build-title" },
     bind(el) { mounted = slug; bindBuilder(el, d); },
   };
 }
@@ -281,16 +282,16 @@ function bindBuilder(el, d) {
   markFilters();
   const go = debounce(() => runName(d), 320);
   input.addEventListener("input", () => { S.q = input.value; go(); });
-  $("#b-name", el).addEventListener("submit", (e) => { e.preventDefault(); input.blur(); runName(d); });
-  for (const b of $$("[data-filter]", el)) b.addEventListener("click", () => { S.filter = S.filter === b.dataset.filter && b.dataset.filter ? "" : b.dataset.filter; markFilters(); runName(d); });
+  $("#b-name", el).addEventListener("submit", (e) => { e.preventDefault(); input.blur(); void runName(d); });
+  for (const b of $$("[data-filter]", el)) b.addEventListener("click", () => { S.filter = S.filter === b.dataset.filter && b.dataset.filter ? "" : b.dataset.filter; markFilters(); void runName(d); });
 
   // by description: the AI turns it into a Scryfall search (in the commander's colours), then the same grid
   const text = $("#b-desc", el);
   text.addEventListener("input", () => { S.desc = text.value; });
   text.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#b-describe", el).requestSubmit(); } });
-  $("#b-describe", el).addEventListener("submit", (e) => { e.preventDefault(); runDescribe(d, text); });
+  $("#b-describe", el).addEventListener("submit", (e) => { e.preventDefault(); void runDescribe(d, text); });
 
-  if (!S.result && !S.busy && !S.error) runName(d); else renderResults(d);
+  if (!S.result && !S.busy && !S.error) void runName(d); else renderResults(d);
   renderDeck(d);
   renderBar(d);
 }
@@ -545,7 +546,7 @@ function deckCardSheet(slug, name) {
 // ---------- a new deck ---------------------------------------------------------------------------------------------
 
 export const slugify = (name) => name.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/ß/g, "ss")
-  .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70) || "deck";
+  .replace(/[^a-z0-9]+/g, "-").split("-").filter(Boolean).join("-").slice(0, 70) || "deck";
 
 export function freeSlug(name) {
   const base = slugify(name);

@@ -55,7 +55,8 @@ class SyncStore:
             """)
 
     def _db(self) -> sqlite3.Connection:
-        db = sqlite3.connect(self.path, timeout=30)
+        # a plain file path (no ``uri=True``), so nothing in it is read as connection options
+        db = sqlite3.connect(self.path, timeout=30)  # NOSONAR: the path comes from the server's own data folder or the admin's restore argument
         db.row_factory = sqlite3.Row
         return db
 
@@ -90,6 +91,8 @@ class SyncStore:
         """Replace the store with a backup (keeping the current state as ``vor-wiederherstellung-….sqlite`` next
         to the backups) and start a new epoch. Devices stay paired as they were at the time of the backup."""
         backup = Path(backup)
+        if not backup.is_file():
+            raise FileNotFoundError(f"Keine Sicherung unter {backup}")
         SyncStore(backup).seq()  # a readable sync store, or sqlite3 raises
         safety = self.backup(self.path.parent / "backups" / f"vor-wiederherstellung-{time.strftime('%Y%m%d-%H%M%S')}.sqlite")
         tmp = self.path.with_name(self.path.name + ".restore")

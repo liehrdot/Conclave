@@ -64,7 +64,7 @@ def step(bracket: int, tier: Tier | None, direction: int) -> tuple[int, Tier]:
 # --- heuristic score --------------------------------------------------------------------------
 
 _ADDS_MANA_RE = re.compile(r"\badd\b[^.]*(\{[WUBRGC]\}|mana)", re.I)
-_BIG_MANA_RE = re.compile(r"add \{C\}\{C\}|add (two|three) mana|add \{[WUBRGC]\}\{[WUBRGC]\}", re.I)
+_BIG_MANA_RE = re.compile(r"add (two|three) mana|add \{[WUBRGC]\}\{[WUBRGC]\}", re.I)
 _FREE_SPELL_RE = re.compile(r"rather than pay this spell'?s mana cost|without paying (its|their) mana cost", re.I)
 _INTERACTION = {"removal", "counterspell", "board_wipe"}
 

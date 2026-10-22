@@ -434,7 +434,7 @@ export function newDeckSheet() {
         $("#deck-go", el).addEventListener("click", () => {
           const commanders = [f.commander.name, ...(f.partner ? [f.partner.name] : [])];
           closeSheet();
-          import("./build.js").then((m) => m.createDeck({ name: f.name.trim() || auto, commanders, colors: joinColors(f.commander.colors, f.partner?.colors), bracket: f.bracket }));
+          void import("./build.js").then((m) => m.createDeck({ name: f.name.trim() || auto, commanders, colors: joinColors(f.commander.colors, f.partner?.colors), bracket: f.bracket }));
         });
       },
     };
@@ -559,8 +559,8 @@ export function cardSheet(name, action = null) {
     };
   };
   openSheet(page);
-  scry.info(name).then(() => { if ($("#sheet").open) redraw(); });
-  scry.german(name).then((x) => { de = x; if ($("#sheet").open) redraw(); });
+  void scry.info(name).then(() => { if ($("#sheet").open) redraw(); });
+  void scry.german(name).then((x) => { de = x; if ($("#sheet").open) redraw(); });
 }
 
 export function gameDetailSheet(deckSlug, id) {
@@ -661,7 +661,7 @@ export function settingsSheet() {
         $("#sign-off", el)?.addEventListener("click", () => push(signOffPage));
         $("#ai-open", el)?.addEventListener("click", () => push(aiPage));
         $("#link-open", el)?.addEventListener("click", () => push(linkPage));
-        if (!isDemo()) loadAi().then(() => { const s = $("#ai-state", el); if (s) s.textContent = aiStateText(); });
+        if (!isDemo()) void loadAi().then(() => { const s = $("#ai-state", el); if (s) s.textContent = aiStateText(); });
       },
     };
   }, { onClose: () => window.dispatchEvent(new Event("hashchange")) });
@@ -685,7 +685,7 @@ function aiPage({ pop, close, redraw: again, onSaved }) {
   const back = pop && !onSaved ? `<button class="back-btn" type="button" data-sheet-back>${icon("chev-l")}<span>Zurück</span></button>` : "";
   if (!c) {
     return { title: "Suche mit KI", left: back, body: `<div class="empty">${icon("sparkle")}<p>Wird geladen …</p></div>`,
-      bind() { loadAi().then((got) => { if (got) again(); }); } };
+      bind() { void loadAi().then((got) => { if (got) again(); }); } };
   }
   return {
     title: "Suche mit KI", left: back, right: onSaved ? `<button class="btn plain" type="button" data-sheet-close>Abbrechen</button>` : "",
@@ -721,7 +721,7 @@ function aiPage({ pop, close, redraw: again, onSaved }) {
         const body = { key: $("#ai-key", el)?.value.trim() || null };  // only what changed: a model set on the server stays
         const model = $("#ai-models [aria-pressed=true]", el)?.dataset.model;
         if (model && model !== c.model) body.model = model;
-        send(body, "Gespeichert");
+        void send(body, "Gespeichert");
       });
       for (const b of $$("[data-model]", el)) b.addEventListener("click", () => {
         for (const o of $$("[data-model]", el)) { const on = o === b; o.setAttribute("aria-pressed", on); o.setAttribute("aria-checked", on); }
@@ -741,7 +741,7 @@ function linkPage({ redraw: again }) {
   if (!pairValid() && !pairing?.error) {
     return { title: "Gerät verbinden", left: back, body: `<div class="empty">${icon("qr")}<p>Code wird erstellt …</p></div>`,
       bind() {
-        serverCall("/api/pair/start?qr=1", { method: "POST" })
+        void serverCall("/api/pair/start?qr=1", { method: "POST" })
           .then((got) => { pairing = got; }, (e) => { pairing = { error: e.message }; })
           .then(again);
       } };

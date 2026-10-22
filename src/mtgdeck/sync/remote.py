@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -123,7 +124,7 @@ class HttpTransport:
         return self._call("GET", "/api/devices").json()["devices"]
 
     def revoke(self, device_id: str) -> dict[str, Any]:
-        return self._call("DELETE", f"/api/devices/{device_id}").json()
+        return self._call("DELETE", f"/api/devices/{quote(device_id, safe='')}").json()
 
     def presence(self, info: dict[str, Any]) -> dict[str, Any]:
         return self._call("POST", "/api/presence", json={"info": info}).json()

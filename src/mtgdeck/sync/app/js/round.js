@@ -129,7 +129,7 @@ export function startSheet() {
         r = { id: uid(), deck: f.deck, start_life: f.life, started: nowIso(), opps: f.opps.map((o) => ({ id: o.id || null, commander: o.commander || oppBy(o.id)?.commanders?.[0] || "", colors: o.colors || "" })),
           events: [] };
         persist();
-        import("./data.js").then((m) => { m.setPref("roundLife", f.life); m.setPref("deck", f.deck); });
+        void import("./data.js").then((m) => { m.setPref("roundLife", f.life); m.setPref("deck", f.deck); });
         vibrate(18);
         closeSheet();
         setTimeout(() => { location.hash = "#/runde"; }, 60);

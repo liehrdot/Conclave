@@ -67,7 +67,7 @@ const fmtPrice = (v, cur = "") => fmtNum(v, cur ? " " + (CURRENCY_SIGNS[String(c
 const fmtDate = (iso) => {
   if (!iso) return "";
   const d = new Date(iso);
-  return isNaN(d) ? iso.replace("T", " ").slice(0, 16) : d.toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+  return Number.isNaN(d.getTime()) ? iso.replace("T", " ").slice(0, 16) : d.toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
 };
 const icon = (name) => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
@@ -145,7 +145,7 @@ function homeHash() {
 for (const a of $$("a.brand")) a.addEventListener("click", (e) => { e.preventDefault(); go(homeHash()); });
 
 function go(hash) {
-  if (location.hash === hash) route();
+  if (location.hash === hash) void route();
   else location.hash = hash;
 }
 
@@ -159,13 +159,13 @@ async function route() {
   }
   for (const v of $$(".view")) v.hidden = v.dataset.view !== r.view;
   if (r.view === "deck") selectTab(r.tab || "karten", false);
-  if (r.view === "settings") { refreshDbStatus(); refreshBackups(); refreshSync({ quiet: true }); refreshDesktop(); }
-  if (r.view === "collection") loadCollection();
-  if (r.view === "sell") showSell();
-  if (r.view === "glossary") showGlossary(r.slug);
-  if (r.view === "orders") showOrders(r.slug);
-  if (r.view === "tables") showTables(r.slug);
-  if (r.view === "opponents") showOpponents(r.slug);
+  if (r.view === "settings") { void refreshDbStatus(); void refreshBackups(); void refreshSync({ quiet: true }); void refreshDesktop(); }
+  if (r.view === "collection") void loadCollection();
+  if (r.view === "sell") void showSell();
+  if (r.view === "glossary") void showGlossary(r.slug);
+  if (r.view === "orders") void showOrders(r.slug);
+  if (r.view === "tables") void showTables(r.slug);
+  if (r.view === "opponents") void showOpponents(r.slug);
   placeJobPanel();
   setNavOpen(false);
   markNav(r);
@@ -250,7 +250,7 @@ function renderDeckFlags(d) {
   $("#view-deck").classList.toggle("is-shelved", !!d.shelved);
 }
 $("#pin-btn").addEventListener("click", () => currentDeck && setDeckFlag(currentDeck, "pinned", !currentDeck.pinned));
-$("#shelve-btn").addEventListener("click", () => { $("#deck-menu").open = false; if (currentDeck) setDeckFlag(currentDeck, "shelved", !currentDeck.shelved); });
+$("#shelve-btn").addEventListener("click", () => { $("#deck-menu").open = false; if (currentDeck) void setDeckFlag(currentDeck, "shelved", !currentDeck.shelved); });
 $("#unshelve-btn").addEventListener("click", () => currentDeck && setDeckFlag(currentDeck, "shelved", false));
 $("#deck-filter").addEventListener("input", renderDeckList);
 
@@ -316,8 +316,8 @@ async function initBrackets() {
 newForm.addEventListener("submit", (e) => {  // Enter in the link or search field
   e.preventDefault();
   const im = $("#import-box").dataset.imode;
-  if (im === "link") loadImport({ url: $("#import-url").value });
-  else if (im === "precon") searchPrecons();
+  if (im === "link") void loadImport({ url: $("#import-url").value });
+  else if (im === "precon") void searchPrecons();
 });
 
 function wireAutocomplete(input, list, onPick) {
@@ -338,7 +338,7 @@ function setImportMode(mode) {
   $("#import-box").dataset.imode = mode;
   $(`#import-box [name=imode][value="${mode}"]`).checked = true;
   $("#import-msg").textContent = "";
-  if (mode === "precon" && !preconItems) searchPrecons();
+  if (mode === "precon" && !preconItems) void searchPrecons();
 }
 $("#import-box").addEventListener("change", (e) => { if (e.target.name === "imode") setImportMode(e.target.value); });
 $("#import-url-btn").addEventListener("click", () => loadImport({ url: $("#import-url").value }));
@@ -376,7 +376,7 @@ async function importFromClipboard() {
   }
   if (!text) { toast("Die Zwischenablage ist leer. Kopiere zuerst die Liste, z. B. in Moxfield mit „Copy for MTGA“.", "error"); return; }
   $("#import-text").value = text;
-  loadImport({ text });
+  void loadImport({ text });
 }
 
 async function loadImport(body) {
@@ -433,7 +433,7 @@ window.conclaveMoxfield = (d) => {
   if (parseHash().view !== "new") go("#/new");
   setImportMode("text");
   $("#import-text").value = lines.join("\n");
-  loadImport({ text: lines.join("\n"), name: typeof d.name === "string" ? d.name.slice(0, 120) : undefined });
+  void loadImport({ text: lines.join("\n"), name: typeof d.name === "string" ? d.name.slice(0, 120) : undefined });
 };
 
 function renderImportPreview(d) {
@@ -663,7 +663,7 @@ function handleEvent(ev) {
       setJobStatus(`Bild ${ev.done} von ${ev.total}`);
       break;
     }
-    case "print": onPrepared(ev.result); break;
+    case "print": void onPrepared(ev.result); break;
     case "console":
       if (ev.running) { openTerminal(); setJobStatus("MPC Autofill läuft – bediene es im Terminal."); }
       else if (term) term.options.disableStdin = true;
@@ -672,7 +672,7 @@ function handleEvent(ev) {
       if (term) term.write(ev.data);
       else logLine("text", ev.data.replace(ANSI_RE, "").trimEnd());
       break;
-    case "done": finishJob(ev); break;
+    case "done": void finishJob(ev); break;
   }
 }
 
@@ -740,11 +740,11 @@ async function openDeck(slug) {
   setProfile($("#retune-form .profile-fields"), d.power_profile);
   renderPower(d);
   renderSpeed(d);
-  renderHistory(d);
+  void renderHistory(d);
   renderSheetTitle(d);
-  loadGames(d);
-  loadOwnership(d);
-  loadTokens(d);
+  void loadGames(d);
+  void loadOwnership(d);
+  void loadTokens(d);
   resetHand();
   renderOdds(d);
   $("#deck-menu").open = false;
@@ -845,10 +845,10 @@ function selectTab(tab, updateHash = true, focus = false) {
   if (tab === "drucken") mountPrintStudio("#panel-drucken");
   if (tab === "drucken" && currentDeck && printLoadedFor !== currentDeck.slug) {
     printLoadedFor = currentDeck.slug;
-    loadPlan();
+    void loadPlan();
   }
   if (legacy === "target") requestAnimationFrame(() => $("#deck-target").scrollIntoView({ behavior: "smooth", block: "start" }));
-  if (legacy === "rule0") openRule0();
+  if (legacy === "rule0") void openRule0();
 }
 $("#deck-tabs").addEventListener("click", (e) => {
   const t = e.target.closest("[role=tab]");
@@ -1296,7 +1296,7 @@ $("#edit-save").addEventListener("click", async () => {
     await refreshDeckList();
     await route();
     toast(`Gespeichert als v${r.version}.${r.legal ? "" : " Achtung: das Deck ist nicht legal – siehe Prüfung."}`, r.legal ? "info" : "error");
-    offerOrderAfterRebuild(slug, since);
+    void offerOrderAfterRebuild(slug, since);
   } catch (err) { fail(err); }
   finally { btn.disabled = false; btn.textContent = "Speichern & prüfen"; }
 });
@@ -1373,7 +1373,7 @@ async function dropCardsIntoDeck(cards, { maybe = false } = {}) {
     if (!edit) return;
     for (const name of added) {
       if (!maybe) setQty(name, currentQty(name) - 1);
-      else if (movedToMaybe(name)) addCard(name);  // back into the deck
+      else if (movedToMaybe(name)) void addCard(name);  // back into the deck
       else removeMaybe(name);
     }
     renderCards(currentDeck);
@@ -1678,7 +1678,7 @@ function renderHealth(d) {
 $("#health-panel").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
-  if (b.dataset.role) openRoleCandidates(b.dataset.role, b.dataset.label);
+  if (b.dataset.role) void openRoleCandidates(b.dataset.role, b.dataset.label);
 });
 
 let similarRole = null;
@@ -1813,7 +1813,7 @@ async function describeRun(fn) {
   try { await fn(); }
   catch (err) {
     $("#describe-hint").textContent = err.message;
-    if (err.status === 409 && /eingerichtet/.test(err.message)) describeSetup();
+    if (err.status === 409 && /eingerichtet/.test(err.message)) void describeSetup();
   } finally {
     describe.busy = false;
     $("#describe-go").disabled = $("#describe-q-run").disabled = false;
@@ -1824,7 +1824,7 @@ $("#describe-form").addEventListener("submit", (e) => {
   e.preventDefault();
   const text = $("#describe-text").value.trim();
   if (text.length < 3) { $("#describe-hint").textContent = "Beschreib kurz, was die Karte tun soll."; return; }
-  describeRun(async () => {
+  void describeRun(async () => {
     describeShow(null);
     $("#describe-hint").textContent = "Claude baut die Suche …";
     const got = await api("/api/cards/describe", { method: "POST", body: { text, colors: pickedChips($("#describe-colors")), types: pickedChips($("#describe-types")) } });
@@ -1836,7 +1836,7 @@ $("#describe-query").addEventListener("submit", (e) => {
   e.preventDefault();
   const q = $("#describe-q").value.trim();
   if (!q) return;
-  describeRun(async () => {
+  void describeRun(async () => {
     const got = await api(`/api/cards/query?q=${enc(q)}`);
     describe.query = q; describe.page = 1;
     describeShow({ ...got, used: q, explain: "Deine angepasste Suche" });
@@ -1949,7 +1949,7 @@ function openCardFromEvent(e) {
 }
 $("#cards").addEventListener("click", openCardFromEvent);
 $("#cards").addEventListener("keydown", (e) => {
-  if ((e.key === "Enter" || e.key === " ") && e.target.matches(".card[role=button]")) { e.preventDefault(); openCardFromEvent(e); }
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches(".card[role=button]")) { e.preventDefault(); void openCardFromEvent(e); }
 });
 
 let cardViewCard = null;  // { name, cd } of the open card view
@@ -1974,7 +1974,7 @@ function showCardView(name, cd, list, index, copies = []) {
   preview.hidden = true;
   const dlg = $("#card-view");
   if (!dlg.open) dlg.showModal();
-  loadCardText(name);
+  void loadCardText(name);
 }
 function stepCardView(dir) {
   if (!cardViewList) return;
@@ -2099,7 +2099,7 @@ $("#card-view-order").addEventListener("click", () => {
   const item = { kind: token ? "token" : "card", name, qty: 1, source: deck ? deck.name : (token ? "Tokens" : "Einzelkarten"),
     ...(deck ? { source_slug: deck.slug } : {}),
     ...(token ? { type_line: cd.type_line || "Token", token_id: /^[0-9a-f-]{36}$/.test(cd.id || "") ? cd.id : null, image: cd.image || null } : {}) };
-  orderDialog({ title: token ? "Token drucken" : "Karte drucken", text: `„${name}“ in eine Sammelbestellung packen.`,
+  void orderDialog({ title: token ? "Token drucken" : "Karte drucken", text: `„${name}“ in eine Sammelbestellung packen.`,
     body: { items: [item] }, qtyField: true });
 });
 
@@ -2161,7 +2161,7 @@ function renderCardText(data) {
   const german = cardLang === "de" && data.printed;
   const faces = german ? data.printed.faces : data.faces;
   $("#card-view-rules").innerHTML = faces.map((f, i) => `<div class="face">
-      <div class="head"><span>${esc(f.name)}</span><span>${(data.faces[i]?.mana_cost || "").match(/\{[^}]+\}/g)?.map(manaHtml).join("") || ""}</span></div>
+      <div class="head"><span>${esc(f.name)}</span><span>${(data.faces[i]?.mana_cost || "").match(/\{[^{}]{1,12}\}/g)?.map(manaHtml).join("") || ""}</span></div>
       <div class="type">${esc(f.type_line)}</div>
       ${f.text.split("\n").filter(Boolean).map((line) => `<p>${rulesHtml(line, data.terms)}</p>`).join("") || '<p class="muted small">Kein Regeltext.</p>'}
     </div>`).join("")
@@ -2515,7 +2515,7 @@ $("#game-form").addEventListener("submit", async (e) => {
     e.target.reset();
     for (const n of [1, 2, 3]) delete e.target.elements[`opp${n}`].dataset.oid;
     if (currentDeck?.slug === slug) renderGames(slug, data);
-    if (body.opponents.length) refreshOpponents().then(renderKnownOpps);
+    if (body.opponents.length) void refreshOpponents().then(renderKnownOpps);
     toast(body.result === "win" ? "Sieg gespeichert – Glückwunsch!" : "Partie gespeichert.");
   } catch (err) { fail(err); }
 });
@@ -2643,7 +2643,7 @@ $("#print-form").addEventListener("change", (e) => {
   const name = e.target.name;
   if (!["source", "stock", "foil", "upscale", "only_missing", "tokens", "token_copies"].includes(name)) return;
   if (name === "token_copies" && !$("#print-form").elements.tokens.checked) return;
-  loadPlan();
+  void loadPlan();
 });
 const planQuery = () => { const o = printOpts(); return new URLSearchParams({ source: o.source, only_missing: o.only_missing, tokens: o.tokens }).toString(); };
 
@@ -2662,7 +2662,7 @@ async function loadPlan() {
   if (pctx()?.slug !== slug) return;
   renderPlan();
   renderPreparedInfo();
-  updateDownloadLinks();
+  void updateDownloadLinks();
 }
 
 function renderPreparedInfo() {
@@ -2766,14 +2766,14 @@ async function saveTokenQty(i, qty) {
 $("#print-token-list").addEventListener("click", (e) => {
   const li = e.target.closest("li[data-i]");
   if (!li) return;
-  if (e.target.closest("[data-pick]")) { openPicker(Number(li.dataset.i), "front"); return; }
+  if (e.target.closest("[data-pick]")) { void openPicker(Number(li.dataset.i), "front"); return; }
   const step = e.target.closest("[data-step]");
   if (step) { setTokenQty(li, Number(li.querySelector("input").value) + Number(step.dataset.step)); return; }
   if (e.target.closest("[data-reset]")) {
     clearTimeout(tokenSaveTimers[li.dataset.i]);
     const c = printPlan.cards[Number(li.dataset.i)];
     li.querySelector("input").value = c.default_qty;
-    saveTokenQty(Number(li.dataset.i), null);
+    void saveTokenQty(Number(li.dataset.i), null);
   }
 });
 $("#print-token-list").addEventListener("input", (e) => {
@@ -2823,7 +2823,7 @@ $("#print-grid").addEventListener("click", (e) => {
     tile.outerHTML = cardTile(printPlan.cards[i], i, side);
     return;
   }
-  openPicker(i, tile.dataset.side);
+  void openPicker(i, tile.dataset.side);
 });
 
 // image picker: MPC Autofill scans + every Scryfall printing, loaded page by page (175 per page)
@@ -2879,7 +2879,9 @@ $("#picker-filter").addEventListener("input", debounce(() => pickerCtx && render
 $("#picker-more-btn").addEventListener("click", loadPickerPage);
 $("#picker-all-btn").addEventListener("click", async () => {
   const ctx = pickerCtx;
-  while (ctx && pickerCtx === ctx && ctx.hasMore && $("#picker").open) await loadPickerPage();
+  if (!ctx) return;
+  // loadPickerPage() sets ctx.hasMore; another face opened meanwhile replaces pickerCtx
+  while (pickerCtx === ctx && ctx.hasMore && $("#picker").open) await loadPickerPage();
 });
 
 async function pick(option) {
@@ -2919,7 +2921,7 @@ $("#picker").addEventListener("drop", (e) => {
   if (!e.dataTransfer?.files?.length) return;
   e.preventDefault();
   $("#picker").classList.remove("dragging");
-  uploadPickerImage(e.dataTransfer.files[0]);
+  void uploadPickerImage(e.dataTransfer.files[0]);
 });
 
 // after a pick/upload/delete: update just this tile – re-rendering the whole grid would make the page jump
@@ -3044,7 +3046,7 @@ async function onPrepared(result) {
     prepared = await api(`/api/decks/${enc(pctx().slug)}/print/prepared`).catch(() => prepared);
     renderPlan();
     renderPreparedInfo();
-    updateDownloadLinks();
+    void updateDownloadLinks();
   }
 }
 
@@ -3084,7 +3086,9 @@ $("#mpc-btn").addEventListener("click", async () => {
 });
 
 // ---------- terminal (MPC Autofill runs in a pseudo-terminal; its menus need arrow keys) ----------
-const ANSI_RE = /\x1b\[[0-9;?]*[ -\/]*[@-~]|\x1b\][^\x07]*\x07|\r/g;
+// escape sequences: CSI (ESC [ … final byte) and OSC (ESC ] … BEL), plus carriage returns
+const [ESC_C, BEL_C] = [String.fromCharCode(27), String.fromCharCode(7)];
+const ANSI_RE = new RegExp(`${ESC_C}\\[[0-9;?]*[ -/]*[@-~]|${ESC_C}\\][^${BEL_C}]*${BEL_C}|\\r`, "g");
 const TERM_SIZE = { rows: 32, cols: 110 };
 const KEYS = { up: "\x1b[A", down: "\x1b[B", enter: "\r" };
 let term = null;
@@ -3355,19 +3359,19 @@ $("#coll-list").addEventListener("click", async (e) => {
   if (!act || !row || act === "proxy" || act === "foil" || act === "select") return;
   const entry = coll.entries.find((x) => x.id === row.dataset.id);
   if (!entry) return;
-  if (act === "plus") patchEntry(entry.id, { qty: entry.qty + 1 });
+  if (act === "plus") void patchEntry(entry.id, { qty: entry.qty + 1 });
   if (act === "minus") {
-    if (entry.qty > 1) patchEntry(entry.id, { qty: entry.qty - 1 });
-    else if (await ask({ title: `${entry.name} entfernen?`, ok: "Entfernen", danger: true })) patchEntry(entry.id, { qty: 0 });
+    if (entry.qty > 1) void patchEntry(entry.id, { qty: entry.qty - 1 });
+    else if (await ask({ title: `${entry.name} entfernen?`, ok: "Entfernen", danger: true })) void patchEntry(entry.id, { qty: 0 });
   }
   if (act === "delete" && await ask({ title: `${entry.name} entfernen?`, text: `${entry.qty}× ${entry.proxy ? "Proxy" : "echt"} – aus der Sammlung löschen.`, ok: "Entfernen", danger: true })) {
     await api(`/api/collection/${enc(entry.id)}`, { method: "DELETE" }).catch(fail);
-    loadCollection();
+    void loadCollection();
   }
   if (act === "place") openPlaceDialog([entry.id]);
   if (act === "art") {
     const p = await pickPrinting(entry.name);
-    if (p) patchEntry(entry.id, { printing: p });
+    if (p) void patchEntry(entry.id, { printing: p });
   }
 });
 $("#coll-list").addEventListener("change", (e) => {
@@ -3377,7 +3381,7 @@ $("#coll-list").addEventListener("change", (e) => {
     if (box.checked) collSel.add(row.dataset.id); else collSel.delete(row.dataset.id);
     row.classList.toggle("selected", box.checked);
     renderBulk();
-  } else if (box && row) changeCopies(row.dataset.id, box.dataset.act, box.checked);
+  } else if (box && row) void changeCopies(row.dataset.id, box.dataset.act, box.checked);
 });
 
 /** How many copies of ``entry`` a change applies to (all, or a few split off into their own row); null = cancelled. */
@@ -3434,7 +3438,9 @@ $("#prints-filter").addEventListener("input", debounce(() => printsCtx && render
 $("#prints-more-btn").addEventListener("click", loadPrintsPage);
 $("#prints-all-btn").addEventListener("click", async () => {
   const ctx = printsCtx;
-  while (ctx && printsCtx === ctx && ctx.hasMore && $("#prints-dialog").open) await loadPrintsPage();
+  if (!ctx) return;
+  // loadPrintsPage() sets ctx.hasMore; another card opened meanwhile replaces printsCtx
+  while (printsCtx === ctx && ctx.hasMore && $("#prints-dialog").open) await loadPrintsPage();
 });
 
 function pickPrinting(name) {
@@ -3446,7 +3452,7 @@ function pickPrinting(name) {
   $("#prints-more").hidden = true;
   printsCtx = { name, prints: [], page: 0, hasMore: true, total: 0, loading: false };
   dlg.showModal();
-  loadPrintsPage();
+  void loadPrintsPage();
   return new Promise((resolve) => {
     const ctx = printsCtx;
     const done = (p) => { resolve(p); if (dlg.open) dlg.close(); };
@@ -3503,7 +3509,7 @@ $("#coll-add-form").addEventListener("submit", async (e) => {
     $("#coll-add-dialog").close();
     toast(`${item.qty}× ${item.name} hinzugefügt${where.place ? ` → ${where.place}` : ""}.`);
     await loadCollection();
-    if (currentDeck) loadOwnership(currentDeck);
+    if (currentDeck) void loadOwnership(currentDeck);
   } catch (err) { fail(err); }
 });
 
@@ -3541,7 +3547,7 @@ $("#coll-menu").addEventListener("click", (e) => { if (e.target.closest(".menu-l
 $("#coll-clear").addEventListener("click", async () => {
   if (!(await ask({ title: "Ganze Sammlung leeren?", text: `${collSummary.cards || 0} Karten werden gelöscht. Tipp: vorher exportieren.`, ok: "Leeren", danger: true }))) return;
   await api("/api/collection?confirm=true", { method: "DELETE" }).catch(fail);
-  loadCollection();
+  void loadCollection();
 });
 
 // ============================================================================================
@@ -3571,7 +3577,7 @@ async function sellWindow() {
 }
 
 const parseEuro = (v) => {
-  const t = String(v ?? "").trim().replace(/\s*€$/, "").replace(/\./g, "").replace(",", ".");
+  const t = String(v ?? "").replace("€", "").trim().replace(/\./g, "").replace(",", ".");
   return t === "" ? null : Number(t);
 };
 function sellFiltered() {
@@ -3667,7 +3673,7 @@ $("#sell-list").addEventListener("change", (e) => {
     return patchSale(row.dataset.id, { price: p });
   }
   if (f === "qty") return patchSale(row.dataset.id, { qty: Math.max(1, Math.round(Number(raw)) || 1) });
-  patchSale(row.dataset.id, { [f]: raw });
+  void patchSale(row.dataset.id, { [f]: raw });
 });
 $("#sell-list").addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.matches("input[data-f]")) e.target.blur();  // commits the change
@@ -3687,7 +3693,7 @@ $("#sell-list").addEventListener("click", async (e) => {
     try {
       const r = await api(`/api/sales/${enc(item.id)}/sold`, { method: "POST" });
       toast(r.removed ? `${r.removed}× ${item.name} verkauft – aus deiner Sammlung genommen.` : `${item.name} als verkauft markiert (war nicht mehr in der Sammlung).`, "ok", 7000,
-        { label: "Rückgängig", run: async () => { await api(`/api/sales/${enc(item.id)}/unsold`, { method: "POST" }).catch(fail); showSell(); refreshCollectionSummary(); } });
+        { label: "Rückgängig", run: async () => { await api(`/api/sales/${enc(item.id)}/unsold`, { method: "POST" }).catch(fail); void showSell(); void refreshCollectionSummary(); } });
     } catch (err) { fail(err); }
     await Promise.all([showSell(), refreshCollectionSummary()]);
   }
@@ -3699,7 +3705,7 @@ $("#sell-list").addEventListener("click", async (e) => {
 $("#sell-clear-sold").addEventListener("click", async () => {
   $("#sell-menu").open = false;
   try { const r = await api("/api/sales/sold", { method: "DELETE" }); toast(`${r.deleted} verkaufte ${r.deleted === 1 ? "Karte" : "Karten"} aus der Liste entfernt.`); } catch (err) { fail(err); }
-  showSell();
+  void showSell();
 });
 $("#sell-copy").addEventListener("click", async () => {
   const open = sales.items.filter((i) => i.status === "open");
@@ -3734,8 +3740,8 @@ window.conclaveSell = async (ev) => {
     try { await api(`/api/sales/${enc(ev.id)}`, { method: "PATCH", body: { status: "open" } }); } catch (err) { return fail(err); }
   }
   if (ev?.type === "closed") $("#sell-hint").hidden = true;
-  if (parseHash().view === "sell") showSell(); else refreshSales();
-  if (parseHash().view === "collection") loadCollection();
+  if (parseHash().view === "sell") void showSell(); else void refreshSales();
+  if (parseHash().view === "collection") void loadCollection();
 };
 
 // Meine Sammlung: „Verkaufen …“ in the marking bar
@@ -3792,7 +3798,7 @@ $("#own-summary").addEventListener("click", async (e) => {
     try { await navigator.clipboard.writeText(ownership.shopping_text); toast("Einkaufsliste kopiert – z. B. bei Cardmarket als Wants-Liste einfügen."); }
     catch { toast("Kopieren nicht erlaubt.", "error"); }
   }
-  if (e.target.closest("#own-buy")) openBuylist();
+  if (e.target.closest("#own-buy")) void openBuylist();
   if (e.target.id === "own-print") {
     $("#print-form").elements.only_missing.checked = true;
     printLoadedFor = null;
@@ -3810,7 +3816,7 @@ $("#add-printed-btn").addEventListener("click", async () => {
     const r = await api(`/api/decks/${enc(pctx().slug)}/collection/add-printed`, { method: "POST", body: opts });
     toast(`${r.added} Proxies zur Sammlung hinzugefügt.`);
     await refreshCollectionSummary();
-    if (currentDeck && !pctx().order) loadOwnership(currentDeck);
+    if (currentDeck && !pctx().order) void loadOwnership(currentDeck);
   } catch (err) { fail(err); }
 });
 
@@ -3867,7 +3873,7 @@ $("#bl-quick").addEventListener("click", async (e) => {
   let rule = btn.dataset.rule;
   if (btn.dataset.price) {
     const v = await ask({ title: "Karten über welchem Preis sperren?", text: "Betrag in Euro (günstigster Druck). Proxy-Decks prüfen ihn genauso.", value: "20", ok: "Sperren" });
-    const n = parseFloat(String(v || "").replace(",", "."));
+    const n = Number.parseFloat(String(v || "").replace(",", "."));
     if (!(n > 0)) return;
     rule = `@price>${n}`;
   }
@@ -3879,7 +3885,7 @@ for (const list of ["#bl-list", "#bl-rules"]) {
     if (!btn) return;
     await api("/api/blacklist", { method: "POST", body: { remove: [btn.dataset.name] } }).catch(fail);
     $("#bl-msg").textContent = "";
-    refreshBlacklist();
+    void refreshBlacklist();
   });
 }
 
@@ -3985,7 +3991,7 @@ function renderOpponent() {
 async function patchOpp(body, msg = "") {
   currentOpp = await api(`/api/opponents/${enc(currentOpp.id)}`, { method: "PATCH", body });
   renderOpponent();
-  refreshOpponents();
+  void refreshOpponents();
   if (msg) toast(msg);
 }
 $("#opp-new").addEventListener("submit", async (e) => {
@@ -4087,7 +4093,7 @@ $("#deck-table").addEventListener("change", async (e) => {
   try {
     await api(`/api/decks/${enc(d.slug)}/table-rule`, { method: "PUT", body: { table_rule: id } });
     await openDeck(d.slug);
-    refreshDeckList();
+    void refreshDeckList();
     const t = currentDeck.validation?.table_rule;
     toast(!id ? "Tischregel entfernt." : t?.compliant ? `Passt zu „${t.name}“.` : `Tischregel gesetzt – ${t?.violations?.length || 0} Verstöße.`);
   } catch (err) { fail(err); renderDeckTable(d); }
@@ -4199,7 +4205,7 @@ $("#tr-quick").addEventListener("click", async (e) => {
   let rule = btn.dataset.rule;
   if (btn.dataset.price) {
     const v = await ask({ title: "Karten über welchem Preis verbieten?", text: "Betrag in Euro (günstigster Druck).", value: "10", ok: "Verbieten" });
-    const n = parseFloat(String(v || "").replace(",", "."));
+    const n = Number.parseFloat(String(v || "").replace(",", "."));
     if (!(n > 0)) return;
     rule = `@price>${n}`;
   }
@@ -4284,7 +4290,7 @@ $("#backup-file").addEventListener("change", async (e) => {
 });
 $("#backup-list").addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-restore]");
-  if (btn) restoreBackup(btn.dataset.restore);
+  if (btn) void restoreBackup(btn.dataset.restore);
 });
 async function restoreBackup(name, info = null) {
   const ok = await ask({ title: "Sicherung wiederherstellen?", ok: "Wiederherstellen", danger: true,
@@ -4322,15 +4328,15 @@ async function restoreFromTrash(id) {
 }
 $("#trash-list").addEventListener("click", async (e) => {
   const back = e.target.closest("button[data-trash-restore]");
-  if (back) { restoreFromTrash(back.dataset.trashRestore); return; }
+  if (back) { void restoreFromTrash(back.dataset.trashRestore); return; }
   const purge = e.target.closest("button[data-trash-purge]");
   if (!purge) return;
   if (!(await ask({ title: "Endgültig löschen?", text: "Das Deck mit Versionen und Partien ist danach weg (außer in einer Sicherung).", ok: "Endgültig löschen", danger: true }))) return;
-  try { await api(`/api/trash/${enc(purge.dataset.trashPurge)}`, { method: "DELETE" }); refreshTrash(); } catch (err) { fail(err); }
+  try { await api(`/api/trash/${enc(purge.dataset.trashPurge)}`, { method: "DELETE" }); void refreshTrash(); } catch (err) { fail(err); }
 });
 $("#trash-empty").addEventListener("click", async () => {
   if (!(await ask({ title: "Papierkorb leeren?", text: "Alle Decks im Papierkorb werden endgültig gelöscht (außer in einer Sicherung).", ok: "Leeren", danger: true }))) return;
-  try { await api("/api/trash", { method: "DELETE" }); refreshTrash(); } catch (err) { fail(err); }
+  try { await api("/api/trash", { method: "DELETE" }); void refreshTrash(); } catch (err) { fail(err); }
 });
 
 // ============================================================================================
@@ -4414,7 +4420,7 @@ function syncNews(run) {
   if (!run.ok || !run.incoming?.length) return;
   const rest = run.incoming.length - 3 + (run.incoming_more || 0);
   const items = run.incoming.slice(0, 3).join(", ") + (rest > 0 ? ` und ${rest} weitere` : "");
-  refreshDeckList();
+  void refreshDeckList();
   toast(`Neu von deinen anderen Geräten: ${items}`, "info", 9000, { label: "Anzeigen", run: reloadAfterSync });
 }
 
@@ -4422,7 +4428,7 @@ async function reloadAfterSync() {
   await Promise.all([refreshDeckList(), refreshTableRules(), refreshOpponents(), refreshBlacklist(), refreshCollectionSummary(), refreshOrders()]);
   if (edit) { toast("Du bearbeitest gerade dieses Deck – speichere oder verwirf zuerst, dann siehst du den neuen Stand."); return; }
   currentDeck = null;
-  route();
+  void route();
 }
 
 async function syncRun() {
@@ -4436,8 +4442,8 @@ async function syncRun() {
     if (r.run.error) toast(r.run.error, "error", 7000);
     else if (!r.run.incoming?.length) toast(r.run.outgoing?.length ? "Abgeglichen – deine Änderungen sind auf dem Server." : "Abgeglichen – alles war schon aktuell.");
     syncNews(r.run);
-    if (r.run.conflicts) refreshSyncConflicts();
-  } catch (err) { fail(err); refreshSync({ quiet: true }); } finally { btn.disabled = false; }
+    if (r.run.conflicts) void refreshSyncConflicts();
+  } catch (err) { fail(err); void refreshSync({ quiet: true }); } finally { btn.disabled = false; }
 }
 $("#sync-run").addEventListener("click", syncRun);
 
@@ -4459,7 +4465,7 @@ $("#sync-connect").addEventListener("submit", async (e) => {
     renderSync();
     if (r.run?.error) toast(`Verbunden, aber der erste Abgleich hat nicht geklappt: ${r.run.error}`, "error", 8000);
     else toast(r.run?.incoming?.length ? "Verbunden – die Daten der anderen Geräte sind jetzt auch hier." : "Verbunden – deine Daten sind auf dem Server.");
-    if (r.run?.incoming?.length) reloadAfterSync();
+    if (r.run?.incoming?.length) void reloadAfterSync();
   } catch (err) { fail(err); } finally { btn.disabled = false; btn.textContent = "Verbinden"; }
 });
 
@@ -4467,7 +4473,7 @@ $("#sync-interval").addEventListener("change", async (e) => {
   try {
     await api("/api/settings", { method: "POST", body: { sync_interval: Number(e.target.value) } });
     toast(Number(e.target.value) ? "Gespeichert – abgeglichen wird beim Start, nach Änderungen und regelmäßig." : "Gespeichert – abgeglichen wird nur noch per Knopf.");
-    refreshSync({ quiet: true });
+    void refreshSync({ quiet: true });
   } catch (err) { fail(err); }
 });
 
@@ -4491,7 +4497,7 @@ $("#sync-pair").addEventListener("click", async () => {
     syncPairTimer = setInterval(tick, 15000);
   } catch (err) { fail(err); }
 });
-$("#sync-pair-close").addEventListener("click", () => { $("#sync-pairing").hidden = true; clearInterval(syncPairTimer); refreshSyncDevices(); });
+$("#sync-pair-close").addEventListener("click", () => { $("#sync-pairing").hidden = true; clearInterval(syncPairTimer); void refreshSyncDevices(); });
 $("#sync-copy").addEventListener("click", async (e) => {
   try { await navigator.clipboard.writeText(e.target.dataset.link); toast("Link kopiert."); }
   catch { await ask({ title: "Kopplungslink", text: "Zum Kopieren markieren:", value: e.target.dataset.link, ok: "Schließen" }); }
@@ -4511,12 +4517,12 @@ async function refreshSyncDevices() {
     </li>`;
   }).join("") || '<li class="muted small">Keine Geräte.</li>';
 }
-$("#sync-devices-box").addEventListener("toggle", (e) => { if (e.target.open) refreshSyncDevices(); });
+$("#sync-devices-box").addEventListener("toggle", (e) => { if (e.target.open) void refreshSyncDevices(); });
 $("#sync-devices").addEventListener("click", async (e) => {
   const btn = e.target.closest("button[data-sync-revoke]");
   if (!btn) return;
   if (!(await ask({ title: `„${btn.dataset.name}“ abmelden?`, text: "Das Gerät kann danach nicht mehr abgleichen, bis du es neu koppelst. Seine eigenen Daten bleiben dort erhalten.", ok: "Abmelden", danger: true }))) return;
-  try { await api(`/api/sync/devices/${enc(btn.dataset.syncRevoke)}`, { method: "DELETE" }); toast(`„${btn.dataset.name}“ ist abgemeldet.`); refreshSyncDevices(); } catch (err) { fail(err); }
+  try { await api(`/api/sync/devices/${enc(btn.dataset.syncRevoke)}`, { method: "DELETE" }); toast(`„${btn.dataset.name}“ ist abgemeldet.`); void refreshSyncDevices(); } catch (err) { fail(err); }
 });
 
 const conflictVal = (v) => {
@@ -4535,7 +4541,7 @@ async function refreshSyncConflicts() {
         <div class="small">Feld <code>${esc(c.where)}</code> · gilt jetzt: <span class="conflict-val">${esc(conflictVal(c.kept))}</span>
           · hier war: <span class="conflict-val">${esc(conflictVal(c.local))}</span></div></div></li>`).join("");
 }
-$("#sync-conflicts-box").addEventListener("toggle", (e) => { if (e.target.open) refreshSyncConflicts(); });
+$("#sync-conflicts-box").addEventListener("toggle", (e) => { if (e.target.open) void refreshSyncConflicts(); });
 $("#sync-result").addEventListener("click", (e) => {
   if (!e.target.closest("[data-sync-conflicts]")) return;
   e.preventDefault();
@@ -4543,7 +4549,7 @@ $("#sync-result").addEventListener("click", (e) => {
   $("#sync-conflicts-box").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 $("#sync-conflicts-clear").addEventListener("click", async () => {
-  try { await api("/api/sync/conflicts", { method: "DELETE" }); refreshSyncConflicts(); refreshSync({ quiet: true }); } catch (err) { fail(err); }
+  try { await api("/api/sync/conflicts", { method: "DELETE" }); void refreshSyncConflicts(); void refreshSync({ quiet: true }); } catch (err) { fail(err); }
 });
 
 $("#sync-disconnect").addEventListener("click", async () => {
@@ -4552,7 +4558,7 @@ $("#sync-disconnect").addEventListener("click", async () => {
 });
 
 // keep the status fresh while the app is visible; coming back to the window syncs if it has been a while
-setInterval(() => { if (document.visibilityState === "visible" && syncInfo?.connected) refreshSync({ quiet: true }); }, SYNC_POLL_MS);
+setInterval(() => { if (document.visibilityState === "visible" && syncInfo?.connected) void refreshSync({ quiet: true }); }, SYNC_POLL_MS);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible" || !syncInfo?.connected || syncInfo.revoked || !syncInfo.interval) return;
   if (!syncInfo.running && Date.now() / 1000 - (syncInfo.last?.at || 0) > 60) {
@@ -4655,7 +4661,7 @@ async function refreshDbStatus() {
 }
 $("#db-btn").addEventListener("click", async () => {
   await api("/api/carddb/refresh", { method: "POST" }).catch(fail);
-  refreshDbStatus();
+  void refreshDbStatus();
 });
 
 // ============================================================================================
@@ -4736,7 +4742,7 @@ $("#order-export-menu").addEventListener("click", copyOrderList);
 const refreshOrderPlan = (() => {
   const run = () => {
     if (!currentOrder || parseHash().view !== "orders") return;
-    if (currentOrder.counts.slots) loadPlan();
+    if (currentOrder.counts.slots) void loadPlan();
     else { printPlan = null; $("#print-grid").innerHTML = ""; $("#print-summary").textContent = "Noch nichts zu drucken – füge oben Karten oder Tokens hinzu."; }
   };
   const later = debounce(run, 700);
@@ -4747,7 +4753,7 @@ function orderChanged(o, msg) {
   currentOrder = o;
   renderOrder();
   refreshOrderPlan();
-  refreshOrders();
+  void refreshOrders();
   if (msg) toast(msg);
 }
 
@@ -4822,7 +4828,7 @@ async function renderDeckPick() {
     $("#oadd-pick").innerHTML = names.map((n) => `<label><input type="checkbox" value="${esc(n)}"> ${esc(n)}</label>`).join("");
   } catch (err) { fail(err); }
 }
-$("#oadd-deck").addEventListener("change", (e) => { if (e.target.name === "which" || e.target.name === "deck") renderDeckPick(); });
+$("#oadd-deck").addEventListener("change", (e) => { if (e.target.name === "which" || e.target.name === "deck") void renderDeckPick(); });
 $("#oadd-deck").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = e.target.elements;
@@ -4920,7 +4926,7 @@ function orderDialog({ title, text, body, missingToggle = false, qtyField = fals
           payload.items = payload.items.map((i) => ({ ...i, qty }));
         }
         const r = await api(`/api/orders/${enc(id)}/items`, { method: "POST", body: payload });
-        refreshOrders();
+        void refreshOrders();
         toast(`${r.added} ${r.added === 1 ? "Karte" : "Karten"} in „${r.name}“ – zu finden unter „Sammelbestellungen“.`);
         done(r);
       } catch (err) { fail(err); }
@@ -5087,7 +5093,7 @@ function updateBuyCompareTitle() {
   $("#buy-compare-mode").hidden = !n;
 }
 const buyMode = () => (buyPicked().size ? $("#buy-compare-mode input:checked")?.value || "all" : "all");
-const buyMax = () => { const v = parseFloat(String($("#buy-max").value).replace(",", ".")); return Number.isFinite(v) && v >= 0 ? v : null; };
+const buyMax = () => { const v = Number.parseFloat(String($("#buy-max").value).replace(",", ".")); return Number.isFinite(v) && v >= 0 ? v : null; };
 function renderBuylist() {
   const r = buyData, max = buyMax();
   $("#buy-bar").hidden = false;
@@ -5192,10 +5198,10 @@ $("#order-from-deck").addEventListener("click", () => {
   if (!currentDeck) return;
   $("#deck-menu").open = false;
   const total = currentDeck.cards.reduce((n, c) => n + (c.qty || 1), 0) + currentDeck.commanders.length;
-  orderDialog({ title: "Deck drucken", text: `Karten aus „${currentDeck.name}“ (${total} insgesamt) in eine Sammelbestellung packen.`,
+  void orderDialog({ title: "Deck drucken", text: `Karten aus „${currentDeck.name}“ (${total} insgesamt) in eine Sammelbestellung packen.`,
     body: { deck: currentDeck.slug }, missingToggle: true });
 });
-refreshOrders();
+void refreshOrders();
 
 // ============================================================================================
 // glossary: keywords, actions and Commander terms
@@ -5263,7 +5269,7 @@ function paletteItems() {
     for (const [tab, label] of Object.entries(tabNames)) items.push({ label, hint: d.name, run: () => selectTab(tab) });
     items.push({ label: "Karten bearbeiten", hint: d.name, run: () => { selectTab("karten"); if (!edit) setEditing(true); } });
     items.push({ label: "Einkaufsliste mit Preisen", hint: d.name, run: () => openBuylist() });
-    items.push({ label: "Rule 0", hint: d.name, run: () => { selectTab("karten"); openRule0(); } });
+    items.push({ label: "Rule 0", hint: d.name, run: () => { selectTab("karten"); void openRule0(); } });
     items.push({ label: "Ziel und Tischregel", hint: d.name, run: () => { selectTab("karten"); $("#deck-target").scrollIntoView({ behavior: "smooth", block: "start" }); } });
     items.push({ label: "Liste kopieren", hint: d.name, run: () => $("#copy-btn").click() });
     items.push({ label: "Mit anderem Deck vergleichen", hint: d.name, run: () => openDeckCompare() });
@@ -5571,14 +5577,14 @@ async function loadDesktopVersions() {
   note.textContent = desktopReleases.length ? "" : "Keine Versionen gefunden.";
   $("#desktop-switch").disabled = !pick;
 }
-$("#desktop-other").addEventListener("toggle", (e) => { if (e.target.open) loadDesktopVersions(); });
+$("#desktop-other").addEventListener("toggle", (e) => { if (e.target.open) void loadDesktopVersions(); });
 $("#desktop-versions").addEventListener("change", () => { $("#desktop-switch").disabled = !$("#desktop-versions").value; });
 $("#desktop-preview").addEventListener("change", async (e) => {
   try {
     await api("/api/settings", { method: "POST", body: { desktop_preview: e.target.checked } });
     await api("/api/desktop/command", { method: "POST", body: { type: "check_update" } });
     toast(e.target.checked ? "Vorschau-Versionen werden ab jetzt angeboten." : "Nur noch freigegebene Versionen. Eine Vorschau bleibt, bis die nächste Version kommt.");
-    if ($("#desktop-other").open) loadDesktopVersions();
+    if ($("#desktop-other").open) void loadDesktopVersions();
     clearTimeout(desktopTimer);
     desktopTimer = setTimeout(refreshDesktop, 15000);
   } catch (err) { fail(err); }
@@ -5622,9 +5628,9 @@ wireAutocomplete($("#tr-input"), $("#ac-tr"));
 wireAutocomplete($("#opp-new [name=commander]"), $("#ac-opp-new"));
 wireAutocomplete($("#opp-form [name=commander]"), $("#ac-opp-edit"));
 wireAutocomplete($("#opp-form [name=partner]"), $("#ac-opp-partner"));
-refreshBlacklist();
+void refreshBlacklist();
 loadSettings().catch((err) => console.error(err));
-Promise.all([initBrackets(), refreshDeckList(), refreshCollectionSummary(), refreshTableRules(), refreshOpponents(), refreshSales()]).then(route, (err) => { fail(err); route(); });
-refreshSync({ quiet: true });
+Promise.all([initBrackets(), refreshDeckList(), refreshCollectionSummary(), refreshTableRules(), refreshOpponents(), refreshSales()]).then(route, (err) => { fail(err); void route(); });
+void refreshSync({ quiet: true });
 // the desktop shell polls the backend a few seconds after the start; sooner after an update, to report how it went
 setTimeout(refreshDesktop, store.get("update") ? 4000 : 20000);

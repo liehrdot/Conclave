@@ -50,19 +50,27 @@ export function nameLines(lines) {
   return [...new Set(lines.map((l) => cleanName(l.text)).filter((t) => t.length >= 3 && /\p{L}{3}/u.test(t)))].slice(0, 4);
 }
 
+// drops any of ``chars`` from both ends (a loop instead of /^[…]+|[…]+$/, which backtracks on long runs)
+function trimChars(s, chars) {
+  let a = 0, b = s.length;
+  while (a < b && chars.includes(s[a])) a++;
+  while (b > a && chars.includes(s[b - 1])) b--;
+  return s.slice(a, b);
+}
+
 // "Sol Rinq @" → "Sol Rinq": letters (also accents), spaces, apostrophes, commas, hyphens; stray symbols at the ends go
 export function cleanName(text) {
   const line = String(text).split("\n").map((l) => l.trim()).sort((a, b) => b.length - a.length)[0] || "";
   const words = line.replace(/[’`´]/g, "'").replace(/[^\p{L}' ,\-]/gu, " ").split(/\s+/).filter(Boolean);
   while (words.length && !/\p{L}{2}/u.test(words[0])) words.shift();
   while (words.length && !/\p{L}{2}/u.test(words[words.length - 1])) words.pop();
-  return words.join(" ").replace(/^[,'\-]+|[,'\-]+$/g, "").trim();
+  return trimChars(words.join(" "), ",'-").trim();
 }
 
 // "0123 R" / "MKM • DE ✒ Artist" (and older "123/280 R" / "M20 • EN") → {set, number, lang}
 export function parseLine(text) {
   const t = String(text).toUpperCase().replace(/[|]/g, "I");
-  const m = t.match(/\b([A-Z0-9]{3,5})\s*[^A-Z0-9\s]{0,2}\s*(EN|DE|FR|IT|ES|SP|PT|JP|JA|KO|RU|CS|CT|PH)\b/);
+  const m = t.match(/\b([A-Z0-9]{3,5})\s{0,4}(?:[^A-Z0-9\s]{1,2}\s{0,4})?(EN|DE|FR|IT|ES|SP|PT|JP|JA|KO|RU|CS|CT|PH)\b/);
   if (!m || !/[A-Z]/.test(m[1])) return null;
   const before = t.slice(0, m.index);
   const n = before.match(/\b0*(\d{1,4})(?:\s*\/\s*\d{1,4})?\b/) || t.slice(m.index + m[0].length).match(/\b0*(\d{1,4})\s*\/\s*\d{1,4}\b/);
@@ -152,7 +160,7 @@ function strip(view, box, height, angle = 0) {
   // grey, contrast stretched (2 % – 98 %): glare and dim light read better
   const img = g.getImageData(0, 0, c.width, c.height), px = img.data;
   const hist = new Uint32Array(256);
-  for (let i = 0; i < px.length; i += 4) { const y = (px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000 | 0; px[i] = y; hist[y]++; }
+  for (let i = 0; i < px.length; i += 4) { const y = Math.trunc((px[i] * 299 + px[i + 1] * 587 + px[i + 2] * 114) / 1000); px[i] = y; hist[y]++; }
   const n = px.length / 4;
   let lo = 0, hi = 255, acc = 0;
   for (; lo < 255 && (acc += hist[lo]) < n * 0.02; lo++);
@@ -446,7 +454,7 @@ export function scanner() {
         video.srcObject = stream;
         await video.play().catch(() => {});
         track = stream.getVideoTracks()[0];
-        try { track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {}); } catch { /* not supported */ }
+        Promise.resolve().then(() => track.applyConstraints({ advanced: [{ focusMode: "continuous" }] })).catch(() => { /* not supported */ });
         const caps = track.getCapabilities?.() || {};
         torch.hidden = !caps.torch;
         torch.setAttribute("aria-pressed", "false");
@@ -516,7 +524,7 @@ export function scanner() {
         } catch { /* one bad frame */ }
         timer = setTimeout(tick, 120);
       };
-      tick();
+      void tick();
     },
     onClose: stop,
   });
@@ -701,7 +709,7 @@ export function addSheet(first, { lang = "", onAdded = null, onClose = null } = 
     };
   };
   const printPage = () => {
-    if (!printsList) scry.prints(card.oracle_id, { lang: s.lang === "en" ? "" : "any" }).then((list) => { printsList = list; redraw(); });
+    if (!printsList) void scry.prints(card.oracle_id, { lang: s.lang === "en" ? "" : "any" }).then((list) => { printsList = list; redraw(); });
     const list = (printsList || []).filter((p) => s.lang === "en" ? p.lang === "en" : p.lang === s.lang || p.lang === "en");
     return {
       title: "Ausgabe wählen", left: `<button class="btn plain" type="button" data-sheet-back>${icon("chev-l", "sm")}Zurück</button>`,

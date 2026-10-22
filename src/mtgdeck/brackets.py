@@ -84,7 +84,7 @@ _MLD_RE = re.compile(
     r"nonbasic lands are (mountains|islands|plains|swamps|forests)|exile all lands|return all lands",
     re.I,
 )
-_EXTRA_TURN_RE = re.compile(r"takes? (an|\w+) extra turns?", re.I)
+_EXTRA_TURN_RE = re.compile(r"takes? \w+ extra turns?", re.I)
 
 
 def describe() -> list[dict[str, Any]]:

@@ -24,7 +24,7 @@ def version_key(v: str) -> tuple:
     """Sort key for versions like 0.1.9 and 0.1.10-preview.42 (a prerelease sorts before its release)."""
     m = _SEMVER.fullmatch(v.lstrip("v"))
     if not m:
-        return (-1,)
+        return (-1, 0, 0, 0, ())
     pre = m.group(4)
     parts = tuple((0, int(p), "") if p.isdigit() else (1, 0, p) for p in pre.split(".")) if pre else ()
     return (int(m.group(1)), int(m.group(2)), int(m.group(3)), 0 if pre else 1, parts)
@@ -39,7 +39,7 @@ def parse(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
         feed = next((a.get("browser_download_url") for a in r.get("assets") or [] if a.get("name") == "latest.json"), None)
         tag = str(r.get("tag_name") or "")
         version = tag.removeprefix("preview-").lstrip("v")
-        if not feed or not _FEED.fullmatch(str(feed)) or version_key(version) == (-1,):
+        if not feed or not _FEED.fullmatch(str(feed)) or version_key(version)[0] < 0:
             continue
         out.append({"version": version, "tag": tag, "preview": bool(r.get("prerelease")), "feed": feed,
                     "date": r.get("published_at"), "notes": (r.get("body") or "").strip()[:500]})  # fmt: skip

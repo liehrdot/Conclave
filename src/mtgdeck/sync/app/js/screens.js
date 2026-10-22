@@ -254,7 +254,7 @@ export function deck(slug, seg = "rule0") {
         for (const x of $$("[data-seg]", el)) { x.setAttribute("aria-pressed", x === b); x.setAttribute("aria-selected", x === b); }
         $("#seg-body", el).innerHTML = segment(d, b.dataset.seg);
         bindSegment(el, d);
-        const top = $(".seg-sticky", el).getBoundingClientRect().top + scrollY - 52 - (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--top")) || 0);
+        const top = $(".seg-sticky", el).getBoundingClientRect().top + scrollY - 52 - (Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--top")) || 0);
         if (scrollY > top) scrollTo({ top });
       });
       bindSegment(el, d);

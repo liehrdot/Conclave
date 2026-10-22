@@ -161,7 +161,7 @@
       <header class="page-head deck-head">
         <img id="deck-thumb" class="deck-thumb" alt="" hidden>
         <div class="deck-title">
-          <h1 id="deck-name"></h1>
+          <h1 id="deck-name">Deck</h1>
           <p id="deck-commanders" class="deck-commanders"></p>
           <p id="deck-facts" class="muted small"></p>
           <p id="deck-verdict" class="verdict"></p>
@@ -363,7 +363,7 @@
                 <div class="pick-chips opp-known" id="game-known-opps" hidden></div>
                 <div class="opp-slots" role="group" aria-labelledby="opp-label">
                   <div class="opp-slot"><input name="opp1" list="ac-opp1" placeholder="z. B. Atraxa" aria-label="Commander des ersten Gegners"><datalist id="ac-opp1"></datalist>
-                    <input name="oppnote1" placeholder="Aufgefallen, z. B. Combo mit Thassa's Oracle" aria-label="Aufgefallen beim ersten Gegner"></div>
+                    <label class="sr-only" for="oppnote1">Aufgefallen beim ersten Gegner</label><input name="oppnote1" id="oppnote1" placeholder="Aufgefallen, z. B. Combo mit Thassa's Oracle"></div>
                   <div class="opp-slot"><input name="opp2" list="ac-opp2" placeholder="2. Gegner" aria-label="Commander des zweiten Gegners"><datalist id="ac-opp2"></datalist>
                     <input name="oppnote2" placeholder="Aufgefallen (optional)" aria-label="Aufgefallen beim zweiten Gegner"></div>
                   <div class="opp-slot"><input name="opp3" list="ac-opp3" placeholder="3. Gegner" aria-label="Commander des dritten Gegners"><datalist id="ac-opp3"></datalist>
@@ -659,7 +659,7 @@
         <header class="page-head">
           <div>
             <a class="link small" href="#/orders">← Alle Sammelbestellungen</a>
-            <h1 id="order-name"></h1>
+            <h1 id="order-name">Sammelbestellung</h1>
             <p id="order-meta" class="lead"></p>
           </div>
           <div class="page-actions">
@@ -713,7 +713,8 @@
             <p class="muted small">Eine Liste (Moxfield-Export, Arena, „1 Sol Ring“, auch deutsche Namen) <b>oder</b> ein Deck-Link von
               Moxfield, Archidekt, MTGGoldfish, TappedOut, Deckstats oder EDHREC.</p>
             <input name="url" type="url" inputmode="url" placeholder="https://www.moxfield.com/decks/…" aria-label="Deck-Link">
-            <textarea name="text" rows="6" placeholder="1 Aetherspouts&#10;1 Craterhoof Behemoth&#10;1 Ezuri's Predation&#10;1 Hornet Queen" aria-label="Kartenliste"></textarea>
+            <label class="sr-only" for="order-add-text">Kartenliste</label>
+            <textarea name="text" id="order-add-text" rows="6" placeholder="1 Aetherspouts&#10;1 Craterhoof Behemoth&#10;1 Ezuri's Predation&#10;1 Hornet Queen"></textarea>
             <button type="submit" class="btn primary">Hinzufügen</button>
           </form>
         </section>
@@ -778,7 +779,7 @@
           <img id="opp-thumb" class="opp-thumb" alt="" hidden>
           <div>
             <a class="link small" href="#/opponents">← Alle Gegnerdecks</a>
-            <h1 id="opp-name"></h1>
+            <h1 id="opp-name">Gegnerdeck</h1>
             <p id="opp-meta" class="lead"></p>
           </div>
           <div class="page-actions">
@@ -801,7 +802,8 @@
         <section class="panel">
           <h2>Aufgefallen</h2>
           <form id="opp-note-form" class="inline-form" autocomplete="off">
-            <input name="note" placeholder="z. B. hat in Zug 5 mit Thassa's Oracle gewonnen" aria-label="Neue Beobachtung" maxlength="1000" required>
+            <label class="sr-only" for="opp-note-input">Neue Beobachtung</label>
+            <input name="note" id="opp-note-input" placeholder="z. B. hat in Zug 5 mit Thassa's Oracle gewonnen" maxlength="1000" required>
             <button type="submit" class="btn">Notieren</button>
           </form>
           <ul id="opp-notes" class="opp-notes"></ul>
@@ -861,7 +863,7 @@
         <header class="page-head">
           <div>
             <a class="link small" href="#/tables">← Alle Tischregeln</a>
-            <h1 id="tr-name"></h1>
+            <h1 id="tr-name">Tischregel</h1>
             <p id="tr-meta" class="lead"></p>
           </div>
           <div class="page-actions">
@@ -1163,7 +1165,7 @@
   </div>
   <div id="progress" class="progressbar" hidden><div></div><span></span></div>
   <div id="terminal-wrap" class="terminal-wrap" hidden>
-    <div id="terminal" class="terminal" tabindex="0" aria-label="MPC-Autofill-Terminal"></div>
+    <div id="terminal" class="terminal" role="region" aria-label="MPC-Autofill-Terminal"></div>
     <div class="term-keys">
       <span class="muted small">Ins Terminal klicken und mit der Tastatur bedienen – oder:</span>
       <button type="button" class="btn small" data-key="up">↑</button>
@@ -1189,6 +1191,7 @@
 
 <dialog id="palette" class="dialog palette" aria-label="Schnellsuche">
   <div class="palette-input"><svg class="icon"><use href="#i-search"/></svg>
+    <label class="sr-only" for="palette-input">Schnellsuche</label>
     <input id="palette-input" placeholder="Deck, Seite oder Aktion …" role="combobox" aria-controls="palette-list"
       aria-expanded="true" aria-autocomplete="list" autocomplete="off" spellcheck="false"></div>
   <ul id="palette-list" role="listbox" aria-label="Treffer"></ul>
@@ -1198,12 +1201,12 @@
 <dialog id="shortcuts" class="dialog small-dialog" aria-labelledby="shortcuts-title">
   <h2 id="shortcuts-title">Tastenkürzel</h2>
   <table class="shortcuts">
-    <tr><td><kbd>Strg</kbd> <kbd>K</kbd></td><td>Schnellsuche: Decks, Seiten, Aktionen</td></tr>
-    <tr><td><kbd>Strg</kbd> <kbd>N</kbd></td><td>Neues Deck</td></tr>
-    <tr><td><kbd>Strg</kbd> <kbd>,</kbd></td><td>Einstellungen</td></tr>
-    <tr><td><kbd>Strg</kbd> <kbd>S</kbd></td><td>Kartenänderungen speichern (im Bearbeiten-Modus)</td></tr>
-    <tr><td><kbd>Esc</kbd></td><td>Dialog, Menü oder Schnellsuche schließen</td></tr>
-    <tr><td><kbd>?</kbd></td><td>Diese Übersicht</td></tr>
+    <tr><th scope="row"><kbd>Strg</kbd> <kbd>K</kbd></th><td>Schnellsuche: Decks, Seiten, Aktionen</td></tr>
+    <tr><th scope="row"><kbd>Strg</kbd> <kbd>N</kbd></th><td>Neues Deck</td></tr>
+    <tr><th scope="row"><kbd>Strg</kbd> <kbd>,</kbd></th><td>Einstellungen</td></tr>
+    <tr><th scope="row"><kbd>Strg</kbd> <kbd>S</kbd></th><td>Kartenänderungen speichern (im Bearbeiten-Modus)</td></tr>
+    <tr><th scope="row"><kbd>Esc</kbd></th><td>Dialog, Menü oder Schnellsuche schließen</td></tr>
+    <tr><th scope="row"><kbd>?</kbd></th><td>Diese Übersicht</td></tr>
   </table>
   <p class="muted small">Auf dem Mac steht ⌘ für Strg. Im Browser kann Strg+N vom Browser belegt sein – in der Desktop-App nicht.</p>
   <div class="dialog-actions"><button type="button" class="btn primary" id="shortcuts-close">Schließen</button></div>
@@ -1247,8 +1250,9 @@
 
 <dialog id="ask-dialog" class="dialog small-dialog">
   <form method="dialog" id="ask-form">
-    <h2 id="ask-title"></h2>
+    <h2 id="ask-title">Frage</h2>
     <p id="ask-text" class="muted"></p>
+    <label class="sr-only" for="ask-input">Antwort</label>
     <input id="ask-input" hidden>
     <div class="dialog-actions">
       <button type="button" class="btn" value="cancel" id="ask-cancel">Abbrechen</button>
@@ -1268,7 +1272,7 @@
 
 <dialog id="picker" class="dialog">
   <div class="dialog-head">
-    <h2 id="picker-title"></h2>
+    <h2 id="picker-title">Bild wählen</h2>
     <div class="btn-group">
       <button type="button" class="btn" id="picker-auto">Automatisch wählen</button>
       <button type="button" class="icon-btn" id="picker-close" aria-label="Schließen"><svg class="icon"><use href="#i-x"/></svg></button>
@@ -1276,6 +1280,7 @@
   </div>
   <div class="picker-upload" id="picker-upload">
     <button type="button" class="btn" id="picker-upload-btn"><svg class="icon"><use href="#i-image"/></svg>Eigenes Bild hochladen …</button>
+    <label class="sr-only" for="picker-file">Bilddatei</label>
     <input type="file" id="picker-file" accept="image/png,image/jpeg,image/webp,image/tiff,image/bmp" hidden>
     <label class="check small">Beschnittrand
       <select id="picker-bleed">
@@ -1298,7 +1303,7 @@
 
 <dialog id="compare" class="dialog compare-dialog">
   <div class="dialog-head">
-    <h2 id="compare-title"></h2>
+    <h2 id="compare-title">Vergleich</h2>
     <div class="btn-group">
       <label class="check">Zoom
         <select id="compare-zoom"><option value="1" selected>Einpassen</option><option value="2">2×</option><option value="4">4×</option><option value="8">8×</option></select>
@@ -1450,7 +1455,7 @@
 
 <dialog id="card-view" class="dialog card-view" aria-labelledby="card-view-title">
   <div class="card-view-bar">
-    <h2 id="card-view-title" class="sr-only"></h2>
+    <h2 id="card-view-title" class="sr-only">Karte</h2>
     <button type="button" class="icon-btn" id="card-view-close" aria-label="Schließen" autofocus><svg class="icon"><use href="#i-x"/></svg></button>
   </div>
   <div class="card-view-body">
@@ -1492,7 +1497,7 @@
     <button type="button" class="icon-btn" id="rule0-full-close" aria-label="Schließen" autofocus><svg class="icon"><use href="#i-x"/></svg></button>
   </div>
   <div class="sheet">
-    <h1 class="print-only" id="sheet-title"></h1>
+    <h1 class="print-only" id="sheet-title">Rule 0</h1>
     <dl id="rule0-full-rows" class="rule0-rows big"></dl>
     <p class="rule0-ask">Passt das für eure Runde?</p>
   </div>

@@ -8,7 +8,8 @@ export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ESC[c]);
 
 export const icon = (name, cls = "") => `<svg class="icon ${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 
-export const uid = () => (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, "") : Math.random().toString(16).slice(2) + Date.now().toString(16)).slice(0, 12);
+// randomUUID needs a secure context; getRandomValues works on plain http too (a test server in the LAN)
+export const uid = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => b.toString(16).padStart(2, "0")).join("");
 
 export const nowIso = () => new Date().toISOString().replace(/\.\d{3}Z$/, "+00:00");
 
@@ -16,7 +17,7 @@ export const nowIso = () => new Date().toISOString().replace(/\.\d{3}Z$/, "+00:0
 export function ago(iso) {
   if (!iso) return "";
   const t = new Date(iso);
-  if (isNaN(t)) return "";
+  if (Number.isNaN(t.getTime())) return "";
   const s = (Date.now() - t.getTime()) / 1000;
   if (s < 60) return "gerade eben";
   if (s < 3600) return `vor ${Math.round(s / 60)} Min.`;
@@ -94,7 +95,7 @@ function symbol(sym) {
 }
 export function mana(cost) {
   if (!cost) return "";
-  return String(cost).split(" // ").map((part) => part.replace(/\{([^}]+)\}/g, (_, sym) => symbol(sym))).join(" // ");
+  return String(cost).split(" // ").map((part) => part.replace(/\{([^{}]{1,12})\}/g, (_, sym) => symbol(sym))).join(" // ");
 }
 /** Rules text with its {T}, {2}{R} … as symbols (everything else escaped). */
-export const rulesText = (text) => esc(text || "").replace(/\{([^}]+)\}/g, (_, sym) => symbol(sym));
+export const rulesText = (text) => esc(text || "").replace(/\{([^{}]{1,12})\}/g, (_, sym) => symbol(sym));

@@ -208,6 +208,16 @@ async def post_json(url: str, body: Any, ttl: int = DEFAULT_TTL) -> Any:
     return await request_json("POST", url, json_body=body, ttl=ttl)
 
 
+async def save_stream(resp: httpx.Response, path: Path) -> None:
+    """Write a streamed response body to ``path``; the file work runs in a thread so the event loop stays free."""
+    fh = await asyncio.to_thread(path.open, "wb")
+    try:
+        async for chunk in resp.aiter_bytes(1 << 16):
+            await asyncio.to_thread(fh.write, chunk)
+    finally:
+        await asyncio.to_thread(fh.close)
+
+
 async def download(url: str, dest: Path) -> Path:
     """Download a binary file (e.g. a card image) unless it already exists."""
     if dest.exists() and dest.stat().st_size > 0:
@@ -219,9 +229,7 @@ async def download(url: str, dest: Path) -> Path:
         async with client().stream("GET", url, headers={"Accept": "*/*"}) as resp:
             if resp.status_code >= 400:
                 raise HttpError(resp.status_code, url, "download failed")
-            with tmp.open("wb") as fh:
-                async for chunk in resp.aiter_bytes(1 << 16):
-                    fh.write(chunk)
+            await save_stream(resp, tmp)
     except httpx.TransportError as exc:
         tmp.unlink(missing_ok=True)
         raise HttpError(0, url, _transport_text(exc)) from exc

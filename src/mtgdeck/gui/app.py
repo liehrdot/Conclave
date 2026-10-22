@@ -102,7 +102,7 @@ async def _guard(request: Request, call_next: Any) -> Any:
             # Lax, not Strict: the shell's start page lives on another site (tauri.localhost), and a Strict cookie
             # is not sent on the navigation that follows this redirect – the window would show the 401 JSON. Lax
             # still keeps the cookie out of cross-site POSTs and embedded requests; the Origin check covers the rest.
-            response.set_cookie(TOKEN_COOKIE, GUI_TOKEN, httponly=True, samesite="lax", path="/")
+            response.set_cookie(TOKEN_COOKIE, GUI_TOKEN, httponly=True, samesite="lax", path="/")  # NOSONAR: plain HTTP on 127.0.0.1, a Secure cookie would never be sent
             return response
         if not _token_ok(request):
             return JSONResponse({"detail": "Kein Zugriff: Die Oberfläche gehört zur Desktop-App. Bitte dort öffnen."}, status_code=401)
@@ -190,6 +190,7 @@ def _register(job: Job, work: Awaitable[None]) -> dict[str, str]:
             await work
         except asyncio.CancelledError:
             job.emit(type="error", text="Abgebrochen.")
+            raise
         except Exception as exc:
             log.exception("Job %s failed", job.id)
             job.emit(type="error", text=_error_text(exc))
@@ -249,13 +250,13 @@ async def api_health() -> dict[str, Any]:
 
 
 class DesktopPoll(BaseModel):
-    since: int = 0
+    since: int = Field(0, ge=0)
     visible: bool = True
     autostart: bool | None = None
     version: str | None = None
     update: dict[str, Any] | None = None  # the shell's update state: state, rev, current, version, notes, progress, downloaded, total, speed, error, failed_step
     features: list[str] | None = None  # what this shell can do, e.g. "moxfield" (opens moxfield.com links in its own window)
-    wait: float = 0  # long poll: hold the answer up to this many seconds until a notice or command comes up
+    wait: float = Field(0, ge=0, le=60)  # long poll: hold the answer up to this many seconds until a notice or command comes up
 
 
 class DesktopCommand(BaseModel):
@@ -2096,7 +2097,7 @@ def serve() -> None:
     sock.bind((host, port))
     port = sock.getsockname()[1]
     shown = f"[{host}]" if ":" in host else host
-    url = f"http://{shown}:{port}/" + (f"?token={GUI_TOKEN}" if GUI_TOKEN else "")
+    url = f"http://{shown}:{port}/" + (f"?token={GUI_TOKEN}" if GUI_TOKEN else "")  # NOSONAR: the local backend, no TLS on loopback
     print(f"Conclave GUI: {url}")
     print(f"MTGDECK_URL={url}", flush=True)
     try:

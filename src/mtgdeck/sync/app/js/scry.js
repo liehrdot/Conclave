@@ -93,7 +93,7 @@ export function hydrate(root) {
       img.src = i[kind];
     };
     const c = cached(img.dataset.card);
-    if (c) set(c); else info(img.dataset.card).then(set);
+    if (c) set(c); else void info(img.dataset.card).then(set);
   }
 }
 

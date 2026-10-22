@@ -42,7 +42,7 @@
   const isLanguage = (sel) => sel.tagName === "SELECT" && (/language|sprache/.test(label(sel)) || options(sel).some((o) => /english|englisch/.test(o)));
   function fields(f) {
     const all = [...f.querySelectorAll("input, select, textarea")];
-    const pick = (test) => all.find(test) || null;
+    const pick = (test) => all.find((el) => test(el)) || null;
     return {
       price: pick((el) => el.tagName === "INPUT" && /price|preis/.test(label(el)) && !/min|max|from|to\b|bis|von/.test(label(el)) && !["hidden", "checkbox", "radio"].includes(el.type)),
       amount: pick((el) => /amount|quantity|anzahl|menge|count/.test(label(el)) && el.type !== "hidden"),
@@ -72,7 +72,7 @@
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
   function choose(sel, test) {
-    const o = [...sel.options].find(test);
+    const o = [...sel.options].find((opt) => test(opt));
     if (!o) return false;
     setValue(sel, o.value);
     return true;
