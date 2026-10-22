@@ -51,21 +51,33 @@ into a deck stays with me; the app only gives me the facts I need for it.
 <table>
   <tr>
     <td width="50%">
-      <img src="docs/images/desktop-test.jpg" alt="A test hand rated as a keep, with reasons for and against it">
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="docs/images/desktop-test-light.jpg">
+        <img src="docs/images/desktop-test-dark.jpg" alt="A test hand rated as a keep, with reasons for and against it">
+      </picture>
       <p align="center"><sub>Test hands, rated: keep, borderline or mulligan</sub></p>
     </td>
     <td width="50%">
-      <img src="docs/images/desktop-cardview.jpg" alt="A foil card from the collection in the big card view">
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="docs/images/desktop-cardview-light.jpg">
+        <img src="docs/images/desktop-cardview-dark.jpg" alt="A foil card from the collection in the big card view">
+      </picture>
       <p align="center"><sub>Your own copies in the deck, foils included</sub></p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <img src="docs/images/desktop-buy.jpg" alt="The shopping list with Cardmarket prices">
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="docs/images/desktop-buy-light.jpg">
+        <img src="docs/images/desktop-buy-dark.jpg" alt="The shopping list with Cardmarket prices">
+      </picture>
       <p align="center"><sub>Shopping list with Cardmarket prices</sub></p>
     </td>
     <td width="50%">
-      <img src="docs/images/desktop-print.jpg" alt="The print studio with one picture per card">
+      <picture>
+        <source media="(prefers-color-scheme: light)" srcset="docs/images/desktop-print-light.jpg">
+        <img src="docs/images/desktop-print-dark.jpg" alt="The print studio with one picture per card">
+      </picture>
       <p align="center"><sub>Proxy printing with your own choice of art</sub></p>
     </td>
   </tr>
