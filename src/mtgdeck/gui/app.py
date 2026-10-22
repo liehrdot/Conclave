@@ -985,6 +985,24 @@ async def api_deck_table_rule(slug: str, req: DeckTableRule) -> dict[str, Any]:
     return {"slug": slug, "table_rule": deck.get("table_rule"), "validation": deck.get("validation")}
 
 
+class DeckFlags(BaseModel):
+    pinned: bool | None = None
+    shelved: bool | None = None
+
+
+@app.put("/api/decks/{slug}/flags")
+async def api_deck_flags(slug: str, req: DeckFlags) -> dict[str, Any]:
+    """Pin a deck to the top of the lists or mark it as not played at the moment (no new version)."""
+    flags = req.model_dump(exclude_none=True)
+    if not flags:
+        raise HTTPException(422, "Nichts zu ändern")
+    try:
+        deck = storage.set_flags(slug, **flags)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, "Deck nicht gefunden") from exc
+    return {"slug": slug, "pinned": bool(deck.get("pinned")), "shelved": bool(deck.get("shelved"))}
+
+
 class DeckTarget(BaseModel):
     bracket: int = Field(ge=1, le=5)
     profile: PowerProfile | None = None

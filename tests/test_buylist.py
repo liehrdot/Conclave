@@ -79,7 +79,7 @@ async def test_buylist_counts_only_collection_cards_no_other_deck_uses():
     assert "Filler 0" not in items  # 2 copies: one for "Anderes", one free for this deck
     whole = await buylist.build(deck, use_collection=False)
     assert {i["name"] for i in whole["items"]} == {"Meren of Clan Nel Toth", "Sol Ring", "Cultivate", "Filler 0"}
-    assert whole["use_collection"] is False and whole["other_decks"] == [{"slug": "anderes", "name": "Anderes"}]
+    assert whole["use_collection"] is False and whole["other_decks"] == [{"slug": "anderes", "name": "Anderes", "shelved": False}]
     assert {i["name"]: i["decks"] for i in whole["items"]}["Sol Ring"] == [{"slug": "anderes", "qty": 1}]  # also without the collection check
 
 

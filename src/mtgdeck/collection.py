@@ -438,7 +438,7 @@ def summary(entries: list[dict[str, Any]] | None = None) -> dict[str, Any]:
 
 
 def decks_by_card() -> dict[str, list[dict[str, Any]]]:
-    """Card name -> decks that use it (slug, name, qty)."""
+    """Card name -> decks that use it (slug, name, qty, shelved = not played at the moment)."""
     out: dict[str, list[dict[str, Any]]] = {}
     for meta in storage.list_decks():
         try:
@@ -449,7 +449,8 @@ def decks_by_card() -> dict[str, list[dict[str, Any]]]:
         for c in deck.get("cards", []):
             need[c["name"]] += int(c.get("qty", 1))
         for name, qty in need.items():
-            out.setdefault(name, []).append({"slug": deck["slug"], "name": deck.get("name", deck["slug"]), "qty": qty})
+            out.setdefault(name, []).append({"slug": deck["slug"], "name": deck.get("name", deck["slug"]), "qty": qty,
+                                             "shelved": bool(deck.get("shelved"))})  # fmt: skip
     return out
 
 

@@ -773,6 +773,11 @@ body.immersive .screen { padding-bottom: calc(max(env(safe-area-inset-bottom), 1
 /* ---------- Deck bauen (#/bauen/<slug>): search + deck, side by side on an iPad ---------- */
 body.wide .screen { max-width: 1320px; }
 .build-open { margin-top: 14px; width: 100%; }
+.deck-flags { margin-top: 12px; }
+.shelved-note { margin: 8px 0 0; }
+.row .title .pin { width: 14px; height: 14px; color: var(--accent-text); vertical-align: -1px; }
+.row.shelved .thumb { opacity: .45; filter: grayscale(.6); }
+.row.shelved .title { color: var(--text-2); }
 .draft-note {
   margin-top: 14px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r-row);
   background: var(--accent-soft); color: var(--on-accent-soft);
@@ -1008,3 +1013,4 @@ body.camera:has(.toasts .toast) .cam-hint { visibility: hidden; }  /* the toast 
 .place-new .input { flex: 1 1 auto; min-width: 0; }
 .place-chip { max-width: 100%; min-width: 0; gap: 4px; border: 1px dashed var(--text-3); background: transparent; color: var(--text-2); }
 .place-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

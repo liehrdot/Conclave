@@ -6,7 +6,7 @@ An operation is ``{"id", "type", "payload", "at"}``; ``apply(op, docs)`` takes t
 remembers applied ids, so an operation sent twice (the phone retries after a lost answer) changes nothing.
 
 Types: ``game.add`` · ``game.delete`` · ``opponent.add`` · ``opponent.update`` · ``opponent.note`` ·
-``opponent.note_delete`` · ``opponent.delete`` · ``deck.new`` · ``deck.edit`` · ``collection.add`` · ``collection.update``.
+``opponent.note_delete`` · ``opponent.delete`` · ``deck.new`` · ``deck.edit`` · ``deck.flags`` · ``collection.add`` · ``collection.update``.
 
 Decks built on the phone or tablet are saved like ``storage.save`` does it: a new version with a history entry and a
 full snapshot (``decks/.versions/<slug>/vNNNN.json``, returned by ``apply`` next to the deck). Card data never reaches
@@ -27,7 +27,7 @@ from typing import Any
 from .. import maybe as maybe_list
 from ..games import HOW, ISSUES, RESULTS
 from ..opponents import MAX_NOTES, TAGS
-from ..storage import _metrics, diff, level_text
+from ..storage import FLAGS, _metrics, diff, level_text
 from .files import snapshot_path
 
 OPPONENTS = "decks/.opponents.json"
@@ -36,7 +36,7 @@ SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]{0,80}")
 ID_RE = re.compile(r"[A-Za-z0-9_-]{1,40}")
 ISO_RE = re.compile(r"\d{4}-\d\d-\d\dT[\d:.]+(Z|[+-]\d\d:\d\d)?")
 TYPES = ("game.add", "game.delete", "opponent.add", "opponent.update", "opponent.note", "opponent.note_delete", "opponent.delete",
-         "deck.new", "deck.edit", "collection.add", "collection.update")  # fmt: skip
+         "deck.new", "deck.edit", "deck.flags", "collection.add", "collection.update")  # fmt: skip
 ROUND_KINDS = ("life", "cmd", "poison", "turn", "note")  # entries in the Runden-Helfer's log (js/round.js)
 ROUND_EVENTS_MAX = 400
 CATEGORIES = ("Ramp", "Draw", "Removal", "Board Wipe", "Counterspell", "Tutor", "Protection", "Synergy", "Win Condition", "Utility", "Land")
@@ -80,7 +80,7 @@ def paths(op: dict[str, Any]) -> list[str]:
         return [f"decks/.games/{_deck_slug(p)}.json"]
     if t == "deck.new":
         return [f"decks/{_deck_slug(p.get('deck') or {}, 'slug')}.json"]
-    if t == "deck.edit":
+    if t in ("deck.edit", "deck.flags"):
         return [f"decks/{_deck_slug(p)}.json"]
     if t.startswith("collection."):
         return [COLLECTION]
@@ -285,6 +285,24 @@ def _deck_edit(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, An
     return _save_version(deck, old, _change_note(added, removed, changed, _text(p.get("note"), 200)), at)
 
 
+def _deck_flags(p: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
+    """Like ``storage.set_flags``: ``pinned`` / ``shelved`` (bools) set or cleared in the file, no new version."""
+    slug = _deck_slug(p)
+    old = docs.get(f"decks/{slug}.json")
+    if not isinstance(old, dict):
+        raise OpError("Dieses Deck gibt es nicht mehr – am PC gelöscht?")
+    flags = {k: p[k] for k in FLAGS if k in p}
+    if not flags or not all(isinstance(v, bool) for v in flags.values()):
+        raise OpError("Ungültige Daten")
+    deck = dict(old)
+    for key, on in flags.items():
+        if on:
+            deck[key] = True
+        else:
+            deck.pop(key, None)
+    return {} if deck == old else {f"decks/{slug}.json": deck}
+
+
 def _coll_key(e: dict[str, Any]) -> tuple[Any, ...]:  # like collection._key (that module needs the network stack)
     return (str(e.get("name") or "").lower(), e.get("scryfall_id") or "", bool(e.get("proxy")), bool(e.get("foil")), e.get("lang") or "en",
             e.get("place_deck") or "", "" if e.get("place_deck") else str(e.get("place") or "").strip().lower())  # fmt: skip
@@ -397,6 +415,8 @@ def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
         return _deck_new(p, docs, at)
     if t == "deck.edit":
         return _deck_edit(p, docs, at)
+    if t == "deck.flags":
+        return _deck_flags(p, docs)
     if t == "collection.add":
         return _collection_add(p, docs, at)
     if t == "collection.update":
