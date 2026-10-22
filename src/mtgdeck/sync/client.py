@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from ..jsonstore import locked, read_json, write_json
+from ..paths import inside
 from . import files
 from .files import DECK_RE, SNAPSHOT_RE, Roots, canonical, decode, digest, kind_of, snapshot_path
 from .merge import MISSING, Log, merge_deck, merge_json, merge_lines
@@ -95,7 +96,7 @@ class SyncClient:
         write_json(self.state_file, self.state, indent=None)
 
     def _base_file(self, path: str) -> Path:
-        return self.roots.state.joinpath("base", *path.split("/"))
+        return inside(self.roots.state / "base", *path.split("/"))  # a path from the server never leaves base/
 
     def _base_value(self, path: str, kind: str) -> Any:
         st = self.state["docs"].get(path)
