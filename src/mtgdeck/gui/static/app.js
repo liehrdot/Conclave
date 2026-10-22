@@ -217,14 +217,39 @@ async function refreshDeckList() {
 function renderDeckList() {
   const q = $("#deck-filter").value.trim().toLowerCase();
   const list = deckIndex.filter((d) => !q || `${d.name} ${d.commanders.join(" ")}`.toLowerCase().includes(q));
-  $("#deck-list").innerHTML = list.length ? list.map((d) => `<li>
+  const firstShelved = list.findIndex((d) => d.shelved);  // the backend lists pinned decks first, shelved ones last
+  $("#deck-list").innerHTML = list.length ? list.map((d, i) => `${i === firstShelved ? `<li class="deck-list-group" title="Karten daraus kannst du für andere Decks nehmen">Pausiert</li>` : ""}<li${d.shelved ? ' class="shelved"' : ""}>
       <a href="#/deck/${enc(d.slug)}" data-slug="${esc(d.slug)}">
-        <span class="name">${d.valid === false ? '<span class="dot bad" title="nicht legal"></span><span class="sr-only">nicht legal:</span>' : ""}<span class="label">${esc(d.name)}</span></span>
+        <span class="name">${d.valid === false ? '<span class="dot bad" title="nicht legal"></span><span class="sr-only">nicht legal:</span>' : ""}<span class="label">${esc(d.name)}</span>${d.pinned ? `<svg class="icon pin" aria-label="angeheftet"><title>Angeheftet</title><use href="#i-pin"/></svg>` : ""}</span>
         ${d.updated ? `<span class="meta">${esc(fmtDate(d.updated))}</span>` : ""}
       </a></li>`).join("")
     : `<li class="empty-inline">${deckIndex.length ? "Kein Treffer." : "Noch keine Decks – starte mit „Neues Deck“."}</li>`;
   markNav();
 }
+
+// pin a deck to the top of the list, or shelve it (not played at the moment: its cards may go into other decks)
+async function setDeckFlag(d, key, on) {
+  try {
+    const r = await api(`/api/decks/${enc(d.slug)}/flags`, { method: "PUT", body: { [key]: on } });
+    if (currentDeck?.slug === d.slug) { currentDeck.pinned = r.pinned; currentDeck.shelved = r.shelved; renderDeckFlags(currentDeck); }
+    await refreshDeckList();
+    const text = key === "pinned" ? (on ? "oben angeheftet" : "nicht mehr angeheftet") : on ? "pausiert – seine Karten sind für andere Decks frei" : "wird wieder gespielt";
+    toast(`„${d.name}“ ${text}.`, "ok", 5000, { label: "Rückgängig", run: () => setDeckFlag(d, key, !on) });
+  } catch (err) { fail(err); }
+}
+
+function renderDeckFlags(d) {
+  const pin = $("#pin-btn");
+  pin.setAttribute("aria-pressed", String(!!d.pinned));
+  pin.title = d.pinned ? "Angeheftet – klicken zum Lösen" : "Oben anheften";
+  pin.setAttribute("aria-label", d.pinned ? "Angeheftet, lösen" : "Oben anheften");
+  $("#shelve-btn").textContent = d.shelved ? "Wieder spielen" : "Pausieren (gerade nicht gespielt)";
+  $("#deck-shelved").hidden = !d.shelved;
+  $("#view-deck").classList.toggle("is-shelved", !!d.shelved);
+}
+$("#pin-btn").addEventListener("click", () => currentDeck && setDeckFlag(currentDeck, "pinned", !currentDeck.pinned));
+$("#shelve-btn").addEventListener("click", () => { $("#deck-menu").open = false; if (currentDeck) setDeckFlag(currentDeck, "shelved", !currentDeck.shelved); });
+$("#unshelve-btn").addEventListener("click", () => currentDeck && setDeckFlag(currentDeck, "shelved", false));
 $("#deck-filter").addEventListener("input", renderDeckList);
 
 // ============================================================================================
@@ -744,6 +769,7 @@ function renderDeckHead(d) {
   $("#deck-against").hidden = !against.length;
   $("#deck-against").innerHTML = against.length ? `${icon("swords")} Gebaut gegen ${against.map((o) => `<a href="#/opponents/${enc(o.id)}">${esc(o.title)}</a>`).join(", ")}` : "";
   $("#export-txt").href = `/api/decks/${enc(d.slug)}/export/text`;
+  renderDeckFlags(d);
   renderDeckStatus(d);
 }
 
@@ -4781,7 +4807,7 @@ function renderBuyCompare() {
   const group = (kind, title) => {
     const list = opts.filter((o) => o.kind === kind);
     return list.length ? `<p class="buy-compare-group muted small">${title}</p>` + list.map((o) => `<label class="check"><input type="checkbox" value="${esc(o.key)}"
-      ${saved.includes(o.key) ? "checked" : ""}> <span>${esc(o.label)} <span class="count">(${count(o)})</span></span></label>`).join("") : "";
+      ${saved.includes(o.key) ? "checked" : ""}> <span>${esc(o.label)}${o.shelved ? ' <span class="count">· pausiert</span>' : ""} <span class="count">(${count(o)})</span></span></label>`).join("") : "";
   };
   $("#buy-compare-decks").innerHTML = group("place", "Orte in deiner Sammlung") + group("deck", "Andere Decks");
   if (saved.some((s) => opts.some((o) => o.key === s))) $("#buy-compare").open = true;
@@ -4801,6 +4827,12 @@ function renderBuylist() {
   $("#buy-proxies-box").hidden = !r.use_collection;
   $("#buy-body").hidden = !r.items.length;
   const price = (v) => (v ? esc(fmtPrice(v, "eur")) : "–");
+  const shelved = r.use_collection ? r.from_shelved || [] : [];
+  const taken = shelved.reduce((a, s) => a + s.qty, 0);
+  $("#buy-shelved").hidden = !taken;
+  $("#buy-shelved-title").textContent = `${taken} ${taken === 1 ? "Karte" : "Karten"} aus pausierten Decks nehmen`;
+  $("#buy-shelved-list").innerHTML = shelved.map((s) => `<li><span class="qty">${s.qty}×</span> ${esc(s.name)}
+    <span class="muted small">aus ${s.decks.map((n) => `„${esc(n)}“`).join(", ")}</span></li>`).join("");
   const picked = buyPicked(), mode = buyMode();
   $("#buy-list").innerHTML = r.items.map((i, k) => {
     const inPicked = buyWhere(i, picked);
@@ -4849,7 +4881,7 @@ function updateBuylistSelection() {
     + (picked.size ? ` · ${shared} von ${r.items.length} ${shared === 1 ? "liegt" : "liegen"} schon an den gewählten Orten` : "")
     + (!r.collection_size ? '<br><span class="muted">Deine Sammlung ist leer, deshalb steht das ganze Deck auf der Liste (ohne Standardländer).</span>'
       : !r.use_collection ? '<br><span class="muted">Ohne Abgleich steht das ganze Deck auf der Liste (ohne Standardländer).</span>'
-      : '<br><span class="muted">Karten aus deiner Sammlung fehlen nur, wenn sie schon in einem anderen Deck stecken.</span>');
+      : '<br><span class="muted">Karten aus deiner Sammlung fehlen nur, wenn sie schon in einem anderen Deck stecken, das du spielst.</span>');
   $("#buy-copy span").textContent = copies ? `${copies} ${copies === 1 ? "Karte" : "Karten"} für Cardmarket kopieren` : "Für Cardmarket kopieren";
   $("#buy-copy").disabled = !copies;
 }

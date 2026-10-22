@@ -67,7 +67,7 @@ def _other_decks(usage: dict[str, list[dict[str, Any]]], slug: str | None) -> li
     for meta in storage.list_decks():
         s = meta.get("slug")
         if s and s != slug and not meta.get("damaged"):
-            out.append({"slug": s, "name": names.get(s) or meta.get("name") or s})
+            out.append({"slug": s, "name": names.get(s) or meta.get("name") or s, "shelved": bool(meta.get("shelved"))})
     return out
 
 
@@ -97,29 +97,35 @@ def _places(entries: list[dict[str, Any]], decks: list[dict[str, Any]]) -> list[
     then the other decks (their decklists plus copies placed there)."""
     out = [{"key": place_key(p), "label": p["place"], "kind": "place"}
            for p in collection.places(entries) if not p["place_deck"] and p["place"].strip()]  # fmt: skip
-    return out + [{"key": f"deck:{d['slug']}", "label": d["name"], "kind": "deck", "slug": d["slug"]} for d in decks]
+    return out + [{"key": f"deck:{d['slug']}", "label": d["name"], "kind": "deck", "slug": d["slug"], "shelved": d.get("shelved", False)}
+                  for d in decks]  # fmt: skip
 
 
 async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_proxies: bool = True) -> dict[str, Any]:
     """``use_collection``: copies in the collection only count when no other deck uses them (a card
-    sleeved up in another deck still has to be bought). Off = the whole deck goes on the list."""
+    sleeved up in another deck still has to be bought, unless that deck is shelved: then it is listed in
+    ``from_shelved`` to take out instead). Off = the whole deck goes on the list."""
     need = _need(deck)
     entries = collection.load()
     owned = collection.owned_counts(entries) if use_collection else {}
     usage = collection.decks_by_card()  # also for comparing with other decks and places in the dialog
     by_place = _copies_by_place(entries)
     rows = []
+    from_shelved: list[dict[str, Any]] = []  # cards to take out of shelved decks instead of buying them
     for name, n in need.items():
         if name in collection.BASIC_LANDS:
             continue
         o = owned.get(name, {"real": 0, "proxy": 0})
         others = [d for d in usage.get(name, []) if d["slug"] != deck.get("slug")]
+        played = [d for d in others if not d.get("shelved")]  # a shelved deck's copies may be taken out
         have = o["real"] + (0 if replace_proxies else o["proxy"])
         free = max(have - sum(d["qty"] for d in others), 0)
-        buy = max(n - free, 0)
+        buy = max(n - max(have - sum(d["qty"] for d in played), 0), 0)
+        if (taken := n - buy - min(free, n)) > 0:
+            from_shelved.append({"name": name, "qty": taken, "decks": [d["name"] for d in others if d.get("shelved")]})
         if buy:
             rows.append({"name": name, "qty": buy, "need": n, "real": o["real"], "proxy": o["proxy"],
-                         "in_decks": [d["name"] for d in others] if have else [],
+                         "in_decks": [d["name"] for d in played] if have else [],
                          "decks": [{"slug": d["slug"], "qty": d["qty"]} for d in others],
                          "places": {k: v for k, v in by_place.get(name, {}).items() if k != f"deck:{deck.get('slug')}"}})  # fmt: skip
 
@@ -170,6 +176,7 @@ async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_pr
         "replace_proxies": replace_proxies,
         "collection_size": len(entries),
         "items": rows,
+        "from_shelved": sorted(from_shelved, key=lambda r: r["name"]),
         "cards": sum(r["qty"] for r in rows),
         "total_trend": round(sum(r["total_trend"] or 0 for r in rows), 2),
         "total_low": round(sum(r["total_low"] or 0 for r in rows), 2),

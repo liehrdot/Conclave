@@ -602,6 +602,7 @@ const OP_LABEL = {
   "game.delete": () => "Partie löschen", "opponent.add": (p) => `Gegnerdeck ${shortName(p.opponent?.commanders?.[0])}`,
   "opponent.update": () => "Merkmale eines Gegners", "opponent.note": () => "Notiz zu einem Gegner",
   "opponent.note_delete": () => "Notiz löschen", "opponent.delete": () => "Gegnerdeck löschen",
+  "deck.flags": (p) => `Markierung von ${deckBy(p.deck)?.name || p.deck || "?"}`,
 };
 
 export function settingsSheet() {

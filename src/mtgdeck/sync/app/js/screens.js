@@ -1,6 +1,6 @@
 // The tabs and their detail screens. Each screen returns {html, fab, bar, bind}; main.js draws it.
 
-import { currentDeck, deckBy, failedOps, gamesOf, isDemo, isPending, op, oppBy, oppName, oppSub, pendingCount, serverCall, setPref, shortName, state } from "./data.js";
+import { currentDeck, deckBy, failedOps, gamesOf, isDemo, isPending, op, oppBy, oppName, oppSub, pendingCount, serverCall, setPref, shortName, state, undo } from "./data.js";
 import { draftCount, tabletSized } from "./build.js";
 import { roundCard, running, startSheet } from "./round.js";
 import { cardSheet, editOpponentSheet, gameDetailSheet, gameSheet, newDeckSheet, opponentSheet, settingsSheet, switchDeckSheet } from "./forms.js";
@@ -144,13 +144,26 @@ export function showRule0(d) {
 // ---------- Decks ----------
 export function decks() {
   const list = state.snap.decks;
-  const html = `<div class="large-title"><h1>Decks</h1></div>
-    ${list.length ? `<div class="group">${list.map((d) => `<a class="row" href="#/decks/${esc(d.slug)}">
+  const played = list.filter((d) => !d.shelved), shelved = list.filter((d) => d.shelved);
+  const row = (d) => `<a class="row${d.shelved ? " shelved" : ""}" href="#/decks/${esc(d.slug)}">
         ${thumb(d.commanders[0], d.colors)}
-        <span class="main"><span class="title">${esc(d.name)}</span>
-          <span class="subtitle">${pips(d.colors)} ${esc(d.level)} · ${esc(recordText(d.record))}</span></span>${icon("chev-r", "sm chev")}</a>`).join("")}</div>`
+        <span class="main"><span class="title">${d.pinned ? `${icon("pin", "xs pin")}<span class="sr-only">Angeheftet:</span> ` : ""}${esc(d.name)}</span>
+          <span class="subtitle">${pips(d.colors)} ${esc(d.level)} · ${esc(recordText(d.record))}</span></span>${icon("chev-r", "sm chev")}</a>`;
+  const html = `<div class="large-title"><h1>Decks</h1></div>
+    ${list.length ? `${played.length ? `<div class="group">${played.map(row).join("")}</div>` : ""}
+      ${shelved.length ? `<div class="section-head"><h2>Pausiert</h2></div>
+        <p class="hint-small">Spielst du gerade nicht – Karten daraus kannst du für andere Decks nehmen.</p>
+        <div class="group">${shelved.map(row).join("")}</div>` : ""}`
       : empty("decks", "Noch keine Decks", tabletSized() ? "Leg hier ein neues an – oder baue und importiere Decks am PC, nach dem Abgleich erscheinen sie hier." : "Baue Decks am PC oder auf dem iPad – nach dem Abgleich erscheinen sie hier.")}`;
   return { html, fab: tabletSized() ? { label: "Neues Deck", run: newDeckSheet } : null, bar: { title: "Decks", watch: ".large-title h1" } };
+}
+
+/** Pin the deck (listed first) or shelve it (not played at the moment); a toast offers to take it back. */
+function setFlag(d, key) {
+  const on = !d[key];
+  const entry = op("deck.flags", { deck: d.slug, [key]: on, prev: { [key]: !!d[key] } });
+  const text = key === "pinned" ? (on ? "oben angeheftet" : "nicht mehr angeheftet") : on ? "pausiert" : "wird wieder gespielt";
+  toast(`${d.name} ${text}`, { ok: true, ms: 2600, action: { label: "Rückgängig", run: () => undo(entry) } });
 }
 
 const SEGMENTS = [["rule0", "Rule 0"], ["karten", "Karten"], ["partien", "Partien"]];
@@ -170,6 +183,10 @@ export function deck(slug, seg = "rule0") {
     <div class="detail-head"><h1>${esc(d.name)}</h1>
       <div class="meta">${pips(d.colors)} <span>${esc(d.level)}</span>${d.speed ? ` · <span title="Gesamt-Manawert ${esc(d.speed.total)}">Tempo: ${esc(d.speed.label)} (${esc(d.speed.effective ?? d.speed.total)})</span>` : ""}${d.proxy ? ` · <span>Proxy-Deck</span>` : ""}${d.checking ? ` · <span>wird am PC geprüft</span>` : d.legal === false ? ` · <span class="flag">nicht legal</span>` : ""}</div>
       ${d.description ? `<p class="sub muted">${esc(d.description)}</p>` : ""}
+      <div class="chips deck-flags">
+        <button class="chip" type="button" data-flag="pinned" aria-pressed="${!!d.pinned}">${icon("pin")}${d.pinned ? "Angeheftet" : "Anheften"}</button>
+        <button class="chip" type="button" data-flag="shelved" aria-pressed="${!!d.shelved}">${icon("pause")}${d.shelved ? "Pausiert" : "Pausieren"}</button></div>
+      ${d.shelved ? `<p class="hint-small shelved-note">Spielst du gerade nicht – Karten daraus kannst du für andere Decks nehmen.</p>` : ""}
       <div class="recordbar"><div class="w"><b>${r.wins}</b><span>Siege</span></div><div class="l"><b>${r.losses}</b><span>Niederlagen</span></div>
         <div><b>${r.games ? Math.round((100 * r.wins) / r.games) : 0} %</b><span>${plural(r.games, "Partie", "Partien")}</span></div></div>
       ${!tabletSized() ? "" : drafts ? `<a class="draft-note" href="#/bauen/${esc(d.slug)}">${icon("edit", "sm")}<span class="main"><b>${plural(drafts, "ungespeicherte Änderung", "ungespeicherte Änderungen")}</b>
@@ -181,6 +198,7 @@ export function deck(slug, seg = "rule0") {
   return {
     html, bar: { title: d.name, back: { href: "#/decks", label: "Decks" }, watch: ".detail-head h1", action: tabletSized() ? { label: "Bauen", run: () => { location.hash = `#/bauen/${d.slug}`; } } : null },
     bind(el) {
+      for (const b of $$("[data-flag]", el)) b.addEventListener("click", () => setFlag(d, b.dataset.flag));
       for (const b of $$("[data-seg]", el)) b.addEventListener("click", () => {
         history.replaceState(history.state, "", `#/decks/${slug}/${b.dataset.seg}`);
         for (const x of $$("[data-seg]", el)) { x.setAttribute("aria-pressed", x === b); x.setAttribute("aria-selected", x === b); }

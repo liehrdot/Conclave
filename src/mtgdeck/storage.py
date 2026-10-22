@@ -38,6 +38,7 @@ _CONTENT_KEYS = ("name", "commanders", "cards", "bracket", "power_profile", "pro
 # copied_from …) is carried over when a caller saves a deck dict built from scratch.
 _PER_SAVE_KEYS = {"slug", "history", "version", "created", "updated", "validation", "change_note", "needs_revalidation"}
 TRASH_DIRNAME = ".trash"
+FLAGS = ("pinned", "shelved")  # per-deck marks outside the content (``set_flags``)
 
 
 def _now() -> str:
@@ -183,6 +184,22 @@ def set_extra(deck_slug: str, key: str, value: Any) -> dict[str, Any]:
     return deck
 
 
+def set_flags(deck_slug: str, **flags: bool) -> dict[str, Any]:
+    """Pin a deck (``pinned``: listed first) or shelve it (``shelved``: not played at the moment, its cards may go
+    into other decks). Kept like ``set_extra`` – no new version – and synced like the rest of the file."""
+    if not flags or set(flags) - set(FLAGS):
+        raise ValueError("Unbekannte Markierung")
+    with locked(_path(deck_slug)):
+        deck = load(deck_slug)
+        for key, on in flags.items():
+            if on:
+                deck[key] = True
+            else:
+                deck.pop(key, None)
+        _write_current(deck)
+    return deck
+
+
 def load(deck_slug: str) -> dict[str, Any]:
     deck = read_json(_path(deck_slug))
     if deck is None:
@@ -251,7 +268,7 @@ def copy(deck_slug: str, new_name: str | None = None, version: int | None = None
     """Duplicate a deck (optionally from an old version) as a new deck with its own history."""
     src = load_version(deck_slug, version)
     name = new_name or f"{src.get('name', deck_slug)} (Kopie)"
-    new = {k: v for k, v in src.items() if k not in {"history", "version", "created", "updated", "slug"}}
+    new = {k: v for k, v in src.items() if k not in {"history", "version", "created", "updated", "slug", *FLAGS}}
     new["name"] = name
     new["slug"] = unique_slug(name)
     new["copied_from"] = {"slug": slug(deck_slug), "version": src.get("version")}
@@ -371,6 +388,14 @@ def list_decks() -> list[dict[str, Any]]:
                 "fits": _deck_fits(d),
                 "table_rule": d.get("table_rule"),
                 "needs_revalidation": bool(d.get("needs_revalidation")),  # merged by the sync, check pending
+                "pinned": bool(d.get("pinned")),
+                "shelved": bool(d.get("shelved")),
             }
         )
+    out.sort(key=list_rank)  # stable: newest first inside each group
     return out
+
+
+def list_rank(d: dict[str, Any]) -> int:
+    """Pinned decks first, shelved ones last (a deck can be both: then it leads the shelved ones)."""
+    return (2 if d.get("shelved") else 0) + (0 if d.get("pinned") else 1)
