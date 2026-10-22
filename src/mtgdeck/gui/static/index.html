@@ -33,6 +33,7 @@
   <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></symbol>
   <symbol id="i-table" viewBox="0 0 24 24"><path d="M3 10h18M6 10v9M18 10v9M9 14h6"/><circle cx="8" cy="5" r="1.8"/><circle cx="16" cy="5" r="1.8"/></symbol>
   <symbol id="i-swords" viewBox="0 0 24 24"><path d="M4 4l9 9M4 4h4M4 4v4M20 4l-9 9M20 4h-4M20 4v4"/><path d="M8.5 15.5 5 19M15.5 15.5 19 19M7 13l4 4M17 13l-4 4"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.4"/></symbol>
   <symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4h2l2.4 11h11l2-8H6.3"/><circle cx="9" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M9 3.5h6l-1 6 3.5 3.5h-11L10 9.5z"/><path d="M12 13v7.5"/></symbol>
   <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M10 9v6M14 9v6"/></symbol>
@@ -73,6 +74,7 @@
 
     <nav class="nav-bottom" aria-label="Weitere Bereiche">
       <a href="#/collection" data-nav="collection"><svg class="icon"><use href="#i-box"/></svg>Meine Sammlung <span id="coll-count" class="count"></span></a>
+      <a href="#/sell" data-nav="sell" id="nav-sell" hidden><svg class="icon"><use href="#i-tag"/></svg>Verkaufen <span id="sell-count" class="count"></span></a>
       <a href="#/orders" data-nav="orders"><svg class="icon"><use href="#i-cart"/></svg>Sammelbestellungen <span id="order-count" class="count"></span></a>
       <p class="nav-group" id="nav-g-round">Meine Runde</p>
       <a href="#/opponents" data-nav="opponents"><svg class="icon"><use href="#i-swords"/></svg>Gegnerdecks <span id="opp-count" class="count"></span></a>
@@ -542,6 +544,7 @@
           <details class="menu" id="coll-menu">
             <summary class="btn icon-only" aria-label="Weitere Aktionen" title="Weitere Aktionen"><svg class="icon"><use href="#i-more"/></svg></summary>
             <div class="menu-list" role="menu">
+              <a href="#/sell" role="menuitem">Verkaufsliste</a>
               <button type="button" id="coll-clear" role="menuitem" class="danger">Sammlung leeren …</button>
             </div>
           </details>
@@ -575,6 +578,7 @@
             <optgroup label="Ausführung"><option value="foil">Foil</option><option value="nonfoil">Ohne Foil</option></optgroup>
             <optgroup label="Sprache"><option value="lang:en">Englisch</option><option value="lang:de">Deutsch</option><option value="lang:fr">Französisch</option><option value="lang:it">Italienisch</option><option value="lang:es">Spanisch</option><option value="lang:pt">Portugiesisch</option><option value="lang:ja">Japanisch</option><option value="lang:ko">Koreanisch</option><option value="lang:ru">Russisch</option><option value="lang:zhs">Chinesisch</option></optgroup>
           </select>
+          <button type="button" class="btn small" id="coll-bulk-sell"><svg class="icon"><use href="#i-tag"/></svg>Verkaufen …</button>
           <button type="button" class="btn small danger" id="coll-bulk-delete">Löschen</button>
           <button type="button" class="btn small" id="coll-bulk-all">Alle angezeigten markieren</button>
           <button type="button" class="btn small" id="coll-bulk-none">Auswahl aufheben</button>
@@ -594,6 +598,49 @@
     </section>
 
     <!-- ============ collective print orders ============ -->
+    <!-- ============ Verkaufsliste: sell cards from the collection on Cardmarket ============ -->
+    <section id="view-sell" class="view" data-view="sell" hidden>
+      <header class="page-head">
+        <div>
+          <h1>Verkaufen</h1>
+          <p class="lead">Karten aus deiner Sammlung für Cardmarket vorbereiten: Zustand, Sprache, Menge und Preis. Conclave füllt das
+            Verkaufen-Formular von Cardmarket aus – einstellen tust du jede Karte selbst mit einem Klick auf Cardmarket.</p>
+          <div id="sell-stats" class="meta-row"></div>
+        </div>
+        <div class="page-actions">
+          <button type="button" id="sell-copy" class="btn"><svg class="icon"><use href="#i-copy"/></svg>Liste kopieren</button>
+          <button type="button" id="sell-start" class="btn primary"><svg class="icon"><use href="#i-tag"/></svg>Auf Cardmarket einstellen</button>
+          <details class="menu" id="sell-menu">
+            <summary class="btn icon-only" aria-label="Weitere Aktionen" title="Weitere Aktionen"><svg class="icon"><use href="#i-more"/></svg></summary>
+            <div class="menu-list" role="menu">
+              <a href="#/collection" role="menuitem">Karten aus der Sammlung hinzufügen</a>
+              <button type="button" id="sell-clear-sold" role="menuitem">Verkaufte aus der Liste entfernen</button>
+            </div>
+          </details>
+        </div>
+      </header>
+      <p id="sell-hint" class="hint-box" hidden></p>
+      <section class="panel">
+        <div class="coll-toolbar">
+          <div class="segmented small" role="radiogroup" aria-label="Filter">
+            <label><input type="radio" name="sellfilter" value="open" checked><span>Offen <span class="count" id="sell-n-open"></span></span></label>
+            <label><input type="radio" name="sellfilter" value="listed"><span>Bei Cardmarket <span class="count" id="sell-n-listed"></span></span></label>
+            <label><input type="radio" name="sellfilter" value="sold"><span>Verkauft <span class="count" id="sell-n-sold"></span></span></label>
+            <label><input type="radio" name="sellfilter" value="all"><span>Alle</span></label>
+          </div>
+          <label class="sell-rule">Preis <select id="sell-rule" aria-label="Preisvorschlag"></select></label>
+          <select id="sell-cond-all" aria-label="Zustand für alle offenen Karten"><option value="">Zustand für alle …</option></select>
+        </div>
+        <div id="sell-list" class="sell-list"></div>
+        <div id="sell-empty" class="empty" hidden>
+          <p><b>Noch nichts zum Verkaufen.</b></p>
+          <p class="muted">Markiere in Meine Sammlung die Karten, die gehen dürfen, und wähle „Verkaufen …“.</p>
+          <div class="btn-group center"><a class="btn primary" href="#/collection">Zu meiner Sammlung</a></div>
+        </div>
+        <p id="sell-foot" class="muted small"></p>
+      </section>
+    </section>
+
     <section id="view-orders" class="view" data-view="orders" hidden>
       <div id="orders-list-view">
         <header class="page-head">

@@ -46,7 +46,7 @@ def test_candidates_find_double_faced_names():
     assert cardmarket.candidates(idx, "Delver of Secrets // Insectile Aberration")[0]["id"] == 1
     assert cardmarket.candidates(idx, "Delver of Secrets")[0]["id"] == 1
     assert cardmarket.candidates(idx, "Fire // Ice") == [{"id": 2, "expansion": None, "trend": 2.0, "low": None}]  # foil only
-    assert cardmarket.build_index({"oops": 1}, None) == {"date": None, "cards": {}}
+    assert cardmarket.build_index({"oops": 1}, None) == {"date": None, "cards": {}, "ids": {}}
 
 
 def test_card_db_maps_cardmarket_products():

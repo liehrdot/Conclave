@@ -403,6 +403,12 @@ Die Seite „Meine Sammlung“ merkt sich, welche Karten du hast (`collection.js
   dieselbe Karte brauchen, du aber zu wenige hast. Basic Lands zählen als vorhanden.
 - **Beim Drucken:** „Nur fehlende Karten“ druckt nur, was dir fehlt; danach trägt „Zur Sammlung
   hinzufügen“ die gedruckten Proxies samt Artwork ein.
+- **Verkaufen:** Karten markieren → „Verkaufen …“ setzt sie auf die Verkaufsliste (Seite „Verkaufen“) mit Zustand,
+  Sprache, Anzahl, Kommentar und einem Preis aus der Cardmarket-Preisliste für genau diesen Druck (Trend, −5 %,
+  −10 % oder Ab-Preis). In der Desktop-App öffnet „Auf Cardmarket einstellen“ Cardmarket in einem eigenen Fenster:
+  du meldest dich an, eine Conclave-Leiste geht Karte für Karte durch und füllt Cardmarkets Verkaufen-Formular aus.
+  Einstellen tust du jede Karte selbst mit Cardmarkets Knopf (so mit Cardmarket abgesprochen); Conclave schickt nie
+  etwas ab. „Verkauft“ nimmt die Karten aus der Sammlung (mit „Rückgängig“).
 
 ## Datenquellen & Zugänge
 
@@ -450,6 +456,7 @@ Der Button unter „Einstellungen → Kartendatenbank“ lädt die Scryfall-Bulk
 | `MTG_TABLERULES_FILE` | `./tablerules.json` | Tischregeln |
 | `MTG_BACKUP_DIR` | `./backups` | Sicherungen (ZIP) |
 | `MTG_COLLECTION_FILE` | `./collection.json` | deine Sammlung |
+| `MTG_SALES_FILE` | `./sales.json` | deine Verkaufsliste (Cardmarket) |
 | `MTG_PROXIES_DIR` | `./proxies` | Druckdateien (XML, Bilder-Verweise, PDF) |
 | `MTG_SYNC_DIR` | `./.sync` | Sync-Zustand dieses Geräts (Verbindung, Stand, Basisdateien, Konfliktprotokoll) |
 | `MTG_SYNC_AUTO` | `1` | `0` = kein automatischer Abgleich im Hintergrund (nur per Knopf) |

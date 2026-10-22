@@ -13,6 +13,7 @@ backups/
 blacklist.txt
 build/
 collection.json
+sales.json
 decks/*
 deskmats/
 desktop/src-tauri/gen/

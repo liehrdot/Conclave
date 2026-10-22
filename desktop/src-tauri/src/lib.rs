@@ -5,6 +5,7 @@
 
 mod backend;
 mod bridge;
+mod cardmarket;
 mod moxfield;
 mod updates;
 
@@ -153,11 +154,16 @@ pub fn run() {
                 bridge::start(handle.clone(), backend.clone(), autostart_item, updates.clone());
                 updates::start(handle.clone(), updates.clone(), backend.clone());
             }
-            // built here, not from tauri.conf.json, so moxfield.com links open in the Moxfield window
+            // built here, not from tauri.conf.json, so moxfield.com links open in the Moxfield window and the
+            // Verkaufsliste's cards reach the Cardmarket window
             if let Some(cfg) = app.config().app.windows.iter().find(|w| w.label == "main").cloned() {
                 let nav = handle.clone();
                 WebviewWindowBuilder::from_config(&handle, &cfg)?
                     .on_navigation(move |url| {
+                        if cardmarket::is_sell(url) {
+                            cardmarket::start(&nav, url);
+                            return false;
+                        }
                         if !moxfield::is_moxfield(url) {
                             return true;
                         }

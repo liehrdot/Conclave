@@ -413,6 +413,24 @@ def cardmarket_prints(ids: list[int]) -> dict[int, dict[str, str]]:
     return out
 
 
+def cardmarket_ids(printings: list[tuple[str, str]]) -> dict[tuple[str, str], int]:
+    """(set code, collector number) -> Cardmarket product id, for the printings the local DB knows."""
+    wanted = {(s.lower(), str(n).lower()) for s, n in printings if s and n}
+    if not wanted or not DB_PATH.exists():
+        return {}
+    sets = sorted({s for s, _ in wanted})
+    out: dict[tuple[str, str], int] = {}
+    with closing(_connect()) as conn:
+        for i in range(0, len(sets), 500):
+            chunk = sets[i : i + 500]
+            rows = conn.execute(f"SELECT id, set_code, collector_number FROM cardmarket WHERE set_code IN ({','.join('?' * len(chunk))})", chunk)
+            for r in rows:
+                key = ((r["set_code"] or "").lower(), str(r["collector_number"] or "").lower())
+                if key in wanted:
+                    out.setdefault(key, r["id"])
+    return out
+
+
 def search(
     *,
     color_identity: str | None = None,
