@@ -82,7 +82,7 @@ function shiftDemoDates(base) {
   const walk = (v) => {
     if (Array.isArray(v)) v.forEach(walk);
     else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) {
-      if (DATE_KEYS.has(k) && typeof x === "string" && !isNaN(Date.parse(x))) v[k] = new Date(Date.parse(x) + delta).toISOString();
+      if (DATE_KEYS.has(k) && typeof x === "string" && !Number.isNaN(Date.parse(x))) v[k] = new Date(Date.parse(x) + delta).toISOString();
       else walk(x);
     }
   };
@@ -167,7 +167,11 @@ function revoked() {
 // The ETag is "<server id>-<epoch>-<seq>". An HTTPS proxy in front may change it: Caddy's ``encode`` appends the
 // compression ("…-5-zstd"), others make it weak (W/"…"). So only the three parts count – otherwise the seq reads
 // as 0, confirmed operations never leave the outbox and a game deleted at the PC stays on the phone.
-const tagCore = (etag) => String(etag || "").match(/[0-9a-f]+-[0-9a-f]+-\d+/)?.[0] || "";
+// "<server id>-<epoch>-<seq>", without W/, quotes and the "-zstd"/"-gzip" Caddy appends
+const tagCore = (etag) => {
+  const p = String(etag || "").replace(/^W\//, "").replaceAll('"', "").split("-");
+  return p.length >= 3 && p.slice(0, 2).every((x) => /^[0-9a-f]+$/.test(x)) && /^\d+$/.test(p[2]) ? p.slice(0, 3).join("-") : "";
+};
 const seqOf = (etag) => Number(tagCore(etag).split("-").pop()) || 0;
 let refreshing = null;
 
@@ -256,13 +260,13 @@ let timers = [];
 function startTimers() {
   stopTimers();
   const visible = () => document.visibilityState === "visible";
-  timers.push(setInterval(() => { if (visible()) flush(); }, FLUSH_EVERY));
-  timers.push(setInterval(() => { if (visible()) pollStatus(); }, STATUS_EVERY));
-  pollStatus();
+  timers.push(setInterval(() => { if (visible()) void flush(); }, FLUSH_EVERY));
+  timers.push(setInterval(() => { if (visible()) void pollStatus(); }, STATUS_EVERY));
+  void pollStatus();
 }
 function stopTimers() { timers.forEach(clearInterval); timers = []; }
 /** Look for news now (app shown again, network back, "Jetzt aktualisieren"). */
-export function wake() { if (state.mode === "live") { flush(true); pollStatus(); } }
+export function wake() { if (state.mode === "live") { void flush(true); void pollStatus(); } }
 addEventListener("online", wake);
 addEventListener("offline", () => { state.online = false; emit(); });
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") wake(); });  // iOS: no background sync
@@ -278,7 +282,7 @@ export function op(type, payload) {
   state.ops.push(entry);
   saveOps();
   rebuild();
-  if (state.mode === "demo") demoSend(entry); else flush(true);
+  if (state.mode === "demo") demoSend(entry); else void flush(true);
   return entry;
 }
 

@@ -38,7 +38,7 @@ self.addEventListener("fetch", (e) => {
         const hit = await c.match(req, { ignoreSearch: true });
         if (hit) return hit;
         const res = await fetch(req);
-        if (res.ok) c.put(req, res.clone());
+        if (res.ok) void c.put(req, res.clone());
         return res;
       }));
       return;
@@ -51,7 +51,7 @@ self.addEventListener("fetch", (e) => {
       const hit = await c.match(req, { ignoreSearch: true });
       if (hit) return hit;
       const res = await fetch(req);
-      if (res.ok) c.put(req, res.clone());
+      if (res.ok) void c.put(req, res.clone());
       return res;
     }));
     return;
@@ -61,7 +61,7 @@ self.addEventListener("fetch", (e) => {
       const hit = await c.match(req);
       if (hit) return hit;
       const res = await fetch(req);
-      if (res.ok) { await c.put(req, res.clone()); trim(c); }
+      if (res.ok) { await c.put(req, res.clone()); void trim(c); }
       return res;
     }));
   }

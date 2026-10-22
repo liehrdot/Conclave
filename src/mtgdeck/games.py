@@ -30,6 +30,7 @@ ISSUES: dict[str, tuple[str, str]] = {
     "fliers": ("gegen Flieger / Ausweichen verloren", "Antworten auf fliegende Kreaturen"),
     "too_strong": ("Deck war zu stark für die Runde", "passend zur Runde etwas abschwächen"),
 }
+MAX_TURNS = 999  # same cap as appops._round
 # how the game was decided (optional) and quick-pick labels
 HOW: dict[str, str] = {
     "combat": "Kampfschaden", "commander": "Commander-Schaden", "combo": "Combo",
@@ -151,7 +152,8 @@ def round_turns(rnd: dict[str, Any]) -> list[dict[str, Any]]:
     life = int(rnd.get("start_life") or 0)
     out = []
     events = [e for e in rnd.get("events") or [] if isinstance(e, dict)]
-    for n in range(1, int(rnd.get("turns") or 1) + 1):
+    turns = min(max(int(rnd.get("turns") or 1), 1), MAX_TURNS)  # the phone caps it too (appops._round)
+    for n in range(1, turns + 1):
         t: dict[str, Any] = {"turn": n, "lost": 0, "gained": 0, "cmd": {}, "poison": 0, "events": [], "notes": []}
         for e in events:
             if e.get("turn") != n or e.get("kind") == "turn":

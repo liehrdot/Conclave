@@ -63,14 +63,13 @@ def poll(info: dict[str, Any], since: int, wait: float = 0) -> dict[str, Any]:
     """The shell reports its state and fetches the notices newer than ``since`` plus the queued commands (once).
     With ``wait`` (seconds) it blocks until there is something to fetch or the time is up."""
     deadline = time.monotonic() + min(max(wait, 0), MAX_WAIT)
+    since = max(int(since), 0)
     with _lock:
         _shell.update({k: info[k] for k in ("version", "autostart", "visible", "features") if k in info}, seen=time.time())
         if "update" in info:
             _take_update(info["update"])
-        while not _commands and not (_notices and _notices[-1]["id"] > since):
-            left = deadline - time.monotonic()
-            if left <= 0:
-                break
+        # bounded by the deadline, whatever ``since`` is
+        while (left := deadline - time.monotonic()) > 0 and not _commands and not (_notices and _notices[-1]["id"] > since):
             _wake.wait(left)
         _shell["seen"] = time.time()
         notices = [n for n in _notices if n["id"] > since]

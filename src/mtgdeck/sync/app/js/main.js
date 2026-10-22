@@ -42,7 +42,7 @@ function draw({ keepScroll = false } = {}) {
   // every card image and makes the whole screen flicker
   const same = keepScroll && current?.key === key && s.html === lastHtml;
   lastHtml = s.html;
-  if (!same) main.innerHTML = s.html;
+  if (!same) main.innerHTML = s.html;  // NOSONAR: every screen builds its markup with esc() around data and address parts
   const fabOn = !!s.fab && state.mode !== "none";
   main.classList.toggle("has-fab", fabOn);
   document.body.classList.toggle("has-fab", fabOn);
@@ -80,7 +80,7 @@ function route() {
   const dir = !current || !sameTab ? "" : depth > current.depth ? "vt-push" : depth < current.depth ? "vt-pop" : "";
   if (document.startViewTransition && dir && !reducedMotion()) {
     document.documentElement.classList.add(dir);
-    document.startViewTransition(() => draw()).finished.finally(() => document.documentElement.classList.remove(dir));
+    void document.startViewTransition(() => draw()).finished.finally(() => document.documentElement.classList.remove(dir));
   } else draw();
 }
 
@@ -180,4 +180,4 @@ async function start() {
   }
   serviceWorker();
 }
-start();
+void start();

@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 from . import scryfall
-from .http import client, get_json
+from .http import client, get_json, save_stream
 from . import paths
 
 DATA_DIR = Path(os.environ.get("MTG_DATA_DIR", paths.cache_home()))
@@ -149,9 +149,7 @@ def needs_refresh() -> bool:
 async def _download(url: str, dest: Path) -> None:
     async with client().stream("GET", url, timeout=None) as resp:
         resp.raise_for_status()
-        with dest.open("wb") as fh:
-            async for chunk in resp.aiter_bytes(1 << 16):
-                fh.write(chunk)
+        await save_stream(resp, dest)
 
 
 def _iter_jsonl_gz(path: Path) -> Iterator[dict[str, Any]]:

@@ -333,3 +333,16 @@ def test_gui_card_search_by_description_goes_through_the_sync_server(net, monkey
 
         assert g.get("/api/cards/query", params={"q": "otag:ramp", "page": 1}).json()["total"] == 3
         assert g.get("/api/cards/query", params={"q": "  "}).status_code == 400
+
+
+def test_restore_takes_only_backups_from_the_backup_folder(tmp_path):
+    from mtgdeck.sync.server import _find_backup
+
+    folder = tmp_path / "backups"
+    folder.mkdir()
+    (folder / "sync-20261001.sqlite").write_bytes(b"")
+    assert _find_backup(folder, "sync-20261001.sqlite") == folder / "sync-20261001.sqlite"
+    assert _find_backup(folder, str(folder / "sync-20261001.sqlite")) == folder / "sync-20261001.sqlite"
+    for given in ("fehlt.sqlite", str(tmp_path / "sync-20261001.sqlite"), "../backups/sync-20261001.sqlite"):
+        with pytest.raises(SystemExit):
+            _find_backup(folder, given)

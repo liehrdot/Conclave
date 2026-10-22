@@ -459,7 +459,7 @@ def deck_profile(deck: Deck, *, on_draw: bool = False, samples: int = SAMPLES, s
     """Scores of random 7s from this deck: the baseline a hand is compared with."""
     if len(deck.cards) < 8:
         return {"scores": [], "keep": 0.0, "playable": 0.0}
-    rnd = random.Random(seed)
+    rnd = random.Random(seed)  # NOSONAR: seeded on purpose (the same baseline every time), not security
     scores = sorted(score_hand(rnd.sample(deck.cards, 7), deck, on_draw=on_draw).score for _ in range(samples))
     keep, border = thresholds(7, 0)
     return {

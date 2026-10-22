@@ -84,7 +84,7 @@ function confirmLink(code) {
         catch (err) { const e = $("#pair-error", el); e.hidden = false; e.textContent = err.message; btn.disabled = false; btn.textContent = "Verbinden"; }
       };
       $("#go", el).addEventListener("click", go);
-      $("#pair-name", el).addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+      $("#pair-name", el).addEventListener("keydown", (e) => { if (e.key === "Enter") void go(); });
       $("#other", el).addEventListener("click", () => codeSheet());
     },
   };
@@ -129,7 +129,7 @@ export function codeSheet(prefill = "") {
         catch (err) { error = err.message; redraw(); }
       };
       go.addEventListener("click", submit);
-      for (const x of [input, $("#name", el)]) x.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+      for (const x of [input, $("#name", el)]) x.addEventListener("keydown", (e) => { if (e.key === "Enter") void submit(); });
       if (!value) setTimeout(() => input.focus(), 60);
     },
   }));

@@ -167,7 +167,7 @@ fragt dann Scryfall und zeigt die Karten. Farben, Typ und „in Commander erlaub
 
   ```bash
   cd /opt/mtgdeck-sync
-  docker compose exec sync mtg-sync-server restore /data/backups/sync-20261001.sqlite
+  docker compose exec sync mtg-sync-server restore sync-20261001.sqlite   # eine Datei aus data/backups/
   ```
 
   Der bisherige Stand bleibt als `vor-wiederherstellung-….sqlite` daneben liegen. Die Geräte merken beim nächsten

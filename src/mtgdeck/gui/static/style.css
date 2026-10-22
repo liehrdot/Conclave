@@ -1253,8 +1253,8 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 
 /* shortcuts overview */
 .shortcuts { border-collapse: collapse; width: 100%; margin: var(--space-3) 0; }
-.shortcuts td { padding: 7px 8px; border-bottom: 1px solid var(--border); font-size: var(--fs-sm); vertical-align: top; }
-.shortcuts td:first-child { white-space: nowrap; width: 1%; }
+.shortcuts th, .shortcuts td { padding: 7px 8px; border-bottom: 1px solid var(--border); font-size: var(--fs-sm); vertical-align: top; }
+.shortcuts th { font-weight: normal; text-align: left; white-space: nowrap; width: 1%; }
 
 /* cards dragged in from scryfall.com in another window */
 .drop-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: var(--space-5); background: rgb(0 0 0 / .45); pointer-events: none; }

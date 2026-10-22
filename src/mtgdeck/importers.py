@@ -29,6 +29,7 @@ from .http import HttpError, get_json, get_text
 
 _ARCHIDEKT_RE = re.compile(r"archidekt\.com/(?:api/)?decks/(\d+)")
 _MOXFIELD_RE = re.compile(r"moxfield\.com/decks/([A-Za-z0-9_-]+)")
+_DECK_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
 _GOLDFISH_RE = re.compile(r"mtggoldfish\.com/deck/(?:download/)?(\d+)")
 _TAPPEDOUT_RE = re.compile(r"tappedout\.net/mtg-decks/([A-Za-z0-9_-]+)")
 _DECKSTATS_RE = re.compile(r"deckstats\.net/decks/(\d+)/(\d+)([A-Za-z0-9_-]*)")
@@ -89,6 +90,8 @@ def import_text(text: str, name: str | None = None) -> dict[str, Any]:
 async def import_archidekt(url_or_id: str) -> dict[str, Any]:
     m = _ARCHIDEKT_RE.search(url_or_id)
     deck_id = m.group(1) if m else url_or_id.strip()
+    if not _DECK_ID_RE.fullmatch(deck_id):
+        raise ValueError("Erwartet eine Moxfield-Deck-URL oder -ID")
     if not deck_id.isdigit():
         raise ValueError("Erwartet eine Archidekt-Deck-URL oder -ID")
     data = await get_json(f"https://archidekt.com/api/decks/{deck_id}/", ttl=600)
