@@ -16,10 +16,12 @@ deck usually draws – a 28-land cEDH deck and a 40-land battlecruiser get diffe
 
 from __future__ import annotations
 
-import random
+import hashlib
+import heapq
 import re
 from dataclasses import dataclass, field
 from math import comb
+from collections.abc import Iterator
 from typing import Any
 
 from . import speed as speed_mod
@@ -455,12 +457,21 @@ def bottom(hand: list[Card], deck: Deck, count: int, *, on_draw: bool = False) -
     return out
 
 
+def _sample_hands(cards: list, n: int, seed: int) -> Iterator[list]:
+    """``n`` random-looking 7s, the same ones every time: hand ``k`` takes the 7 cards with the smallest hash of
+    (seed, k, position) – a uniform pick, reproducible without a random generator."""
+    def key(k: int, i: int) -> bytes:
+        return hashlib.blake2b(f"{seed}:{k}:{i}".encode(), digest_size=8).digest()
+
+    for k in range(n):
+        yield [cards[i] for i in heapq.nsmallest(7, range(len(cards)), key=lambda i: key(k, i))]
+
+
 def deck_profile(deck: Deck, *, on_draw: bool = False, samples: int = SAMPLES, seed: int = 44) -> dict[str, Any]:
     """Scores of random 7s from this deck: the baseline a hand is compared with."""
     if len(deck.cards) < 8:
         return {"scores": [], "keep": 0.0, "playable": 0.0}
-    rnd = random.Random(seed)  # NOSONAR: seeded on purpose (the same baseline every time), not security
-    scores = sorted(score_hand(rnd.sample(deck.cards, 7), deck, on_draw=on_draw).score for _ in range(samples))
+    scores = sorted(score_hand(hand, deck, on_draw=on_draw).score for hand in _sample_hands(deck.cards, samples, seed))
     keep, border = thresholds(7, 0)
     return {
         "scores": scores,

@@ -160,7 +160,7 @@ def _write_bytes(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp")
     try:
-        tmp.write_bytes(data)  # NOSONAR: ``data`` is the file's content; the path is checked by Roots.physical()
+        tmp.write_bytes(data)
         os.replace(tmp, path)
     finally:
         tmp.unlink(missing_ok=True)

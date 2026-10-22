@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import re
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 from .deck import parse_decklist
 from .http import HttpError, get_json, get_text
@@ -130,6 +130,7 @@ async def import_moxfield(url_or_id: str) -> dict[str, Any]:
     deck_id = m.group(1) if m else url_or_id.strip()
     data: dict[str, Any] | None = None
     status = 0
+    deck_id = quote(deck_id, safe="")
     for api in (f"https://api2.moxfield.com/v3/decks/all/{deck_id}", f"https://api.moxfield.com/v2/decks/all/{deck_id}"):
         try:
             data = await get_json(api, ttl=600)
