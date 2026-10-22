@@ -603,6 +603,7 @@ const OP_LABEL = {
   "opponent.update": () => "Merkmale eines Gegners", "opponent.note": () => "Notiz zu einem Gegner",
   "opponent.note_delete": () => "Notiz löschen", "opponent.delete": () => "Gegnerdeck löschen",
   "deck.flags": (p) => `Markierung von ${deckBy(p.deck)?.name || p.deck || "?"}`,
+  "deck.pin_order": () => "Reihenfolge der angehefteten Decks",
 };
 
 export function settingsSheet() {

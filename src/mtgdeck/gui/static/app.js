@@ -218,7 +218,8 @@ function renderDeckList() {
   const q = $("#deck-filter").value.trim().toLowerCase();
   const list = deckIndex.filter((d) => !q || `${d.name} ${d.commanders.join(" ")}`.toLowerCase().includes(q));
   const firstShelved = list.findIndex((d) => d.shelved);  // the backend lists pinned decks first, shelved ones last
-  $("#deck-list").innerHTML = list.length ? list.map((d, i) => `${i === firstShelved ? `<li class="deck-list-group" title="Karten daraus kannst du für andere Decks nehmen">Pausiert</li>` : ""}<li${d.shelved ? ' class="shelved"' : ""}>
+  const sortable = !q && deckIndex.filter((d) => d.pinned && !d.shelved).length > 1;  // pinned decks: drag into your own order
+  $("#deck-list").innerHTML = list.length ? list.map((d, i) => `${i === firstShelved ? `<li class="deck-list-group" title="Karten daraus kannst du für andere Decks nehmen">Pausiert</li>` : ""}<li${d.shelved ? ' class="shelved"' : ""}${sortable && d.pinned && !d.shelved ? ` draggable="true" data-pin="${esc(d.slug)}" title="Ziehen, um die Reihenfolge zu ändern"` : ""}>
       <a href="#/deck/${enc(d.slug)}" data-slug="${esc(d.slug)}">
         <span class="name">${d.valid === false ? '<span class="dot bad" title="nicht legal"></span><span class="sr-only">nicht legal:</span>' : ""}<span class="label">${esc(d.name)}</span>${d.pinned ? `<svg class="icon pin" aria-label="angeheftet"><title>Angeheftet</title><use href="#i-pin"/></svg>` : ""}</span>
         ${d.updated ? `<span class="meta">${esc(fmtDate(d.updated))}</span>` : ""}
@@ -251,6 +252,53 @@ $("#pin-btn").addEventListener("click", () => currentDeck && setDeckFlag(current
 $("#shelve-btn").addEventListener("click", () => { $("#deck-menu").open = false; if (currentDeck) setDeckFlag(currentDeck, "shelved", !currentDeck.shelved); });
 $("#unshelve-btn").addEventListener("click", () => currentDeck && setDeckFlag(currentDeck, "shelved", false));
 $("#deck-filter").addEventListener("input", renderDeckList);
+
+// drag a pinned deck above or below another pinned one
+let pinDrag = null;
+const pinTarget = (e) => e.target.closest?.("#deck-list li[data-pin]");
+$("#deck-list").addEventListener("dragstart", (e) => {
+  const li = pinTarget(e);
+  if (!li) return;
+  pinDrag = li.dataset.pin;
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/x-conclave-pin", pinDrag);
+  li.classList.add("dragging");
+});
+$("#deck-list").addEventListener("dragover", (e) => {
+  const li = pinTarget(e);
+  if (!pinDrag || !li) return;
+  e.preventDefault();
+  const below = e.clientY > li.getBoundingClientRect().top + li.offsetHeight / 2;
+  for (const x of $$("#deck-list li[data-pin]")) x.classList.toggle("drop-above", x === li && !below), x.classList.toggle("drop-below", x === li && below);
+});
+$("#deck-list").addEventListener("drop", async (e) => {
+  const li = pinTarget(e);
+  if (!pinDrag || !li) return;
+  e.preventDefault();
+  const before = deckIndex.filter((d) => d.pinned && !d.shelved).map((d) => d.slug);
+  const slugs = before.filter((s) => s !== pinDrag);
+  const at = slugs.indexOf(li.dataset.pin);
+  if (at < 0) return;
+  slugs.splice(li.classList.contains("drop-below") ? at + 1 : at, 0, pinDrag);
+  if (slugs.join() !== before.join()) await setPinOrder(slugs, before);
+});
+$("#deck-list").addEventListener("dragend", () => {
+  pinDrag = null;
+  for (const x of $$("#deck-list li")) x.classList.remove("dragging", "drop-above", "drop-below");
+});
+
+async function setPinOrder(slugs, before) {
+  const pos = new Map(slugs.map((s, i) => [s, i]));
+  deckIndex.forEach((d) => { if (pos.has(d.slug)) d.pin_rank = pos.get(d.slug); });
+  const pinned = deckIndex.filter((d) => pos.has(d.slug)).sort((a, b) => pos.get(a.slug) - pos.get(b.slug));
+  deckIndex = [...pinned, ...deckIndex.filter((d) => !pos.has(d.slug))];  // shown at once, the server agrees
+  renderDeckList();
+  try {
+    await api("/api/decks/pin-order", { method: "PUT", body: { slugs } });
+    toast("Reihenfolge gespeichert.", "ok", 4000, { label: "Rückgängig", run: () => setPinOrder(before, slugs) });
+  } catch (err) { fail(err); }
+  await refreshDeckList();
+}
 
 // ============================================================================================
 // new deck / commander finder

@@ -146,6 +146,10 @@ img { max-width: 100%; }
 .deck-list .name .pin { width: 13px; height: 13px; flex: none; color: var(--accent-text); margin-left: auto; }
 .deck-list-group { margin: var(--space-3) 0 2px; padding: 0 8px; font-size: var(--fs-xs); font-weight: 600; color: var(--muted); cursor: default; }
 .deck-list .shelved a { opacity: .6; }
+.deck-list li[data-pin] { position: relative; cursor: grab; }
+.deck-list li.dragging { opacity: .4; }
+.deck-list li.drop-above::before, .deck-list li.drop-below::after { content: ""; position: absolute; left: 4px; right: 4px; height: 2px; border-radius: 1px; background: var(--accent); }
+.deck-list li.drop-above::before { top: -2px; } .deck-list li.drop-below::after { bottom: -2px; }
 .deck-list .shelved a:hover, .deck-list .shelved a[aria-current="page"] { opacity: 1; }
 .pin-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--on-accent-soft); }
 .shelved-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; margin: 0 0 var(--space-3); font-size: var(--fs-sm); color: var(--muted); }

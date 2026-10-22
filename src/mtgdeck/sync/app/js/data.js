@@ -299,6 +299,7 @@ const INVERSE = {
   "opponent.note": (p) => ({ type: "opponent.note_delete", payload: { id: p.id, note_id: p.note_id } }),
   "opponent.update": (p) => (p.prev ? { type: "opponent.update", payload: { id: p.id, ...p.prev } } : null),
   "deck.flags": (p) => (p.prev ? { type: "deck.flags", payload: { deck: p.deck, ...p.prev } } : null),
+  "deck.pin_order": (p) => (p.prev?.length ? { type: "deck.pin_order", payload: { slugs: p.prev } } : null),
   "collection.add": (p) => ({ type: "collection.add", payload: { entry: { ...p.entry, qty: -p.entry.qty } } }),
   "collection.update": (p) => (p.restore ? { type: "collection.add", payload: { entry: p.restore } }
     : p.prev ? { type: "collection.update", payload: { id: p.id, ...p.prev } } : null),
@@ -466,6 +467,9 @@ function apply(snap, op) {
   } else if (op.type === "deck.flags") {  // like appops._deck_flags: pinned / shelved, no new version
     const d = snap.decks.find((x) => x.slug === p.deck);
     for (const k of ["pinned", "shelved"]) if (d && typeof p[k] === "boolean") d[k] = p[k];
+    if (d && !d.pinned) d.pin_rank = null;
+  } else if (op.type === "deck.pin_order") {  // like appops._pin_order
+    (p.slugs || []).forEach((slug, i) => { const d = snap.decks.find((x) => x.slug === slug); if (d?.pinned) d.pin_rank = i; });
   } else if (op.type === "opponent.delete") {
     snap.opponents = snap.opponents.filter((o) => o.id !== p.id);
   } else {
@@ -498,15 +502,16 @@ function faced(o, g) {
   return !linked.length && (g.opponents || []).some((n) => names.has(String(n).toLowerCase()));
 }
 
-// pinned decks first, shelved ones last (like storage.list_rank)
-const deckRank = (d) => (d.shelved ? 2 : 0) + (d.pinned ? 0 : 1);
+// pinned decks first (newly pinned on top, then in the dragged order), shelved ones last (like storage.list_rank)
+const deckRank = (d) => [(d.shelved ? 2 : 0) + (d.pinned ? 0 : 1), d.pinned && d.pin_rank != null ? 1 : 0, d.pinned ? d.pin_rank ?? 0 : 0];
+const byRank = (a, b) => { const x = deckRank(a), y = deckRank(b); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; };
 
 function recompute(snap) {
   for (const d of snap.decks) {  // a deck the PC has not checked yet has no colour identity: take the commanders'
     if (!d.colors) d.colors = [..."WUBRG"].filter((c) => d.commanders.some((n) => (cached(n)?.colors || "").includes(c))).join("");
   }
   snap.games.sort((a, b) => String(b.played).localeCompare(String(a.played)));
-  snap.decks.sort((a, b) => deckRank(a) - deckRank(b));  // stable: the server's order inside each group
+  snap.decks.sort(byRank);  // stable: the server's order inside each group
   for (const d of snap.decks) d.record = recordOf(snap.games.filter((g) => g.deck === d.slug));
   const names = Object.fromEntries(snap.decks.map((d) => [d.slug, d.name]));
   for (const o of snap.opponents) {

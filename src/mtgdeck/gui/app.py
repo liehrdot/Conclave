@@ -985,6 +985,16 @@ async def api_deck_table_rule(slug: str, req: DeckTableRule) -> dict[str, Any]:
     return {"slug": slug, "table_rule": deck.get("table_rule"), "validation": deck.get("validation")}
 
 
+class PinOrder(BaseModel):
+    slugs: list[str] = Field(max_length=500)
+
+
+@app.put("/api/decks/pin-order")
+async def api_pin_order(req: PinOrder) -> dict[str, Any]:
+    """Order the pinned decks as the user dragged them (first = on top)."""
+    return {"changed": storage.set_pin_order(req.slugs)}
+
+
 class DeckFlags(BaseModel):
     pinned: bool | None = None
     shelved: bool | None = None
