@@ -125,7 +125,7 @@ for (const dlg of $$("dialog")) {
 let brackets = [];
 let currentDeck = null;
 let deckIndex = [];
-const VIEWS = ["new", "deck", "collection", "sell", "orders", "glossary", "opponents", "tables", "blacklist", "settings"];
+const VIEWS = ["new", "deck", "collection", "sell", "orders", "glossary", "opponents", "tables", "blacklist", "settings", "about"];
 const TABS = ["karten", "testen", "partien", "verlauf", "drucken"];
 let lastView = null;
 
@@ -159,10 +159,11 @@ async function route() {
   }
   for (const v of $$(".view")) v.hidden = v.dataset.view !== r.view;
   if (r.view === "deck") selectTab(r.tab || "karten", false);
-  if (r.view === "settings") { void refreshDbStatus(); void refreshBackups(); void refreshSync({ quiet: true }); void refreshDesktop(); }
+  if (r.view === "settings") { void showVersion(); void refreshDbStatus(); void refreshBackups(); void refreshSync({ quiet: true }); void refreshDesktop(); }
   if (r.view === "collection") void loadCollection();
   if (r.view === "sell") void showSell();
   if (r.view === "glossary") void showGlossary(r.slug);
+  if (r.view === "about") void showAbout();
   if (r.view === "orders") void showOrders(r.slug);
   if (r.view === "tables") void showTables(r.slug);
   if (r.view === "opponents") void showOpponents(r.slug);
@@ -176,7 +177,7 @@ async function route() {
     lastView = key;
   }
   document.title = (r.view === "deck" && currentDeck ? currentDeck.name
-    : { new: "Neues Deck", collection: "Meine Sammlung", sell: "Verkaufen", orders: "Sammelbestellungen", glossary: "Glossar", opponents: "Gegnerdecks", tables: "Tischregeln", blacklist: "Blacklist", settings: "Einstellungen" }[r.view]) + " · Conclave";
+    : { new: "Neues Deck", collection: "Meine Sammlung", sell: "Verkaufen", orders: "Sammelbestellungen", glossary: "Glossar", opponents: "Gegnerdecks", tables: "Tischregeln", blacklist: "Blacklist", settings: "Einstellungen", about: "Über Conclave" }[r.view]) + " · Conclave";
 }
 window.addEventListener("hashchange", route);
 
@@ -186,7 +187,7 @@ function markNav(r = parseHash()) {
     else a.removeAttribute("aria-current");
   }
   for (const a of $$(".nav-bottom a")) {
-    if (a.dataset.nav === r.view) a.setAttribute("aria-current", "page");
+    if (a.dataset.nav === (r.view === "about" ? "settings" : r.view)) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
   }
   if (r.view === "new") $("#nav-new").setAttribute("aria-current", "page");
@@ -5379,6 +5380,55 @@ $("#order-from-deck").addEventListener("click", () => {
 void refreshOrders();
 
 // ============================================================================================
+// about: banner, avatar, version and the channels (a channel without a URL shows as „bald“)
+// ============================================================================================
+const SOCIAL = [
+  { key: "twitter", label: "Twitter", url: "https://twitter.com/ConclaveMTG", note: "@ConclaveMTG" },
+  { key: "twitch", label: "Twitch", url: "" },
+  { key: "instagram", label: "Instagram", url: "" },
+  { key: "youtube", label: "YouTube", url: "" },
+  { key: "tiktok", label: "TikTok", url: "" },
+  { key: "github", label: "GitHub", url: "https://github.com/liehrdot/Conclave", note: "Quellcode, Ideen und Fehler melden" },
+];
+// the artists of the 120 card arts in the banner (social media kit, README)
+const BANNER_ARTISTS = [
+  "Adam Paquette", "Adam Rex", "Alayna Danner", "Alejandro Pacheco", "Alexander Forssberg", "Anastasia Ovchinnikova",
+  "Andrew Mar", "Anthony Devine", "April Lee", "Arthur Haas", "Arthur Yuan", "Bastien L. Deharme", "Borja Pindado",
+  "Brian Snõddy", "Bruce Brenneise", "Chase Stone", "Chris Ostrowski", "Chris Rahn", "Christine Choi", "Cliff Childs",
+  "Cliff Nielsen", "Daarken", "Dallas Williams", "Darius Zablockis", "David Frasheski", "David Álvarez", "Dmitry Burmak",
+  "Eric Deschamps", "Eugene Maslovski", "Flavio Greco Paglia", "Gabor Szikszai", "Howard Lyon", "Iga Oliwiak",
+  "Immanuela Crovius", "Isis", "Izzy", "James Paick", "James Ryman", "Javier Charro", "Jesper Ejsing", "Jessica Rossier",
+  "Johann Bodin", "John Avon", "John Thacker", "Jonas De Ro", "Josu Solano", "Julian Kok Joon Wen", "Jung Park", "Kev Walker",
+  "Kevin Sidharta", "Kotakan", "Lindsey Look", "Lordigan", "Lorenzo Mastroianni", "Mark Behm", "Mateus Manhanini",
+  "Mike Dringenberg", "Nino Is", "Pace Wilder", "Pavel Kolomeyets", "Philip Straub", "Piotr Dura", "Randy Vargas",
+  "Raymond Bonilla", "Raymond Swanland", "Richard Wright", "Rimas Valeikis", "rk post", "Robin Olausson", "Ron Spears",
+  "Ryan Alexander Lee", "Ryan Valle", "Rytis Sabaliauskas", "Sarah Finnigan", "Shahab Alizadeh", "Shelly Wan",
+  "Steven Belledin", "Svetlin Velinov", "Tatiana Kirgetova", "Thomas Chamberlain-Keen", "Thomas Stoop", "Titus Lunter",
+  "Todd Lockwood", "Trevor Claxton", "Vance Kovacs", "Veli Nyström", "Wisnu Tan", "Yeong-Hao Han", "Zack Stella"
+];
+
+// „Version x“ on the about page and in its card at the top of the settings
+let appVersion = "";
+async function showVersion() {
+  if (!appVersion) {
+    try { appVersion = desktopShell?.version || (await api("/api/health")).version; } catch { return; /* offline: no version line */ }
+  }
+  for (const el of $$(".about-version-line")) el.textContent = `Version ${appVersion}` + (el.closest(".about-card") ? " · " : "");
+}
+
+async function showAbout() {
+  $("#about-links").innerHTML = SOCIAL.map((s) => {
+    const inner = `<svg class="brand-icon" aria-hidden="true"><use href="#b-${s.key}"/></svg><span><b>${esc(s.label)}</b>`
+      + `<span class="muted small">${esc(s.note || (s.url ? s.url.replace(/^https:\/\/(www\.)?/, "") : "bald"))}</span></span>`;
+    return s.url
+      ? `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${inner}<svg class="icon"><use href="#i-forward"/></svg></a></li>`
+      : `<li class="soon" aria-disabled="true">${inner}</li>`;
+  }).join("");
+  $("#about-artists").textContent = BANNER_ARTISTS.join(" · ");
+  await showVersion();
+}
+
+// ============================================================================================
 // glossary: keywords, actions and Commander terms
 // ============================================================================================
 let glossaryItems = null;
@@ -5436,6 +5486,7 @@ function paletteItems() {
     ...tableSets.map((t) => ({ label: t.name, hint: "Tischregel", run: () => go(`#/tables/${enc(t.id)}`) })),
     { label: "Blacklist", hint: "Seite", run: () => go("#/blacklist") },
     { label: "Einstellungen", hint: "Seite · Strg+,", run: () => go("#/settings") },
+    { label: "Über Conclave", hint: "Einstellungen · Version, Kanäle", run: () => go("#/about") },
     { label: "Tastenkürzel", hint: "Übersicht · ?", run: () => openShortcuts() },
   ];
   if (currentDeck && parseHash().view === "deck") {
