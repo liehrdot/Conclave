@@ -46,6 +46,27 @@ async def revalidate(deck: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+async def revalidate_decks(rule_id: str) -> list[str]:
+    """Re-validate the decks that use ``rule_id`` (after the rule set changed); no new version."""
+    done = []
+    for d in storage.list_decks():
+        try:
+            deck = storage.load(d["slug"])
+        except FileNotFoundError:
+            continue
+        if deck.get("table_rule") != rule_id:
+            continue
+        try:
+            await revalidate(deck)
+            storage.save(deck, expect_version=deck.get("version"))
+        except storage.ConflictError:  # saved meanwhile (e.g. by a sync) – that save validated already
+            continue
+        except Exception:  # network trouble: keep the old validation
+            continue
+        done.append(deck["slug"])
+    return done
+
+
 def _note(added: list[str], removed: list[str], changed: list[str], note: str) -> str:
     parts = []
     if added:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from conftest import deck_lines, save_deck
 from fastapi.testclient import TestClient
 
-from mtgdeck import health, rule0, storage, tablerules
+from mtgdeck import deckedit, health, rule0, storage, tablerules
 from mtgdeck.gui import app as gui
 from mtgdeck.validate import validate_deck
 
@@ -87,7 +87,7 @@ async def test_check_all_and_revalidate():
     assert rows["plain-deck"]["ok"] and rows["plain-deck"]["uses"]
 
     await tablerules.update(rs["id"], add=["Cultivate"])
-    assert await tablerules.revalidate_decks(rs["id"]) == ["plain-deck"]
+    assert await deckedit.revalidate_decks(rs["id"]) == ["plain-deck"]
     deck = storage.load("plain-deck")
     assert not deck["validation"]["table_rule"]["compliant"]
     assert deck["version"] == 1  # re-validation alone makes no new version

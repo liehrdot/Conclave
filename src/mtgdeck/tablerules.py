@@ -284,26 +284,3 @@ async def check_all(rule_id: str) -> list[dict[str, Any]]:
         except (FileNotFoundError, ValueError, KeyError):
             continue
     return sorted(out, key=lambda r: (not r["ok"], not r["uses"], r["name"].lower()))
-
-
-async def revalidate_decks(rule_id: str) -> list[str]:
-    """Re-validate the decks that use ``rule_id`` (after the rule set changed); no new version."""
-    from . import deckedit, storage
-
-    done = []
-    for d in storage.list_decks():
-        try:
-            deck = storage.load(d["slug"])
-        except FileNotFoundError:
-            continue
-        if deck.get("table_rule") != rule_id:
-            continue
-        try:
-            await deckedit.revalidate(deck)
-            storage.save(deck, expect_version=deck.get("version"))
-        except storage.ConflictError:  # saved meanwhile (e.g. by a sync) – that save validated already
-            continue
-        except Exception:  # network trouble: keep the old validation
-            continue
-        done.append(deck["slug"])
-    return done
