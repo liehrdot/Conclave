@@ -1397,7 +1397,10 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .about-links .small { display: block; overflow-wrap: anywhere; }
 .brand-icon { flex: none; width: 22px; height: 22px; fill: currentColor; }
 .about-links a .brand-icon { color: var(--accent-text); }
-.about-credits p:last-child { margin-bottom: 0; }
+.about-values { display: flex; gap: var(--space-4); align-items: flex-start; }
+.about-values h2 { margin-bottom: var(--space-2); }
+.about-values .pride-flag { flex: none; margin-top: 4px; border-radius: 3px; box-shadow: 0 0 0 1px var(--border); }
+.about-values p:last-child, .about-credits p:last-child { margin-bottom: 0; }
 /* the card that opens it, first thing on the settings page */
 .about-card {
   position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: center; gap: var(--space-4);

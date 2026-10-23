@@ -5383,7 +5383,7 @@ void refreshOrders();
 // about: banner, avatar, version and the channels (a channel without a URL shows as „bald“)
 // ============================================================================================
 const SOCIAL = [
-  { key: "x", label: "X (Twitter)", url: "" },
+  { key: "twitter", label: "Twitter", url: "https://twitter.com/ConclaveMTG", note: "@ConclaveMTG" },
   { key: "twitch", label: "Twitch", url: "" },
   { key: "instagram", label: "Instagram", url: "" },
   { key: "youtube", label: "YouTube", url: "" },
