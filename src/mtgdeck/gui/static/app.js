@@ -436,23 +436,76 @@ window.conclaveMoxfield = (d) => {
   void loadImport({ text: lines.join("\n"), name: typeof d.name === "string" ? d.name.slice(0, 120) : undefined });
 };
 
+// commander picker of the import preview: a filterable list of the legendary cards, those whose
+// colours cover the whole deck first (a native <select> of 30+ names was unreadable)
+let impPick = [];  // [commander, partner]
+function cmdRowHtml(c) {
+  const [cmd, partner] = impPick;
+  const role = c.name === cmd ? "Commander" : c.name === partner ? "Partner" : "";
+  const main = cmd && cmd !== c.name ? impCandidate(cmd) : null;
+  const canPartner = main?.pairs && c.pairs && !role;
+  const art = c.image ? c.image.replace("/normal/", "/art_crop/") : "";
+  return `<div class="cmd-opt${role ? " picked" : ""}" data-name="${esc(c.name)}">
+    <button type="button" class="cmd-main" role="option" aria-selected="${role === "Commander"}">
+      ${art ? `<img src="${esc(art)}" alt="" loading="lazy">` : `<span class="cmd-noart"></span>`}
+      <span class="cmd-text"><b>${esc(c.name)}</b><span class="muted small">${esc(c.type_line || "")}</span></span>
+      <span class="cmd-ci">${(c.color_identity || []).map((x) => manaHtml(`{${x}}`)).join("") || manaHtml("{C}")}</span>
+      ${role ? `<span class="cmd-role">${role}</span>` : ""}
+    </button>
+    ${canPartner ? `<button type="button" class="btn small cmd-partner" title="Als zweiten Commander (Partner, Background …) dazunehmen">+ Partner</button>` : ""}
+  </div>`;
+}
+function impCandidate(name) { return importData?.commander_candidates.find((c) => c.name === name); }
+function renderCmdList() {
+  const list = $("#imp-cmd-list");
+  if (!list || !importData) return;
+  const q = ($("#imp-cmd-q")?.value || "").trim().toLowerCase();
+  const all = importData.commander_candidates.filter((c) => !q || `${c.name} ${c.type_line || ""}`.toLowerCase().includes(q));
+  const fit = all.filter((c) => c.fits), rest = all.filter((c) => !c.fits);
+  const group = (title, items) => items.length ? `<p class="cmd-group">${title}</p>${items.map(cmdRowHtml).join("")}` : "";
+  list.innerHTML = all.length ? (fit.length && rest.length
+    ? group("Passen zu den Farben des Decks", fit) + group("Weitere legendäre Karten", rest)
+    : all.map(cmdRowHtml).join(""))
+    : `<p class="muted small cmd-empty">Keine Karte passt zu „${esc(q)}“.</p>`;
+  const [cmd, partner] = impPick;
+  $("#imp-cmd-chosen").innerHTML = cmd
+    ? `Commander: <b>${esc(cmd)}</b>${partner ? ` + <b>${esc(partner)}</b>` : ""}`
+    : `<span class="warn">Noch kein Commander gewählt</span>`;
+  const src = impCandidate(cmd)?.image;
+  $("#imp-cmd-img").hidden = !src;
+  if (src) $("#imp-cmd-img").src = src;
+}
+function pickCommander(name, asPartner) {
+  const [cmd, partner] = impPick;
+  if (asPartner) impPick = [cmd, name];
+  else if (name === cmd) impPick = partner ? [partner] : [];
+  else if (name === partner) impPick = [cmd];
+  else impPick = [name, ...(partner && impCandidate(name)?.pairs ? [partner] : [])];
+  const nameField = $("#imp-name");
+  if (nameField && !nameField.dataset.typed && impPick[0]) nameField.value = impPick[0];
+  renderCmdList();
+}
+
 function renderImportPreview(d) {
   const box = $("#import-preview");
-  const options = (sel) => d.commander_candidates.map((c) => `<option${c.name === sel ? " selected" : ""}>${esc(c.name)}</option>`).join("");
   const known = d.commanders.length > 0;
+  impPick = known ? [] : [...d.suggested];
   const img = (known ? d.commander_images?.[d.commanders[0]] : null)
     || d.commander_candidates.find((c) => c.name === d.suggested[0])?.image;
   const count = d.card_count === 100 ? "100 Karten" : `<span class="warn">${d.card_count} Karten (Commander-Decks haben 100)</span>`;
+  const n = d.commander_candidates.length;
   let cmd;
   if (known) cmd = `<p>Commander: <b>${d.commanders.map(esc).join(" + ")}</b></p>`;
-  else if (d.commander_candidates.length) {
-    cmd = `<div class="cmd-row"><label class="field"><span>Commander</span><select id="imp-cmd1">${d.suggested.length ? "" : "<option value=''>– bitte wählen –</option>"}${options(d.suggested[0])}</select></label>
-      <label class="field"><span>Partner <span class="muted">(optional)</span></span><select id="imp-cmd2"><option value="">–</option>${options(d.suggested[1])}</select></label></div>`;
+  else if (n) {
+    cmd = `<div class="field cmd-pick"><span>Commander</span>
+      <p class="small cmd-chosen" id="imp-cmd-chosen" aria-live="polite"></p>
+      ${n > 6 ? `<input type="search" id="imp-cmd-q" placeholder="${n} legendäre Karten durchsuchen …" autocomplete="off" aria-label="Commander suchen">` : ""}
+      <div class="cmd-list" id="imp-cmd-list" role="listbox" aria-label="Commander wählen"></div></div>`;
   } else {
     cmd = `<label class="field"><span>Commander <span class="muted">(die Seite markiert ihn nicht)</span></span>
       <input id="imp-cmd-text" list="ac-imp-cmd" placeholder="Name des Commanders"><datalist id="ac-imp-cmd"></datalist></label>`;
   }
-  box.innerHTML = `${img ? `<img src="${esc(img)}" alt="">` : ""}
+  box.innerHTML = `<img id="imp-cmd-img" src="${esc(img || "")}" alt=""${img ? "" : " hidden"}>
     <div class="grow">
       <label class="field"><span>Name</span><input id="imp-name" value="${esc(d.name || (d.commanders[0] || d.suggested[0] || "Importiertes Deck"))}" maxlength="120"></label>
       <p class="muted small">${esc(d.site)}${d.source ? ` · <a href="${esc(d.source)}" target="_blank" rel="noopener">Quelle</a>` : ""} · ${count}
@@ -463,7 +516,34 @@ function renderImportPreview(d) {
       <div><button type="button" class="btn primary" id="imp-save">Importieren &amp; prüfen</button></div>
     </div>`;
   box.hidden = false;
+  if (d.name || known) $("#imp-name").dataset.typed = "1";  // a real deck name stays, a commander name follows the pick
+  $("#imp-name").addEventListener("input", (e) => { e.target.dataset.typed = "1"; });
   if ($("#imp-cmd-text")) wireAutocomplete($("#imp-cmd-text"), $("#ac-imp-cmd"));
+  if ($("#imp-cmd-list")) {
+    renderCmdList();
+    $("#imp-cmd-q")?.addEventListener("input", renderCmdList);
+    $("#imp-cmd-q")?.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); $("#imp-cmd-list .cmd-main")?.focus(); }
+      if (e.key === "Enter") { e.preventDefault(); const first = $("#imp-cmd-list .cmd-opt"); if (first) pickCommander(first.dataset.name); }
+    });
+    $("#imp-cmd-list").addEventListener("click", (e) => {
+      const row = e.target.closest(".cmd-opt");
+      if (!row) return;
+      const asPartner = !!e.target.closest(".cmd-partner");
+      if (!asPartner && !e.target.closest(".cmd-main")) return;
+      pickCommander(row.dataset.name, asPartner);
+      $(`#imp-cmd-list .cmd-opt[data-name="${CSS.escape(row.dataset.name)}"] .cmd-main`)?.focus();
+    });
+    $("#imp-cmd-list").addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      const rows = $$("#imp-cmd-list .cmd-main");
+      const i = rows.indexOf(document.activeElement);
+      if (i < 0) return;
+      e.preventDefault();
+      if (e.key === "ArrowUp" && i === 0) $("#imp-cmd-q")?.focus();
+      else rows[Math.max(0, Math.min(rows.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))].focus();
+    });
+  }
   box.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
@@ -473,7 +553,7 @@ $("#import-preview").addEventListener("click", async (e) => {
   const d = importData;
   const commanders = d.commanders.length ? d.commanders
     : $("#imp-cmd-text") ? [$("#imp-cmd-text").value.trim()].filter(Boolean)
-    : [$("#imp-cmd1").value, $("#imp-cmd2").value].filter(Boolean);
+    : impPick.filter(Boolean);
   if (!commanders.length) { toast("Wähle den Commander des Decks.", "error"); return; }
   const bracket = $("#imp-bracket").value;
   const body = { name: $("#imp-name").value.trim() || "Importiertes Deck", commanders, cards: d.cards, categories: d.categories,

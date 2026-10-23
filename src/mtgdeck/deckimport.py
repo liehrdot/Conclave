@@ -17,11 +17,39 @@ def _can_be_commander(card: dict[str, Any]) -> bool:
     return ("Legendary" in front and ("Creature" in front or "Background" in front)) or "can be your commander" in text
 
 
+_PAIRS = ("partner", "choose a background", "friends forever", "doctor's companion")
+
+
+def _pairs(card: dict[str, Any]) -> bool:
+    """Can share the command zone (Partner, Background, Friends forever, Doctor's companion)."""
+    text = (card.get("oracle_text") or "").lower()
+    return "Background" in (card.get("type_line") or "") or any(k in text for k in _PAIRS)
+
+
+def _candidates(counts: dict[str, int], found: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Legendary cards of the list; ``fits`` = its colour identity (or with a partner's) covers the
+    whole deck's, those come first (a commander must cover every card's colours, so the others are rarely the one)."""
+    deck_ci = {c for n in counts if n in found for c in found[n].get("color_identity") or []}
+    out = []
+    for n in counts:
+        card = found.get(n)
+        if not card or not _can_be_commander(card):
+            continue
+        out.append({"name": n, "image": card.get("image"), "type_line": card.get("type_line") or "",
+                    "color_identity": card.get("color_identity") or [], "pairs": _pairs(card),
+                    "fits": deck_ci <= set(card.get("color_identity") or [])})  # fmt: skip
+    if not any(c["fits"] for c in out):  # maybe two partners cover it together
+        pairs = [c for c in out if c["pairs"]]
+        for c in pairs:
+            c["fits"] = any(o is not c and deck_ci <= {*c["color_identity"], *o["color_identity"]} for o in pairs)
+    return sorted(out, key=lambda c: not c["fits"])
+
+
 async def preview(data: dict[str, Any]) -> dict[str, Any]:
     """Resolve the imported names (German too), count cards and offer commander candidates.
 
-    Adds ``card_count``, ``unresolved``, ``commander_candidates`` ([{name, image}], legendary
-    cards of the list) and ``suggested`` (commanders to preselect)."""
+    Adds ``card_count``, ``unresolved``, ``commander_candidates`` ([{name, image, type_line,
+    color_identity, pairs, fits}], legendary cards of the list, colour-fitting first) and ``suggested`` (commanders to preselect)."""
     parsed = parse_decklist(data["cards"])
     names = list(data["commanders"]) + [e.name for e in parsed.entries]
     try:
@@ -34,13 +62,16 @@ async def preview(data: dict[str, Any]) -> dict[str, Any]:
         n = renames.get(e.name, e.name)
         counts[n] = counts.get(n, 0) + e.qty
     categories = {renames.get(k, k): v for k, v in (data.get("categories") or {}).items()}
-    candidates = [{"name": n, "image": found[n].get("image")} for n in counts if n in found and _can_be_commander(found[n])]
+    candidates = _candidates(counts, found)
     suggested = commanders
     hint = (data.get("commander_hint") or "").strip()
     if not suggested and hint:
         suggested = [c["name"] for c in candidates if c["name"] == hint or slugify(c["name"]) == slugify(hint)][:1]
+    fitting = [c["name"] for c in candidates if c["fits"]]
     if not suggested and len(candidates) == 1:
         suggested = [candidates[0]["name"]]
+    if not suggested and (len(fitting) == 1 or (len(fitting) == 2 and all(c["pairs"] for c in candidates if c["fits"]))):
+        suggested = fitting
     images = {n: c.get("image") for n, c in found.items()}
     return {**data, "commanders": commanders, "cards": [f"{q} {n}" for n, q in counts.items()], "categories": categories,
             "card_count": len(commanders) + sum(counts.values()), "unresolved": missing,
