@@ -261,3 +261,37 @@ async def test_bulk_qty_splits_copies_into_their_own_entry():
     assert client.post("/api/collection/bulk", json={"ids": [whole], "delete": True, "qty": 1}).json() == {"changed": 1}
     assert [e["qty"] for e in collection.load()] == [1]  # deleting one of two copies keeps the other
     assert client.post("/api/collection/bulk", json={"ids": [whole], "proxy": True, "qty": 0}).status_code == 422
+
+
+async def test_move_copies_into_a_deck():
+    from fastapi.testclient import TestClient
+
+    from mtgdeck.gui.app import app
+
+    for name in ("Own A", "Own B"):
+        await save_deck(**{"name": name, "commanders": ["Meren of Clan Nel Toth"], "bracket": 2,
+            "cards": [{"name": l.split(" ", 1)[1], "qty": int(l.split(" ", 1)[0])} for l in deck_lines()]})  # fmt: skip
+    await collection.add([{"name": "Sol Ring", "qty": 3}], place="Binder")
+    await collection.add([{"name": "Sol Ring", "proxy": True}], place="Own B", place_deck="own-b")
+    await collection.add([{"name": "Cultivate"}])
+    client = TestClient(app)
+    got = client.get("/api/decks/own-a/copies", params={"name": "Sol Ring"}).json()
+    assert (got["need"], got["placed"], got["here"]) == (1, 0, [])
+    assert [(e["qty"], e["proxy"], e["place"], e["used_by"]) for e in got["elsewhere"]] == [
+        (3, False, "Binder", None), (1, True, "Own B", "Own B")]  # copies another deck plays come last  # fmt: skip
+    binder = got["elsewhere"][0]["id"]
+    moved = client.post("/api/decks/own-a/copies/move", json={"id": binder, "qty": 1}).json()
+    assert (moved["qty"], moved["place"], moved["place_deck"]) == (1, "Binder", "")
+    got = client.get("/api/decks/own-a/copies", params={"name": "Sol Ring"}).json()
+    assert got["placed"] == 1 and got["here"][0]["id"] == moved["id"] and got["elsewhere"][0]["qty"] == 2
+    o = await collection.deck_ownership(storage.load("own-a"))
+    assert [c["qty"] for c in o["cards"]["Sol Ring"]["copies"]] == [1]  # the deck view shows it as its own copy
+    client.post("/api/decks/own-a/copies/move", json={"id": got["elsewhere"][0]["id"]})  # no qty = all: merges into the one there
+    assert sorted((e["qty"], e["place_deck"]) for e in collection.load() if e["name"] == "Sol Ring") == [(1, "own-b"), (3, "own-a")]
+    # undo goes through the bulk route with what the move returned
+    client.post("/api/collection/bulk", json={"ids": [moved["id"]], "place": moved["place"], "place_deck": "", "qty": 1})
+    assert sorted((e["qty"], e["place"], e["place_deck"]) for e in collection.load() if e["name"] == "Sol Ring") == [
+        (1, "Binder", ""), (1, "Own B", "own-b"), (2, "Own A", "own-a")]  # fmt: skip
+    assert client.post("/api/decks/own-a/copies/move", json={"id": "nope"}).status_code == 404
+    assert client.post("/api/decks/missing/copies/move", json={"id": binder}).status_code == 404
+    assert client.get("/api/decks/own-a/copies", params={"name": "Cultivate"}).json()["elsewhere"][0]["place"] == ""

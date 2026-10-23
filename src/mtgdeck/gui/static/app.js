@@ -1153,7 +1153,7 @@ function renderCards(d) {
   $("#cards").innerHTML = Object.entries(groups).sort(([a], [b]) => groupRank(a) - groupRank(b) || a.localeCompare(b)).map(([g, items]) => {
     const html = items.sort(cmp).map((c) => {
       const cd = c.cd;
-      const own = ownershipBadge(c.name, c.qty, c.commander);
+      const own = ownershipBadge(c.name, c.qty, c.commander, c.status !== "new");
       const copy = c.status === "new" ? null : shownCopy(c.name);  // the copy whose Ort is this deck
       const img = copy?.image || cd.image, back = copy?.image ? copy.image_back || "" : cd.image_back || "";
       const data = `data-img="${esc(img || "")}" data-img-back="${esc(back)}" data-name="${esc(c.name)}"${copy?.foil ? ' data-foil="1"' : ""}`;
@@ -1482,16 +1482,20 @@ function ownershipLabel(name) {
   if (!o) return "Unbekannt";
   return o.missing > 0 ? "Fehlt" : o.real >= o.need ? "Vorhanden" : "Als Proxy vorhanden";
 }
-function ownershipBadge(name, need = 1, commander = false) {
+function ownershipBadge(name, need = 1, commander = false, button = false) {
   const o = ownership?.cards?.[name];
   if (!ownership?.collection_size || (!o && !ownership.all)) return "";
   const real = o?.real || 0, prox = o?.proxy || 0;
   // where the copies are right now (the Ort of each collection entry), one line per place
   const where = (o?.places || []).map((p) => `${p.qty}× ${placeLabel(p) || "ohne Ort"}${p.proxy ? " (Proxy)" : ""}`).join("\n");
   const tip = (head) => esc(where ? `${head}:\n${where}` : head);
-  if (real >= need) return `<span class="own ok" title="${tip("In deiner Sammlung")}">✓</span>`;
-  if (real + prox >= need) return `<span class="own proxy" title="${tip("Als Proxy in deiner Sammlung")}">P</span>`;
-  if (real + prox > 0) return `<span class="own part" title="${tip(`Nur ${real + prox} von ${need} vorhanden`)}">${real + prox}/${need}</span>`;
+  // in the deck list the badge is a button: it opens the copies to move into this deck
+  const badge = (cls, head, text) => button
+    ? `<button type="button" class="own ${cls}" data-act="own" title="${tip(head)}\n\nKlicken: Exemplare in dieses Deck legen" aria-label="${esc(head)} – Exemplare in dieses Deck legen">${text}</button>`
+    : `<span class="own ${cls}" title="${tip(head)}">${text}</span>`;
+  if (real >= need) return badge("ok", "In deiner Sammlung", "✓");
+  if (real + prox >= need) return badge("proxy", "Als Proxy in deiner Sammlung", "P");
+  if (real + prox > 0) return badge("part", `Nur ${real + prox} von ${need} vorhanden`, `${real + prox}/${need}`);
   return "";  // missing: no badge (the Sammlung panel and "nach Besitz" show them) – keeps the list calm
 }
 
@@ -1513,6 +1517,88 @@ function deckValueTip(d) {
     v.rest ? `${v.rest} weitere zur günstigsten Ausgabe` : "",
     `Günstigste Ausgaben für alles: ${fmtPrice(v.cheapest, cur)}`].filter(Boolean).join("\n");
 }
+// ---------- move collection copies into the open deck (click on the ✓/P badge) ----------
+let ownCopies = null;  // { slug, name, data: card_copies(), moved: {deck entry id: move result} }
+const OWN_FILTERS = { all: () => true, real: (e) => !e.proxy, proxy: (e) => !!e.proxy };
+async function openOwnCopies(name) {
+  const slug = currentDeck?.slug;
+  if (!slug) return;
+  const filter = OWN_FILTERS[store.get("ownfilter")] ? store.get("ownfilter") : "all";
+  $("#own-copies-filter").querySelector(`input[value="${filter}"]`).checked = true;
+  const moved = ownCopies?.slug === slug && ownCopies.name === name ? ownCopies.moved : {};  // moves made while it was open
+  try { ownCopies = { slug, name, moved, data: await api(`/api/decks/${enc(slug)}/copies?name=${enc(name)}`) }; } catch (err) { return fail(err); }
+  $("#own-copies-title").textContent = name;
+  renderOwnCopies();
+  const dlg = $("#own-copies");
+  if (!dlg.open) dlg.showModal();
+}
+function renderOwnCopies() {
+  const { data } = ownCopies;
+  const filter = $("#own-copies-filter").querySelector("input:checked").value;
+  const want = OWN_FILTERS[filter];
+  const left = Math.max(0, data.need - data.placed);
+  $("#own-copies-text").textContent = data.need
+    ? `Das Deck braucht ${data.need}×. ${data.placed ? `${data.placed} ${data.placed === 1 ? "liegt" : "liegen"} schon drin` : "Noch keins liegt drin"}${left ? ` – ${left} fehlt noch.` : "."}`
+    : "Diese Karte ist gerade nicht im Deck.";
+  const row = (e, here) => {
+    const where = here ? "In diesem Deck" : placeLabel(e) || "Ohne Ort";
+    const facts = [`${e.qty}×`, e.proxy ? "Proxy" : "Echt", where].join(" · ");
+    const act = here ? "" : `<span class="oc-act">
+      ${e.qty > 1 ? `<input type="number" min="1" max="${e.qty}" value="${Math.min(e.qty, Math.max(1, left))}" aria-label="Wie viele davon?" data-qty>` : ""}
+      <button type="button" class="btn small" data-move="${esc(e.id)}">Ins Deck</button></span>`;
+    return `<div class="oc-row">
+      ${e.image ? `<img src="${esc(e.image)}" alt="" loading="lazy">` : '<span class="oc-noimg"></span>'}
+      <div><b>${esc(copyLabel({ ...e, proxy: false }) || "Ohne bestimmte Ausgabe")}</b><small>${esc(facts)}</small>
+        ${e.used_by ? `<small class="warn">Wird in „${esc(e.used_by)}“ gespielt</small>` : ""}</div>
+      ${here ? (ownCopies.moved[e.id] ? `<button type="button" class="btn small" data-back="${esc(e.id)}">Zurücklegen</button>` : `<span class="pill ok">Liegt hier</span>`) : act}</div>`;
+  };
+  const elsewhere = data.elsewhere.filter(want), here = data.here.filter(want);
+  const hidden = data.elsewhere.length - elsewhere.length;
+  $("#own-copies-list").innerHTML = [
+    `<h3>An anderen Orten</h3>`,
+    elsewhere.length ? elsewhere.map((e) => row(e, false)).join("")
+      : `<p class="muted small">${hidden ? `Keine ${filter === "real" ? "echten" : "Proxy-"}Exemplare woanders – ${hidden} unter „Alle“.` : "Keine weiteren Exemplare in deiner Sammlung."}</p>`,
+    here.length ? `<h3>Schon in diesem Deck</h3>${here.map((e) => row(e, true)).join("")}` : "",
+  ].join("");
+}
+$("#own-copies-filter").addEventListener("change", (e) => { store.set("ownfilter", e.target.value); renderOwnCopies(); });
+$("#own-copies-close").addEventListener("click", () => $("#own-copies").close());
+$("#own-copies").addEventListener("close", () => { ownCopies = null; });
+// puts moved copies back where they came from (one undo per move; the toast's „Rückgängig“ does the same)
+async function undoOwnMove(slug, name, moved) {
+  await api("/api/collection/bulk", { method: "POST", body: { ids: [moved.id], place: moved.place, place_deck: moved.place_deck, qty: moved.qty } });
+  if (ownCopies?.slug === slug && ownCopies.name === name) delete ownCopies.moved[moved.id];
+  await afterOwnMove(slug, name);
+}
+$("#own-copies-list").addEventListener("click", async (e) => {
+  const back = e.target.closest("[data-back]");
+  if (back && ownCopies?.moved[back.dataset.back]) {
+    back.disabled = true;
+    return undoOwnMove(ownCopies.slug, ownCopies.name, ownCopies.moved[back.dataset.back]).catch((err) => { back.disabled = false; fail(err); });
+  }
+  const btn = e.target.closest("[data-move]");
+  if (!btn || !ownCopies) return;
+  const state = ownCopies, { slug, name } = state;
+  const entry = state.data.elsewhere.find((x) => x.id === btn.dataset.move);
+  const input = btn.closest(".oc-row").querySelector("[data-qty]");
+  const qty = input ? Math.min(entry.qty, Math.max(1, Math.round(Number(input.value) || 1))) : entry.qty;
+  btn.disabled = true;
+  try {
+    const moved = await api(`/api/decks/${enc(slug)}/copies/move`, { method: "POST", body: { id: entry.id, qty } });
+    const deckName = currentDeck?.slug === slug ? currentDeck.name : slug;
+    const prev = state.moved[moved.id];  // a second move from the same place into the same entry: undo both
+    state.moved[moved.id] = prev && prev.place === moved.place && prev.place_deck === moved.place_deck
+      ? { ...moved, qty: prev.qty + moved.qty } : moved;
+    toast(`${moved.qty}× ${name} liegt jetzt in „${deckName}“.`, "ok", 6000,
+      { label: "Rückgängig", run: () => undoOwnMove(slug, name, moved).catch(fail) });
+    await afterOwnMove(slug, name);
+  } catch (err) { btn.disabled = false; fail(err); }
+});
+async function afterOwnMove(slug, name) {
+  if ($("#own-copies").open && ownCopies?.slug === slug && ownCopies.name === name) await openOwnCopies(name);
+  if (currentDeck?.slug === slug) await loadOwnership(currentDeck);
+}
+
 function copyLabel(c) {
   const lang = c.lang && c.lang !== "en" ? (LANG_NAMES[c.lang] || c.lang.toUpperCase()) : "";
   return [c.set_name || (c.set || "").toUpperCase(), c.collector_number ? `#${c.collector_number}` : "", c.foil ? "Foil" : "", lang, c.proxy ? "Proxy" : ""]
@@ -1997,6 +2083,7 @@ function openCardFromEvent(e) {
   if (!el || !currentDeck) return;
   const act = e.target.closest("[data-act]")?.dataset.act;
   const name = el.dataset.name;
+  if (act === "own") return openOwnCopies(name);
   if (edit && act && act !== "view" && el.dataset.maybe) {
     if (act === "unmaybe") removeMaybe(name);
     if (act === "undo-maybe") edit.maybeRemove.delete(name);

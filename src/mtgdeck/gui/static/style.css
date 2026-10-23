@@ -507,6 +507,24 @@ details.more[open] > summary { margin-bottom: var(--space-3); }
 .own.proxy { background: var(--accent-soft); color: var(--on-accent-soft); }
 .own.part { background: var(--warn-soft); color: var(--warn); }
 .own.miss { background: var(--surface-2); color: var(--muted); }
+/* the badge in the deck list is a button: a larger invisible hit area around the small pill */
+button.own { position: relative; border: 0; font-family: inherit; line-height: 1; cursor: pointer; min-width: 20px; height: 20px; }
+button.own::after { content: ""; position: absolute; inset: -8px -10px; }
+button.own:hover { filter: brightness(1.12); box-shadow: 0 0 0 2px var(--border); }
+button.own:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.dialog.own-copies-dialog { width: min(600px, 94vw); }
+.own-copies-dialog .segmented { margin: var(--space-2) 0 var(--space-3); }
+.own-copies-list { display: flex; flex-direction: column; gap: var(--space-1); max-height: 56vh; overflow: auto; }
+.own-copies-list h3 { font-size: var(--fs-sm); color: var(--muted); font-weight: 600; margin: var(--space-3) 0 var(--space-1); }
+.own-copies-list h3:first-child { margin-top: 0; }
+.oc-row { display: grid; grid-template-columns: 44px 1fr auto; gap: var(--space-3); align-items: center; padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius); }
+.oc-row img, .oc-row .oc-noimg { width: 44px; aspect-ratio: 488 / 680; object-fit: cover; border-radius: 4.75% / 3.5%; background: var(--surface-2); }
+.oc-row b { font-weight: 600; font-size: var(--fs-sm); display: block; }
+.oc-row small { color: var(--muted); font-size: var(--fs-xs); display: block; margin-top: 2px; }
+.oc-row small.warn { color: var(--warn); }
+.oc-row .oc-act { display: flex; gap: var(--space-2); align-items: center; }
+.oc-row .oc-act input { width: 4.2em; margin: 0; }
+.oc-row .pill { height: 22px; }
 .cards.grid .own-badge { position: absolute; top: 6px; left: 6px; }
 .cards.grid .own-badge .own { margin: 0; }
 .similar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
