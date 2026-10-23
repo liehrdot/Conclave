@@ -412,7 +412,22 @@ export function scanner() {
       document.body.classList.add("camera");
       const video = $("#cam-video", el), frame = $("#cam-frame", el), hint = $("#cam-hint", el);
       const say = (text, cls = "") => { hint.textContent = text; hint.className = `cam-hint ${cls}`; };
-      const pause = (on) => { paused = on; el.querySelector(".cam").classList.toggle("paused", on); };
+      // paused (a card found, the add or search sheet open, the camera app taking a photo): the camera is let go – no
+      // live picture behind the sheet, the phone's camera light goes out – and opened again on the same lens afterwards
+      let lensId = "";
+      const pause = (on) => {
+        if (paused === on) return;
+        paused = on;
+        el.querySelector(".cam").classList.toggle("paused", on);
+        if (on) {
+          lensId = track?.getSettings?.().deviceId || lensId;
+          stream?.getTracks().forEach((t) => t.stop());
+          stream = null;
+          video.srcObject = null;
+        } else if (running && track) open(lensId).catch(() => open().catch(() => {
+          say("Die Kamera startet nicht wieder – schließe den Scanner und öffne ihn neu.", "warn");
+        }));
+      };
       $("#cam-type", el).addEventListener("click", () => { pause(true); searchSheet({ onClose: () => pause(false) }); });
       const found = (card, line) => {
         pause(true);
@@ -430,7 +445,6 @@ export function scanner() {
       file.addEventListener("cancel", () => pause(false));
       file.addEventListener("change", async () => {
         const f = file.files?.[0];
-        if (track?.readyState === "ended") open(track.getSettings?.().deviceId).catch(() => {});  // the camera app took it
         if (!f) return pause(false);
         say("Lese das Foto …", "reading");
         let hit = null;
@@ -448,9 +462,10 @@ export function scanner() {
         stream?.getTracks().forEach((t) => t.stop());
         // the camera's own picture, never cut to the screen's shape (that looked zoomed in); the frame maths handle any size
         const video_ = { width: { ideal: 1920 }, height: { ideal: 1080 }, resizeMode: { ideal: "none" } };
-        stream = await navigator.mediaDevices.getUserMedia({ audio: false,
+        const got = await navigator.mediaDevices.getUserMedia({ audio: false,
           video: deviceId ? { ...video_, deviceId: { exact: deviceId } } : { ...video_, facingMode: { ideal: "environment" } } });
-        if (!running) return stop();
+        if (!running || paused) { got.getTracks().forEach((t) => t.stop()); return; }  // closed or paused meanwhile
+        stream = got;
         video.srcObject = stream;
         await video.play().catch(() => {});
         track = stream.getVideoTracks()[0];
