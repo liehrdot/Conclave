@@ -139,6 +139,7 @@ The flat green look and parts of the workflow come from the fork of my colleague
 estimates from [Commander Spellbook](https://commanderspellbook.com).
 
 Conclave is unofficial fan content. Magic: The Gathering and all card images belong to Wizards of the Coast.
+Artists of the card art we use on social media are listed in [CREDITS.md](CREDITS.md).
 
 ## The technical side
 
