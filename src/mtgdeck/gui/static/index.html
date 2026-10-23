@@ -226,12 +226,14 @@
             <form id="add-card-form" class="add-card" autocomplete="off" hidden>
               <input id="add-card-name" list="ac-add" placeholder="Karte hinzufügen …" aria-label="Karte hinzufügen" required>
               <datalist id="ac-add"></datalist>
+              <div class="add-card-opts">
               <input id="add-card-qty" type="number" min="1" max="99" value="1" aria-label="Anzahl">
               <select id="add-card-cat" aria-label="Kategorie">
                 <option value="">Kategorie automatisch</option>
                 <option>Ramp</option><option>Draw</option><option>Removal</option><option>Board Wipe</option>
                 <option>Protection</option><option>Synergy</option><option>Win Condition</option><option>Utility</option><option>Land</option>
               </select>
+              </div>
               <div class="btn-group add-card-btns">
                 <button type="submit" class="btn"><svg class="icon"><use href="#i-plus"/></svg>Hinzufügen</button>
                 <button type="button" class="btn ghost" id="add-card-maybe" title="Auf die Vielleicht-Liste – zählt nicht zum Deck"><svg class="icon"><use href="#i-maybe"/></svg>Vielleicht</button>
