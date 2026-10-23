@@ -1,5 +1,5 @@
-"""Game log per deck (``decks/.games/<slug>.json``): result, opponents, turn, quick-pick problems,
-best card and a note – plus statistics and a focus text for upgrade suggestions ("learn from
+"""Game log per deck (``decks/.games/<slug>.json``): result, opponents, finishing places, turn, quick-pick
+problems, best card and a note – plus statistics and a focus text for upgrade suggestions ("learn from
 your games")."""
 
 from __future__ import annotations
@@ -31,6 +31,7 @@ ISSUES: dict[str, tuple[str, str]] = {
     "too_strong": ("Deck war zu stark für die Runde", "passend zur Runde etwas abschwächen"),
 }
 MAX_TURNS = 999  # same cap as appops._round
+PLACES_MAX = 6  # the user plus at most five opponents
 # how the game was decided (optional) and quick-pick labels
 HOW: dict[str, str] = {
     "combat": "Kampfschaden", "commander": "Commander-Schaden", "combo": "Combo",
@@ -56,10 +57,28 @@ def _write(deck_slug: str, items: list[dict[str, Any]]) -> None:
     write_json(path, items)
 
 
+def clean_places(place: Any, opponent_places: Any, opponents: int) -> tuple[int | None, list[int | None] | None]:
+    """Finishing places 1..N (N = the user plus the opponents; ties allowed): the user's own and one per opponent
+    in the order of ``opponents`` (None = not noted). Without opponents only the user's place, up to ``PLACES_MAX``."""
+    top = min(PLACES_MAX, 1 + opponents) if opponents else PLACES_MAX
+
+    def ok(v: Any) -> int | None:
+        return v if isinstance(v, int) and not isinstance(v, bool) and 1 <= v <= top else None
+
+    theirs = [ok(v) for v in (opponent_places if isinstance(opponent_places, list) else [])[:opponents]]
+    theirs += [None] * (opponents - len(theirs))
+    return ok(place), theirs if any(v is not None for v in theirs) else None
+
+
+def place_text(place: int) -> str:
+    return f"{place}. Platz"
+
+
 def add(deck_slug: str, *, result: str, opponents: list[str] | None = None, turn: int | None = None,
         issues: list[str] | None = None, mvp: str | None = None, note: str = "", version: int | None = None,
         played: str | None = None, entry_id: str | None = None, opponent_ids: list[str | None] | None = None,
-        how: str | None = None, started: str | int | None = None) -> dict[str, Any]:  # fmt: skip
+        how: str | None = None, started: str | int | None = None, place: int | None = None,
+        opponent_places: list[int | None] | None = None) -> dict[str, Any]:  # fmt: skip
     if result not in RESULTS:
         raise ValueError(f"Ergebnis muss eines von {', '.join(RESULTS)} sein")
     unknown = [i for i in issues or [] if i not in ISSUES]
@@ -78,6 +97,11 @@ def add(deck_slug: str, *, result: str, opponents: list[str] | None = None, turn
         entry["how"] = how
     if started == "me" or (isinstance(started, int) and 0 <= started < len(entry["opponents"])):
         entry["started"] = started  # "me" or the index of the opponent who began
+    mine, theirs = clean_places(place, opponent_places, len(entry["opponents"]))
+    if mine:
+        entry["place"] = mine
+    if theirs:
+        entry["opponent_places"] = theirs
     with locked(_file(deck_slug)):
         _write(deck_slug, games(deck_slug) + [entry])
     return entry
@@ -114,6 +138,7 @@ def stats(items: list[dict[str, Any]]) -> dict[str, Any]:
         "per_version": [{"version": v, **per_version[v]} for v in sorted(per_version)],
         "mvps": [{"name": n, "count": c} for n, c in Counter(g["mvp"] for g in items if g.get("mvp")).most_common(5)],
         "opponents": [{"name": n, "count": c} for n, c in Counter(o for g in items for o in g.get("opponents") or []).most_common(5)],
+        "places": places(items),
         "rounds": rounds(items),
     }  # fmt: skip
 
@@ -134,6 +159,20 @@ def learn_focus(items: list[dict[str, Any]], top: int = 3) -> str:
     return "Aus den Partien: " + "; ".join(parts) if parts else ""
 
 
+def places(items: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """The user's finishing places: average, how often each place, average table size. None without any."""
+    rows = [(g["place"], 1 + len(g.get("opponents") or [])) for g in items if isinstance(g.get("place"), int)]
+    if not rows:
+        return None
+    counts = Counter(p for p, _ in rows)
+    sized = [n for _, n in rows if n > 1]
+    return {
+        "games": len(rows), "avg": round(sum(p for p, _ in rows) / len(rows), 1),
+        "counts": [{"place": p, "count": counts[p]} for p in sorted(counts)],
+        "avg_players": round(sum(sized) / len(sized), 1) if sized else None,
+    }  # fmt: skip
+
+
 # ---------- the phone's Runden-Helfer: ``game["round"]`` (cleaned by sync/appops._round) ----------
 def _event_text(e: dict[str, Any]) -> str:
     d, src = int(e.get("delta") or 0), e.get("from")
@@ -144,6 +183,8 @@ def _event_text(e: dict[str, Any]) -> str:
         return f"{'' if d > 0 else '−'}{abs(d)} Commander-Schaden{von}"
     if e.get("kind") == "poison":
         return f"{'+' if d > 0 else '−'}{abs(d)} {'Giftmarke' if abs(d) == 1 else 'Giftmarken'}"
+    if e.get("kind") == "out":
+        return f"{src or 'Ein Gegner'} ist raus"
     return ""
 
 

@@ -133,6 +133,22 @@ def test_game_add_keeps_the_round_log_of_the_round_helper_cleaned():
     assert "round" not in plain["decks/.games/meren.json"][0]
 
 
+def test_game_add_keeps_finishing_places_aligned_with_the_opponents():
+    docs = {"decks/meren.json": _docs()["decks/meren.json"], "decks/.games/meren.json": [], "decks/.opponents.json": _docs()["decks/.opponents.json"]}
+    at = "2026-10-10T20:05:00+00:00"
+    events = [{"turn": 4, "kind": "out", "delta": 1, "from": "Krenko, Mob Boss", "life": 30, "at": at}]
+    round_log = {"start_life": 40, "life": 30, "turns": 6, "started": AT, "ended": at, "events": events}
+    game = {"id": "g1", "deck": "meren", "result": "win", "place": 1, "round": round_log}
+    slots = [{"id": "o1", "place": 2}, {"bogus": True}, {"commander": "Krenko, Mob Boss", "place": 3}]  # the middle slot is skipped
+    entry = appops.apply_copy(_op("game.add", {"game": game, "opponents": slots}), docs)["decks/.games/meren.json"][0]
+    assert (entry["place"], entry["opponent_places"], entry["opponent_ids"]) == (1, [2, 3], ["o1", "o2"])
+    assert entry["round"]["events"][0]["kind"] == "out"
+    # places outside 1..N (N = the user plus the opponents) and booleans are dropped; none noted = no keys
+    bad = {"id": "g2", "deck": "meren", "result": "loss", "place": 4}
+    out = appops.apply_copy(_op("game.add", {"game": bad, "opponents": [{"id": "o1", "place": True}, {"id": "o2", "place": 0}]}, "op000002"), docs)
+    assert "place" not in out["decks/.games/meren.json"][0] and "opponent_places" not in out["decks/.games/meren.json"][0]
+
+
 def test_opponent_operations():
     docs = {"decks/.opponents.json": None}
     out = appops.apply_copy(_op("opponent.add", {"opponent": {"id": "neu1", "commanders": ["Muldrotha, the Gravetide"], "colors": "UBG",

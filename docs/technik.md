@@ -229,6 +229,8 @@ ein Befehl auf dem Server.
     springt in Fünferschritten; Commander-Schaden und Gift trägst du nach Antippen der Kachel in einem eigenen Blatt
     ein. Bist du raus oder beendest du die Runde, öffnet sich das Partie-Formular vorbelegt; die Partie wird mit dem
     ganzen Verlauf gespeichert. „Beenden“ → „Ohne Ergebnis abbrechen“ verwirft eine Runde, ohne etwas zu speichern.
+    Unter „Wer ist raus?“ tippst du an, wer ausscheidet; daraus werden die Plätze 1 bis N im Partie-Formular
+    („Platzierung“, auch ohne Runde von Hand wählbar, der 1. Platz ist golden markiert).
     Am PC steht die Runde nach dem Abgleich im Deck unter *Partien* („Runde ansehen“).
   - **Vorschau:** „Erst mal mit Beispieldaten ansehen“ zeigt die App ohne Kopplung.
 
@@ -324,7 +326,8 @@ Aufbau (bewusst schlicht: eine Hauptaktion pro Seite, Selteneres eingeklappt):
     kommt, und dem Vergleich mit 600 Zufallshänden desselben Decks; nach einem Mulligan ein Vorschlag zum Unterlegen.
   - **Partien:** die Bilanz und die gespielten Partien stehen zuerst. „Partie festhalten“ ist zugeklappt, sobald schon Partien da sind – Ergebnis, Gegner-Commander, letzter Zug, was schiefging
     (Schnellwahl wie „zu wenige Länder“, „kein Weg zu gewinnen“), beste Karte, Notiz. Die Bilanz zeigt
-    Siegquote, Ø Zug, häufigste Probleme, Ergebnis pro Version, beste Karten und Gegner.
+    Siegquote, Ø Zug, häufigste Probleme, Ergebnis pro Version, beste Karten und Gegner, dazu die Platzierung
+    (Ø Platz, wie oft welcher Platz) – „Platzierung“ im Formular hat wie am Handy eine Zeile je Spieler mit den Plätzen 1 bis N; die Plätze stehen auch in der Liste.
     Partien aus dem Runden-Helfer des Handys haben „Runde ansehen“: Lebenskurve, Commander-Schaden und was in
     jedem Zug passiert ist. Die Bilanz zeigt dazu, wer dir über alle Runden den meisten Schaden gemacht hat und in
     welchem eigenen Zug du im Schnitt am meisten Leben verlierst.

@@ -32,6 +32,7 @@
   --win: #0e7a3c;  --win-soft: #e7f5ec;
   --loss: #c4352d; --loss-soft: #fdeceb;
   --draw: #9a6700; --draw-soft: #fbf3e0;
+  --gold: #8a5d00; --gold-fill: #f2b632; --gold-soft: #fdf4dc;  /* first place: text, the place's fill, the row's tint */
   --flag: #a85400; --flag-soft: #fcf0e2;
   --bar: rgb(255 255 255 / .82);
   --bar-solid: #ffffff;
@@ -75,6 +76,7 @@
     --accent: #4ae05a; --accent-press: #6ce97a; --accent-soft: #15301a; --accent-text: #4ae05a; --on-accent: #000000; --on-accent-soft: #b7ebc8;
     --toast-accent: #0e7a3c;
     --win: #3dba6f; --win-soft: #173024; --loss: #f08a7a; --loss-soft: #351c1a; --draw: #e4b24f; --draw-soft: #2c2614;
+    --gold: #f2c55a; --gold-fill: #f2b632; --gold-soft: #2e2611;
     --flag: #f2a55a; --flag-soft: #33230f;
     --bar: rgb(32 32 32 / .82); --bar-solid: #202020; --scrim: rgb(0 0 0 / .55);
     --shadow-bar: 0 8px 28px rgb(0 0 0 / .5), 0 0 0 1px var(--line);
@@ -89,6 +91,7 @@
   --accent: #4ae05a; --accent-press: #6ce97a; --accent-soft: #15301a; --accent-text: #4ae05a; --on-accent: #000000; --on-accent-soft: #b7ebc8;
   --toast-accent: #0e7a3c;
   --win: #3dba6f; --win-soft: #173024; --loss: #f08a7a; --loss-soft: #351c1a; --draw: #e4b24f; --draw-soft: #2c2614;
+  --gold: #f2c55a; --gold-fill: #f2b632; --gold-soft: #2e2611;
   --flag: #f2a55a; --flag-soft: #33230f;
   --bar: rgb(32 32 32 / .82); --bar-solid: #202020; --scrim: rgb(0 0 0 / .55);
   --shadow-bar: 0 8px 28px rgb(0 0 0 / .5), 0 0 0 1px var(--line);
@@ -1019,3 +1022,35 @@ body.camera:has(.toasts .toast) .cam-hint { visibility: hidden; }  /* the toast 
 .place-chip { max-width: 100%; min-width: 0; gap: 4px; border: 1px dashed var(--text-3); background: transparent; color: var(--text-2); }
 .place-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- finishing places: one row per player, 1..N (the game sheet), and who is out (the round) ---------- */
+.places .place-row { gap: 12px; transition: background-color .2s var(--ease-out); }
+.place-row.first, .group .row.first { background: var(--gold-soft); }
+.place-row .first-label { color: var(--gold); font-weight: 650; display: inline-flex; align-items: center; gap: 4px; }
+.place-row .first-label .icon { width: 13px; height: 13px; }
+.place-pick { display: flex; gap: 4px; flex: none; }
+.place-pick button {
+  width: 36px; height: 36px; border: 0; border-radius: 50%; padding: 0; position: relative; background: var(--surface-2); color: var(--text-2);
+  font-weight: 700; font-size: var(--t-sub); font-variant-numeric: tabular-nums; transition: background-color .15s, color .15s, transform .12s var(--ease-out);
+}
+.place-pick button::after { content: ""; position: absolute; inset: -4px -2px; }  /* 44 px hit area */
+.place-pick button:active { transform: scale(.9); }
+.place-pick button[aria-checked="true"] { background: var(--text); color: var(--surface); }
+.place-pick button[data-place="1"][aria-checked="true"] { background: var(--gold-fill); color: #241800; }
+.places.many .thumb { display: none; }
+.places.many .place-pick button { width: 32px; }
+.place-badge { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-2); font-size: var(--t-sub); }
+.place-badge.gold { color: var(--gold); }
+.place-badge .icon { width: 14px; height: 14px; }
+
+.out-row { margin-bottom: 4px; }
+.out-chip .out-place:empty { display: none; }
+.out-chip .out-place { min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; display: grid; place-items: center; background: var(--surface); color: var(--text); font-size: var(--t-cap); margin-right: -6px; }
+.out-chip[aria-pressed="true"] { background: var(--surface-3); color: var(--text-2); }
+.out-chip[aria-pressed="true"] .out-name { text-decoration: line-through; }
+.out-chip[aria-pressed="true"] img { filter: grayscale(1); opacity: .6; }
+.dmg-tile.gone { opacity: .5; }
+.dmg-tile.gone .dmg-art img { filter: grayscale(1); }
+.round-out.won { background: var(--gold-soft); color: var(--gold); }
+.round-out.won .main b { display: inline-flex; align-items: center; gap: 8px; }
+.round-out.won .btn.primary { background: var(--gold-fill); color: #241800; }

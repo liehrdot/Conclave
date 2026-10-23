@@ -522,6 +522,8 @@ class GameIn(BaseModel):
     mvp: str | None = None
     note: str = Field(default="", max_length=2000)
     how: str | None = None  # games.HOW: how the game was decided
+    place: int | None = Field(default=None, ge=1, le=games.PLACES_MAX)  # the user's finishing place
+    opponent_places: list[int | None] = Field(default_factory=list, max_length=5)  # same order as opponents
 
 
 @app.get("/api/decks/{slug}/games")
@@ -534,7 +536,8 @@ async def api_games(slug: str) -> dict[str, Any]:
 async def api_game_add(slug: str, req: GameIn) -> dict[str, Any]:
     deck = _not_found(storage.load, slug)
     slots = [{"commander": o.strip(), "id": (req.opponent_ids[i] if i < len(req.opponent_ids) else None),
-              "note": (req.opponent_notes[i] if i < len(req.opponent_notes) else "")}
+              "note": (req.opponent_notes[i] if i < len(req.opponent_notes) else ""),
+              "place": (req.opponent_places[i] if i < len(req.opponent_places) else None)}
              for i, o in enumerate(req.opponents) if o.strip()]  # fmt: skip
     mvp, opponents = req.mvp, [s["commander"] for s in slots]
     names = [n for n in [mvp or "", *opponents] if n.strip()]
@@ -553,7 +556,8 @@ async def api_game_add(slug: str, req: GameIn) -> dict[str, Any]:
     ids = await opponents_mod.link_game(slug, game_id, slots, remember=req.remember_opponents) if slots else []
     try:
         entry = games.add(slug, result=req.result, opponents=opponents, turn=req.turn, issues=req.issues, mvp=mvp,
-                          note=req.note, version=deck.get("version"), entry_id=game_id, opponent_ids=ids, how=req.how or None)  # fmt: skip
+                          note=req.note, version=deck.get("version"), entry_id=game_id, opponent_ids=ids, how=req.how or None,
+                          place=req.place, opponent_places=[s["place"] for s in slots])  # fmt: skip
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return {"game": entry, **games.summary(slug)}
