@@ -93,6 +93,28 @@ async def test_check_all_and_revalidate():
     assert deck["version"] == 1  # re-validation alone makes no new version
 
 
+async def test_revalidate_decks_skips_what_it_cannot_check(monkeypatch):
+    rs = await tablerules.create("Freitag")
+    await save_deck(name="Plain Deck", commanders=MEREN, cards=deck_lines(["1 Filler Y"]), bracket=3, table_rule=rs["id"])
+    listed = storage.list_decks()
+    monkeypatch.setattr(storage, "list_decks", lambda: [{"slug": "gone"}, *listed])  # deleted meanwhile
+    v1 = storage.load("plain-deck")["validation"]
+
+    def conflict(*a, **k):
+        raise storage.ConflictError("saved meanwhile")
+
+    with monkeypatch.context() as m:
+        m.setattr(storage, "save", conflict)
+        assert await deckedit.revalidate_decks(rs["id"]) == []
+
+    async def offline(deck):
+        raise RuntimeError("keine Verbindung")
+
+    monkeypatch.setattr(deckedit, "revalidate", offline)
+    assert await deckedit.revalidate_decks(rs["id"]) == []
+    assert storage.load("plain-deck")["validation"] == v1  # the old check stays
+
+
 def test_gui_routes():
     with TestClient(gui.app) as client:
         r = client.post("/api/tablerules", json={"name": "Kids", "add": ["Stax", "MLD"], "max_bracket": 2})
