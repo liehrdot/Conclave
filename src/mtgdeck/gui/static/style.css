@@ -1365,7 +1365,6 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 }
 
 /* ---------- about: fading banner, avatar, channels ---------- */
-.nav-avatar { flex: none; width: 18px; height: 18px; border-radius: 50%; background: url("/static/about/avatar.webp") center / cover; box-shadow: 0 0 0 1px var(--border-strong); }
 .about-hero { position: relative; height: 250px; }
 /* the banner melts into the page on every side, so it needs no full-bleed maths */
 .about-banner {
@@ -1394,16 +1393,35 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .about-links a:hover { background: var(--surface-2); border-color: var(--border-strong); }
 .about-links a > .icon { margin-left: auto; color: var(--muted); }
 .about-links li.soon { color: var(--muted); border-style: dashed; }
-.about-links b, .about-teaser b { display: block; font-weight: 600; }
+.about-links b { display: block; font-weight: 600; }
 .about-links .small { display: block; overflow-wrap: anywhere; }
 .brand-icon { flex: none; width: 22px; height: 22px; fill: currentColor; }
 .about-links a .brand-icon { color: var(--accent-text); }
 .about-credits p:last-child { margin-bottom: 0; }
-.about-teaser { margin-top: var(--space-5); display: flex; align-items: center; gap: var(--space-3); color: var(--text); text-decoration: none; }
-.about-teaser:hover { background: var(--surface-2); }
-.about-teaser img { border-radius: 50%; object-fit: cover; flex: none; }
-.about-teaser .muted { display: block; }
-.about-teaser > .icon { margin-left: auto; color: var(--muted); }
+/* the card that opens it, first thing on the settings page */
+.about-card {
+  position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: center; gap: var(--space-4);
+  margin-bottom: var(--space-4); padding: var(--space-5); min-height: 120px; border-radius: var(--radius-lg);
+  border: 1px solid var(--border); background: #0b0e0d; color: #f1f5f2; text-decoration: none;
+}
+.about-card-banner {
+  position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(90deg, rgb(11 14 13 / .96), rgb(11 14 13 / .88) 45%, rgb(11 14 13 / .25) 80%), url("/static/about/banner.webp") center 40% / cover;
+  transition: transform .4s ease;
+}
+.about-card:hover .about-card-banner { transform: scale(1.04); }
+.about-card:hover { border-color: var(--accent); }
+.about-card:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.about-card img { flex: none; border-radius: 50%; object-fit: cover; border: 3px solid #0b0e0d; box-shadow: 0 0 0 2px var(--accent), 0 0 24px rgb(74 224 90 / .4); }
+.about-card-text { min-width: 0; text-shadow: 0 1px 3px rgb(0 0 0 / .8); }
+.about-card-text b { display: block; font-size: var(--fs-lg); font-weight: 600; }
+.about-card-text .muted { display: block; color: #c9d1cb; }
+.about-card-socials { display: flex; gap: var(--space-2); margin-left: auto; }
+.about-card-socials .brand-icon { width: 30px; height: 30px; padding: 7px; border-radius: 50%; background: rgb(11 14 13 / .75); color: var(--accent); }
+.about-card > .icon { flex: none; color: #c9d1cb; }
+.about-back { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--muted); text-decoration: none; margin-bottom: var(--space-2); }
+.about-back:hover { color: var(--text); }
+@media (max-width: 860px) { .about-card-socials { display: none; } .about-card { padding: var(--space-4); gap: var(--space-3); } .about-card img { width: 60px; height: 60px; } }
 @media (prefers-reduced-motion: reduce) { .about-banner, .about-avatar { animation: none !important; } }
 @media (max-width: 1100px) { .about-banner { inset: 0 calc(-1 * var(--space-5)); } }
 @media (max-width: 860px) { .about-hero { height: 190px; } .about-banner { inset: 0 calc(-1 * var(--space-4)); } .about-avatar { width: 104px; height: 104px; } }

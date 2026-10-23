@@ -159,7 +159,7 @@ async function route() {
   }
   for (const v of $$(".view")) v.hidden = v.dataset.view !== r.view;
   if (r.view === "deck") selectTab(r.tab || "karten", false);
-  if (r.view === "settings") { void refreshDbStatus(); void refreshBackups(); void refreshSync({ quiet: true }); void refreshDesktop(); }
+  if (r.view === "settings") { void showVersion(); void refreshDbStatus(); void refreshBackups(); void refreshSync({ quiet: true }); void refreshDesktop(); }
   if (r.view === "collection") void loadCollection();
   if (r.view === "sell") void showSell();
   if (r.view === "glossary") void showGlossary(r.slug);
@@ -187,7 +187,7 @@ function markNav(r = parseHash()) {
     else a.removeAttribute("aria-current");
   }
   for (const a of $$(".nav-bottom a")) {
-    if (a.dataset.nav === r.view) a.setAttribute("aria-current", "page");
+    if (a.dataset.nav === (r.view === "about" ? "settings" : r.view)) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
   }
   if (r.view === "new") $("#nav-new").setAttribute("aria-current", "page");
@@ -5407,6 +5407,15 @@ const BANNER_ARTISTS = [
   "Todd Lockwood", "Trevor Claxton", "Vance Kovacs", "Veli Nyström", "Wisnu Tan", "Yeong-Hao Han", "Zack Stella"
 ];
 
+// „Version x“ on the about page and in its card at the top of the settings
+let appVersion = "";
+async function showVersion() {
+  if (!appVersion) {
+    try { appVersion = desktopShell?.version || (await api("/api/health")).version; } catch { return; /* offline: no version line */ }
+  }
+  for (const el of $$(".about-version-line")) el.textContent = `Version ${appVersion}` + (el.closest(".about-card") ? " · " : "");
+}
+
 async function showAbout() {
   $("#about-links").innerHTML = SOCIAL.map((s) => {
     const inner = `<svg class="brand-icon" aria-hidden="true"><use href="#b-${s.key}"/></svg><span><b>${esc(s.label)}</b>`
@@ -5416,9 +5425,7 @@ async function showAbout() {
       : `<li class="soon" aria-disabled="true">${inner}</li>`;
   }).join("");
   $("#about-artists").textContent = BANNER_ARTISTS.join(" · ");
-  if (!$("#about-version").textContent) {
-    try { const h = await api("/api/health"); $("#about-version").textContent = `Version ${desktopShell?.version || h.version}`; } catch { /* offline: no version line */ }
-  }
+  await showVersion();
 }
 
 // ============================================================================================
@@ -5479,7 +5486,7 @@ function paletteItems() {
     ...tableSets.map((t) => ({ label: t.name, hint: "Tischregel", run: () => go(`#/tables/${enc(t.id)}`) })),
     { label: "Blacklist", hint: "Seite", run: () => go("#/blacklist") },
     { label: "Einstellungen", hint: "Seite · Strg+,", run: () => go("#/settings") },
-    { label: "Über Conclave", hint: "Seite · Version, Kanäle", run: () => go("#/about") },
+    { label: "Über Conclave", hint: "Einstellungen · Version, Kanäle", run: () => go("#/about") },
     { label: "Tastenkürzel", hint: "Übersicht · ?", run: () => openShortcuts() },
   ];
   if (currentDeck && parseHash().view === "deck") {

@@ -89,7 +89,6 @@
       <a href="#/blacklist" data-nav="blacklist"><svg class="icon"><use href="#i-ban"/></svg>Blacklist <span id="bl-count" class="count"></span></a>
       <p class="nav-group">Hilfe</p>
       <a href="#/glossary" data-nav="glossary"><svg class="icon"><use href="#i-book"/></svg>Glossar</a>
-      <a href="#/about" data-nav="about"><span class="nav-avatar" aria-hidden="true"></span>Über Conclave</a>
       <a href="#/settings" data-nav="settings"><svg class="icon"><use href="#i-settings"/></svg>Einstellungen <span id="sync-dot" class="sync-dot" hidden></span></a>
     </nav>
   </aside>
@@ -968,6 +967,7 @@
 
     <!-- ============ about: banner, avatar, links to the channels ============ -->
     <section id="view-about" class="view narrow" data-view="about" hidden>
+      <a class="about-back small" href="#/settings"><svg class="icon"><use href="#i-back"/></svg>Einstellungen</a>
       <div class="about-hero">
         <div class="about-banner" aria-hidden="true"></div>
         <img class="about-avatar" src="/static/about/avatar.webp" width="128" height="128" alt="Conclave-Profilbild: Conclave Tribunal">
@@ -975,7 +975,7 @@
       <header class="about-head">
         <h1>Conclave</h1>
         <p class="lead">Commander-Decks selbst bauen – am Schreibtisch, am Tisch und auf dem iPad.</p>
-        <p class="muted small" id="about-version"></p>
+        <p class="muted small about-version-line"></p>
       </header>
 
       <section class="panel">
@@ -1010,6 +1010,15 @@
           <p class="lead">Darstellung, Sync zwischen Geräten, Datensicherung, Kartendatenbank und Proxy-Druck.</p>
         </div>
       </header>
+
+      <a class="about-card" href="#/about">
+        <span class="about-card-banner" aria-hidden="true"></span>
+        <img src="/static/about/avatar.webp" width="72" height="72" alt="">
+        <span class="about-card-text"><b>Über Conclave</b>
+          <span class="muted small"><span class="about-version-line"></span>Kanäle, Infos zur App und Bildnachweis</span></span>
+        <span class="about-card-socials" aria-hidden="true"><svg class="brand-icon"><use href="#b-x"/></svg><svg class="brand-icon"><use href="#b-twitch"/></svg><svg class="brand-icon"><use href="#b-instagram"/></svg><svg class="brand-icon"><use href="#b-youtube"/></svg><svg class="brand-icon"><use href="#b-tiktok"/></svg></span>
+        <svg class="icon"><use href="#i-forward"/></svg>
+      </a>
 
       <section class="panel">
         <h2>Darstellung</h2>
@@ -1193,11 +1202,6 @@
         </div>
       </form>
 
-      <a class="panel about-teaser" href="#/about">
-        <img src="/static/about/avatar.webp" width="48" height="48" alt="">
-        <span><b>Über Conclave</b><span class="muted small">Version, Kanäle auf X, Twitch, Instagram, YouTube und TikTok, Bildnachweis</span></span>
-        <svg class="icon"><use href="#i-forward"/></svg>
-      </a>
     </section>
   </main>
 </div>
