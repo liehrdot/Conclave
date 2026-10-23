@@ -1,6 +1,6 @@
 # CodeQL code scanning: GitHub's fixed security queries over Python, the JavaScript of the GUI and the phone
 # app, and the workflows themselves. Same result on every run, so it is the baseline next to the Claude
-# review (security-review.yml). Findings show under Security → Code scanning; the master ruleset's
+# review (job `claude` in sonarcloud.yml). Findings show under Security → Code scanning; the master ruleset's
 # "Require code scanning results" rule blocks a merge on new high or critical alerts.
 # This is CodeQL's "advanced setup": the repository's "default setup" must stay off, or the two clash.
 name: CodeQL
