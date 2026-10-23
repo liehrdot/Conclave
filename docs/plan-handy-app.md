@@ -354,6 +354,12 @@ darunter Commander-Schaden je gegnerischem Commander (Partner zählen einzeln), 
   Zähler innerhalb von 4 s werden ein Eintrag („−5“). Im Verlauf lassen sich Notizen zum laufenden Zug festhalten.
   Rückgängig nimmt die letzte Änderung zurück, Notizen bleiben. Alle Werte werden aus dem Protokoll berechnet.
 - **Raus:** bei 0 Leben, 10 Gift oder 21 Commander-Schaden erscheint „Du bist raus“ mit „Als Niederlage speichern“.
+- **Platzierung:** „Wer ist raus?“ hat einen Knopf je Gegner. Antippen hält fest, dass er raus ist (im Verlauf als
+  „Krenko ist raus“), noch mal antippen nimmt es zurück. Wer zuerst rausgeht, wird Letzter. Sind alle Gegner raus,
+  erscheint „Du hast gewonnen“ mit „Als Sieg speichern“. Beim Speichern sind die Plätze im Partie-Formular
+  vorbelegt; dort steht unter den Gegnern „Platzierung“ mit einer Zeile je Spieler und den Plätzen 1 bis N
+  (Gleichstand erlaubt). Ist nur noch einer offen, bekommt er den übrigen Platz; der eigene 1. Platz macht die
+  Partie zum Sieg, ein späterer zur Niederlage. Der 1. Platz ist golden markiert.
 - **Ende:** „Beenden“ fragt „Als Partie speichern“ oder „Ohne Ergebnis abbrechen“ (verwirft die Runde, der Hinweis
   bietet „Rückgängig“ an). Speichern öffnet das Partie-Formular vorbelegt (Deck, Ergebnis, Zug, Gegner, bei
   Commander-Schaden „Entschieden durch“). Erst das Speichern dort beendet die Runde und schickt sie als Partie an den Server, mit dem

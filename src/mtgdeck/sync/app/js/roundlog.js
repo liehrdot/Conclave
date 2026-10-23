@@ -5,9 +5,10 @@ import { redraw as redrawSheet, toast } from "./ui.js";
 import { $, esc, icon, nowIso, plural } from "./util.js";
 
 // ---------- the round's numbers, always derived from its log (so undo is just "drop the last entry") ----------
-/** {life, poison, turn, cmd: {name: n}, from: {name: n}} of a round (or a saved ``game.round``). */
+/** {life, poison, turn, cmd: {name: n}, from: {name: n}, out: [commander, …]} of a round (or a saved ``game.round``);
+ *  ``out`` = the opponents that are out, first out first (by their commander). */
 export function totals(round) {
-  const t = { life: round.start_life, poison: 0, turn: 1, cmd: {}, from: {} };
+  const t = { life: round.start_life, poison: 0, turn: 1, cmd: {}, from: {}, out: [] };
   for (const e of round.events || []) {
     if (e.kind === "life") {
       t.life += e.delta;
@@ -18,6 +19,7 @@ export function totals(round) {
       t.from[e.from] = (t.from[e.from] || 0) + e.delta;
     } else if (e.kind === "poison") t.poison += e.delta;
     else if (e.kind === "turn") t.turn = e.turn;
+    else if (e.kind === "out" && e.from && !t.out.includes(e.from)) t.out.push(e.from);
   }
   t.poison = Math.max(0, t.poison);
   for (const k in t.cmd) t.cmd[k] = Math.max(0, t.cmd[k]);
@@ -59,6 +61,7 @@ export function eventText(e) {
   if (e.kind === "cmd") return `${e.delta > 0 ? "" : "−"}${Math.abs(e.delta)} Commander-Schaden${from}`;
   if (e.kind === "poison") return `${e.delta > 0 ? "+" : "−"}${plural(Math.abs(e.delta), "Giftmarke", "Giftmarken")}`;
   if (e.kind === "note") return e.text || "";
+  if (e.kind === "out") return `${shortName(e.from) || "Ein Gegner"} ist raus`;
   return "";
 }
 

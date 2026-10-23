@@ -53,6 +53,26 @@ async def test_routes_and_delete_with_deck():
     assert games.games(slug) == []
 
 
+async def test_finishing_places_are_stored_and_counted():
+    slug = await _save()
+    games.add(slug, result="win", opponents=["Atraxa", "Krenko"], place=1, opponent_places=[3, 2])
+    games.add(slug, result="loss", opponents=["Atraxa", "Krenko", "Korvold"], place=3, opponent_places=[1, None, 2])
+    games.add(slug, result="loss", place=5)  # no opponents noted: only the user's place, up to PLACES_MAX
+    games.add(slug, result="loss", opponents=["Atraxa"], place=3, opponent_places=[True])  # 3rd of 2 players: dropped
+    items = games.games(slug)
+    assert [(g.get("place"), g.get("opponent_places")) for g in items] == [(1, [3, 2]), (3, [1, None, 2]), (5, None), (None, None)]
+    assert games.stats(items)["places"] == {"games": 3, "avg": 3.0, "counts": [{"place": 1, "count": 1}, {"place": 3, "count": 1},
+                                                                           {"place": 5, "count": 1}], "avg_players": 3.5}  # fmt: skip
+    assert games.stats([])["places"] is None
+    client = TestClient(app)
+    r = client.post(f"/api/decks/{slug}/games", json={"result": "loss", "opponents": ["Krenko", "", "Atraxa"], "place": 2,
+                                                       "opponent_places": [3, 2, 1]})  # fmt: skip
+    assert (r.json()["game"]["place"], r.json()["game"]["opponent_places"]) == (2, [3, 1])
+    assert client.post(f"/api/decks/{slug}/games", json={"result": "win", "place": 7}).status_code == 422
+    # an opponent going out shows in the round's turn table
+    assert games.round_turns({"start_life": 40, "turns": 1, "events": [_ev(1, "out", 1, "Krenko, Mob Boss")]})[0]["events"] == ["Krenko, Mob Boss ist raus"]
+
+
 def _ev(turn, kind, delta, frm=None, text=None):
     e = {"turn": turn, "kind": kind, "delta": delta, "at": "2026-10-11T12:00:00Z"}
     return e | ({"from": frm} if frm else {}) | ({"text": text} if text else {})

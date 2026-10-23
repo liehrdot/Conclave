@@ -358,7 +358,7 @@ details.more[open] > summary { margin-bottom: var(--space-3); }
 .deck-title { min-width: 0; flex: 1; }
 .deck-thumb { width: 64px; border-radius: 3px; border: 1px solid var(--border); flex: none; }
 .job-buttons { align-items: center; }
-.btn.primary.danger-fill { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn.primary.danger-fill { background: var(--bad); border-color: var(--bad); color: var(--surface); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .meta-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-3); }
 .pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--border); font-size: var(--fs-sm); font-weight: 550; white-space: nowrap; }
@@ -776,13 +776,9 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .bl-rule-main p, .bl-rule-main details { flex-basis: 100%; margin: 0; }
 .tr-rules { margin-top: var(--space-4); }
 /* opponent decks */
-.opp-slots { display: grid; gap: var(--space-2); }
-.opp-slot { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-2); }
-.opp-slot datalist { display: none; }
-.opp-known { margin-bottom: var(--space-2); align-items: center; }
+.opp-known { margin-top: var(--space-2); align-items: center; }
 .opp-known .chip { font-size: var(--fs-sm); }
 .opp-known-label { font-style: normal; color: var(--muted); font-size: var(--fs-sm); margin-right: 2px; }
-.opp-slots + .check { margin-top: var(--space-3); }
 .opp-row { justify-content: flex-start; }
 .opp-row > div { flex: 1; min-width: 0; }
 .opp-row img { width: 46px; height: 64px; object-fit: cover; border-radius: 4px; flex: none; }
@@ -794,7 +790,7 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .opp-notes li { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--border); }
 .opp-notes li:first-child { border-top: none; }
 .opp-notes p { margin: 0 0 2px; }
-@media (max-width: 640px) { .opp-slot { grid-template-columns: 1fr; } .opp-thumb { width: 54px; height: 75px; } }
+@media (max-width: 640px) { .opp-thumb { width: 54px; height: 75px; } }
 
 .tr-rules + .chips { margin-top: var(--space-3); }
 .ok-text, .bad-text { display: flex; align-items: center; gap: 6px; font-weight: 600; margin: var(--space-3) 0 var(--space-2); }
@@ -1049,6 +1045,46 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .game-list li { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--border); font-size: var(--fs-sm); }
 .game-list li:first-child { border-top: none; }
 .game-list .res { font-weight: 700; }
+.game-list .place { font-weight: 700; font-variant-numeric: tabular-nums; }
+.game-list .place.first { color: var(--warn); }
+/* the game form ("Partie festhalten"), laid out like the phone's game sheet: one column, a step per block */
+.game-form { max-width: 640px; }
+.gf-step { margin-bottom: var(--space-5, 24px); }
+.gf-result { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.gf-result label { position: relative; }
+.gf-result input { position: absolute; opacity: 0; pointer-events: none; }
+.gf-result span { display: grid; place-items: center; min-height: 44px; border: 1px solid var(--input-border); border-radius: var(--radius-lg); background: var(--surface); font-weight: 650; cursor: pointer; }
+.gf-result span:hover { border-color: var(--text); }
+.gf-result input:focus-visible + span { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.gf-result input[value="win"]:checked + span { background: var(--ok); border-color: var(--ok); color: var(--surface); }
+.gf-result input[value="loss"]:checked + span { background: var(--bad); border-color: var(--bad); color: var(--surface); }
+.gf-result input[value="draw"]:checked + span { background: var(--warn); border-color: var(--warn); color: var(--surface); }
+.gf-opps { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.gf-opps:not(:empty) { margin-bottom: var(--space-2); }
+.gf-opp { display: inline-flex; align-items: center; gap: 8px; padding: 3px 4px 3px 3px; border: 1px solid var(--border); border-radius: 99px; background: var(--surface-2); font-weight: 600; }
+.gf-opp img, .gf-opp > i { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: var(--border); }
+.gf-opp .icon-btn { width: 26px; height: 26px; }
+.gf-opp-add { display: flex; gap: var(--space-2); }
+.gf-opp-add input { flex: 1; min-width: 0; }
+.gf-opp-add datalist { display: none; }
+.gf-more { margin: 0 0 var(--space-4); }
+.gf-more .pick-chips label { position: relative; }
+.gf-issues-more { margin-top: var(--space-2); }
+.gf-foot { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+
+/* finishing places in the game form (like the phone's game sheet) */
+.place-rows { display: grid; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.place-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); }
+.place-row + .place-row { border-top: 1px solid var(--border); }
+.place-row.first { background: var(--warn-soft); }
+.place-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.place-row .first-label { color: var(--warn); font-weight: 700; margin-left: var(--space-2); display: inline-flex; align-items: center; gap: 4px; }
+.place-row .first-label .icon { width: 14px; height: 14px; }
+.place-pick { display: flex; gap: 6px; flex: none; }
+.place-pick button { width: 32px; height: 32px; border-radius: 50%; border: 0; padding: 0; background: var(--surface-2); color: var(--muted); font: inherit; font-weight: 700; cursor: pointer; }
+.place-pick button:hover { box-shadow: inset 0 0 0 1px var(--border-strong); }
+.place-pick button[aria-checked="true"] { background: var(--text); color: var(--bg, #fff); }
+.place-pick button[data-place="1"][aria-checked="true"] { background: #f2b632; color: #241800; }
 .game-list .res.win { color: var(--ok); } .game-list .res.loss { color: var(--bad); } .game-list .res.draw { color: var(--muted); }
 .game-list .meta { color: var(--muted); }
 .game-list .issues { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }

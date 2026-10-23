@@ -411,13 +411,22 @@ function newOpponent(fields, at) {
     record: { games: 0, wins: 0, losses: 0, draws: 0, last: null, per_deck: [] } };
 }
 
+/** Like games.clean_places: the user's place and the opponents' (1..N, N = everyone at the table; ties allowed). */
+export const PLACES_MAX = 6;
+export function cleanPlaces(place, oppPlaces, opponents) {
+  const top = opponents ? Math.min(PLACES_MAX, 1 + opponents) : PLACES_MAX;
+  const ok = (v) => (Number.isInteger(v) && v >= 1 && v <= top ? v : null);
+  const theirs = Array.from({ length: opponents }, (_, i) => ok(oppPlaces?.[i]));
+  return { place: ok(place), opponent_places: theirs.some((v) => v !== null) ? theirs : undefined };
+}
+
 function apply(snap, op) {
   const p = op.payload || {};
   if (op.type.startsWith("collection.")) return applyCollection(snap, op);
   if (op.type === "game.add") {
     if (snap.games.some((g) => g.id === p.game.id && g.deck === p.game.deck)) return;
     const deck = snap.decks.find((d) => d.slug === p.game.deck);
-    const ids = [], names = [];
+    const ids = [], names = [], places = [];
     for (const slot of p.opponents || []) {
       let o = findOpponent(snap, slot);
       if (!o) {
@@ -429,8 +438,11 @@ function apply(snap, op) {
       o.updated = op.at;
       ids.push(o.id);
       names.push(slot.commander || o.commanders[0]);
+      places.push(slot.place ?? null);
     }
-    snap.games.unshift({ ...p.game, played: p.game.played || op.at, opponents: names, opponent_ids: ids, version: deck?.version ?? null });
+    const game = { ...p.game, played: p.game.played || op.at, opponents: names, opponent_ids: ids, version: deck?.version ?? null };
+    Object.assign(game, cleanPlaces(p.game.place, places, names.length));
+    snap.games.unshift(game);
   } else if (op.type === "game.delete") {
     snap.games = snap.games.filter((g) => !(g.id === p.id && g.deck === p.deck));
   } else if (op.type === "opponent.add") {
