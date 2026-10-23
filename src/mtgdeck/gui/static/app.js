@@ -1441,7 +1441,7 @@ $("#own-copies-list").addEventListener("click", async (e) => {
 });
 async function afterOwnMove(slug, name) {
   if ($("#own-copies").open && ownCopies?.slug === slug && ownCopies.name === name) await openOwnCopies(name);
-  if (currentDeck?.slug === slug) loadOwnership(currentDeck);
+  if (currentDeck?.slug === slug) await loadOwnership(currentDeck);
 }
 
 function copyLabel(c) {
