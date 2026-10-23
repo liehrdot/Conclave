@@ -160,7 +160,8 @@ def _write_bytes(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp")
     try:
-        tmp.write_bytes(data)
+        with open(tmp, "wb") as fh:  # the bytes are content only: the path comes from the caller
+            fh.write(data)
         os.replace(tmp, path)
     finally:
         tmp.unlink(missing_ok=True)
