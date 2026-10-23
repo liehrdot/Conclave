@@ -2590,6 +2590,7 @@ let gameData = null;  // { slug, games, stats, learn_focus, issue_labels, result
 
 async function loadGames(d) {
   renderKnownOpps();
+  renderGameForm();
   $("#game-deck-cards").innerHTML = [...d.commanders, ...d.cards.map((c) => c.name)].map((n) => `<option value="${esc(n)}">`).join("");
   try {
     const data = await api(`/api/decks/${enc(d.slug)}/games`);
@@ -2604,11 +2605,16 @@ function renderGames(slug, data) {
   const formBox = $("#game-form-box");
   if (formBox.dataset.slug !== slug) {
     formBox.dataset.slug = slug;
+    resetGameForm();
     formBox.open = !data.games.length;
   }
   if (first || !$("#game-issues").children.length) {
-    $("#game-issues").innerHTML = Object.entries(data.issue_labels).map(([k, label]) =>
-      `<label><input type="checkbox" name="issues" value="${esc(k)}"><span>${esc(label)}</span></label>`).join("");
+    // the reasons that happen most first; six at a time, the rest behind "mehr …"
+    const seen = Object.fromEntries((data.stats.issues || []).map((i) => [i.key, i.count]));
+    const keys = Object.keys(data.issue_labels).sort((a, b) => (seen[b] || 0) - (seen[a] || 0));
+    $("#game-issues").innerHTML = keys.map((k, i) =>
+      `<label${i >= 6 ? " hidden" : ""}><input type="checkbox" name="issues" value="${esc(k)}"><span>${esc(data.issue_labels[k])}</span></label>`).join("")
+      + (keys.length > 6 ? '<button type="button" class="chip" id="game-issues-more">mehr …</button>' : "");
   }
   const st = data.stats;
   $("#game-count").textContent = st.games || "";
@@ -2665,74 +2671,139 @@ function roundBoxHtml(r, turns) {
     </tbody></table></details>`;
 }
 
-for (const n of [1, 2, 3]) wireAutocomplete($(`#game-form [name=opp${n}]`), $(`#ac-opp${n}`));
+// ---------- the game form, like the phone's game sheet: result, opponents as chips, places, the rest folded away ----------
+const GAME_OPPS_MAX = 5;
+let gameOpps = [];  // [{name, id, note, place, image}]
+let gameMe = null;  // my finishing place
+
+function resetGameForm() {
+  $("#game-form").reset();
+  gameOpps = []; gameMe = null;
+  renderGameForm();
+}
+const commanderArt = (url) => (url ? url.replace("/normal/", "/art_crop/") : "");
+
+function addGameOpp(name, id = null) {
+  name = name.trim();
+  if (!name) return;
+  if (gameOpps.some((o) => (id && o.id === id) || o.name.toLowerCase() === name.toLowerCase())) return;
+  if (gameOpps.length >= GAME_OPPS_MAX) { toast(`Höchstens ${GAME_OPPS_MAX} Gegner.`, "error"); return; }
+  const known = id ? oppIndex.find((o) => o.id === id) : oppIndex.find((o) => o.commanders.some((c) => c.toLowerCase() === name.toLowerCase()));
+  const o = { name, id: known?.id || null, note: "", place: null, image: commanderArt(known?.image) };
+  gameOpps.push(o);
+  if (!o.image) void api(`/api/card?name=${enc(name)}`).then((c) => { o.image = commanderArt(c.image); renderGameForm(); }).catch(() => {});
+  renderGameForm();
+}
+
+function renderGameForm() {
+  const form = $("#game-form");
+  const result = form.elements.result.value;
+  // opponents
+  $("#game-opps").innerHTML = gameOpps.map((o, i) => `<span class="gf-opp" role="listitem">${o.image ? `<img src="${esc(o.image)}" alt="">` : '<i aria-hidden="true"></i>'}
+      <span>${esc(o.name)}</span><button type="button" class="icon-btn" data-remove="${i}" aria-label="${esc(o.name)} entfernen">${icon("x")}</button></span>`).join("");
+  $("#game-opp-add").hidden = gameOpps.length >= GAME_OPPS_MAX;
+  const known = $$("#game-known-opps button[data-oid]");
+  for (const b of known) b.hidden = gameOpps.some((o) => o.id === b.dataset.oid);
+  $("#game-known-opps").hidden = !known.some((b) => !b.hidden);
+  // places: me + the opponents, 1..N
+  const n = 1 + gameOpps.length;
+  if (gameMe > n) gameMe = null;
+  for (const o of gameOpps) if (o.place > n) o.place = null;
+  const rows = [{ who: "me", name: "Ich", place: gameMe }, ...gameOpps.map((o, i) => ({ who: String(i), name: o.name, place: o.place }))];
+  $("#game-places-box").hidden = n < 2;
+  $("#game-places").innerHTML = n < 2 ? "" : rows.map((r) => `<div class="place-row${r.place === 1 ? " first" : ""}" data-who="${r.who}">
+      <span class="place-name">${esc(r.name)}${r.place === 1 ? ` <span class="first-label">${icon("trophy")}Gewinner</span>` : ""}</span>
+      <span class="place-pick" role="radiogroup" aria-label="Platz: ${esc(r.name)}">${Array.from({ length: n }, (_, k) => k + 1).map((x) =>
+        `<button type="button" role="radio" data-place="${x}" aria-checked="${r.place === x}" aria-label="${x}. Platz">${x}</button>`).join("")}</span>
+    </div>`).join("");
+  // what went wrong: only after a loss or a draw
+  $("#game-issues-box").hidden = !(result === "loss" || result === "draw");
+  // notes per opponent (under "Mehr Details")
+  const notes = $("#game-opp-notes");
+  const typing = notes.contains(document.activeElement);
+  if (!typing) {
+    notes.innerHTML = gameOpps.map((o, i) => `<label class="field"><span>Aufgefallen bei ${esc(o.name)}</span>
+      <input data-note="${i}" value="${esc(o.note)}" placeholder="z. B. Combo mit Thassa's Oracle"></label>`).join("");
+  }
+  // the one primary button names what gets saved
+  const label = { win: "Sieg speichern", loss: "Niederlage speichern", draw: "Unentschieden speichern" }[result] || "Partie speichern";
+  $("#game-save").textContent = label;
+  $("#game-save").disabled = !result;
+  $("#game-save-hint").hidden = !!result;
+  const els = form.elements;
+  const howLabel = $(`#game-how input:checked + span`)?.textContent || "";
+  $("#game-more-sum").textContent = [els.turn.value ? `Zug ${els.turn.value}` : "", howLabel, els.mvp.value.trim(), els.note.value.trim() ? "Notiz" : ""].filter(Boolean).join(" · ");
+}
+
+// a place (the same again clears it); the last open player gets the place left; my 1st place = win, later = loss
+function setGamePlace(who, place) {
+  const get = (w) => (w === "me" ? gameMe : gameOpps[Number(w)].place);
+  const set = (w, v) => { if (w === "me") gameMe = v; else gameOpps[Number(w)].place = v; };
+  set(who, get(who) === place ? null : place);
+  const all = ["me", ...gameOpps.map((_, i) => String(i))];
+  const open = all.filter((w) => !get(w));
+  const taken = new Set(all.map(get).filter(Boolean));
+  if (get(who) && open.length === 1 && taken.size === all.length - 1) set(open[0], all.map((_, i) => i + 1).find((x) => !taken.has(x)));
+  const els = $("#game-form").elements;
+  if (gameMe === 1) els.result.value = "win";
+  else if (gameMe && els.result.value !== "draw") els.result.value = "loss";
+}
+
+wireAutocomplete($("#game-opp-input"), $("#ac-game-opp"));
+const addTypedOpp = () => { const input = $("#game-opp-input"); addGameOpp(input.value); input.value = ""; input.focus(); };
+$("#game-opp-btn").addEventListener("click", addTypedOpp);
+$("#game-opp-input").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); addTypedOpp(); } });
+$("#game-opps").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-remove]");
+  if (!b) return;
+  gameOpps.splice(Number(b.dataset.remove), 1);
+  renderGameForm();
+});
+$("#game-places").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-place]");
+  if (!b) return;
+  setGamePlace(b.closest("[data-who]").dataset.who, Number(b.dataset.place));
+  renderGameForm();
+});
+$("#game-issues").addEventListener("click", (e) => {
+  if (e.target.id !== "game-issues-more") return;
+  for (const l of $$("#game-issues label")) l.hidden = false;
+  e.target.remove();
+});
+$("#game-opp-notes").addEventListener("input", (e) => { if (e.target.dataset.note) gameOpps[Number(e.target.dataset.note)].note = e.target.value; });
+// a picked "how" can be taken back by clicking it again
+$("#game-how").addEventListener("click", (e) => {
+  const input = e.target.closest("label")?.querySelector("input");
+  if (input?.checked && e.target.tagName === "SPAN") { e.preventDefault(); input.checked = false; renderGameForm(); }
+});
+$("#game-form").addEventListener("input", (e) => { if (["turn", "mvp", "note"].includes(e.target.name)) renderGameForm(); });
+$("#game-form").addEventListener("change", (e) => {
+  if (e.target.name === "result") {
+    if (e.target.value === "win" && !gameMe && gameOpps.length) gameMe = 1;
+    if (e.target.value === "loss" && gameMe === 1) gameMe = null;
+  }
+  renderGameForm();
+});
+
 $("#game-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (!currentDeck) return;
   const f = new FormData(e.target);
-  const slots = [1, 2, 3].map((n) => ({ name: (f.get(`opp${n}`) || "").trim(), note: (f.get(`oppnote${n}`) || "").trim(),
-    id: e.target.elements[`opp${n}`].dataset.oid || null, place: gamePlaces[n] })).filter((s) => s.name);
   const body = {
     result: f.get("result"), turn: f.get("turn") ? Number(f.get("turn")) : null, mvp: f.get("mvp") || null,
-    opponents: slots.map((s) => s.name), opponent_ids: slots.map((s) => s.id), opponent_notes: slots.map((s) => s.note),
+    opponents: gameOpps.map((o) => o.name), opponent_ids: gameOpps.map((o) => o.id), opponent_notes: gameOpps.map((o) => o.note.trim()),
     remember_opponents: !!f.get("remember_opponents"), issues: f.getAll("issues"), note: f.get("note") || "", how: f.get("how") || null,
-    place: slots.length ? gamePlaces.me : null, opponent_places: slots.map((s) => s.place),
+    place: gameOpps.length ? gameMe : null, opponent_places: gameOpps.map((o) => o.place),
   };
+  if (body.result === "win") body.issues = [];
   const slug = currentDeck.slug;
   try {
     const data = await api(`/api/decks/${enc(slug)}/games`, { method: "POST", body });
-    e.target.reset();
-    for (const n of [1, 2, 3]) delete e.target.elements[`opp${n}`].dataset.oid;
-    resetGamePlaces();
+    resetGameForm();
     if (currentDeck?.slug === slug) renderGames(slug, data);
     if (body.opponents.length) void refreshOpponents().then(renderKnownOpps);
     toast(body.result === "win" ? "Sieg gespeichert – Glückwunsch!" : "Partie gespeichert.");
   } catch (err) { fail(err); }
-});
-// finishing places like the phone's game sheet: one row per player (me + the opponents typed in), places 1..N,
-// ties allowed; with all but one placed on different places the last one gets the place left; my 1st place is a
-// win, a later one a loss (a draw stays a draw), and a win without a place is 1st place
-let gamePlaces = { me: null, 1: null, 2: null, 3: null };
-const gamePlayers = () => {
-  const els = $("#game-form").elements;
-  return [{ key: "me", name: "Ich" }, ...[1, 2, 3].map((n) => ({ key: n, name: els[`opp${n}`].value.trim() })).filter((p) => p.name)];
-};
-function resetGamePlaces() { gamePlaces = { me: null, 1: null, 2: null, 3: null }; renderGamePlaces(); }
-function renderGamePlaces() {
-  const players = gamePlayers();
-  const n = players.length;
-  for (const p of players) if (gamePlaces[p.key] > n) gamePlaces[p.key] = null;
-  $("#game-places-box").hidden = n < 2;
-  $("#game-places").innerHTML = n < 2 ? "" : players.map((p) => `<div class="place-row${gamePlaces[p.key] === 1 ? " first" : ""}" data-who="${p.key}">
-      <span class="place-name">${esc(p.name)}${gamePlaces[p.key] === 1 ? ` <span class="first-label">${icon("trophy")}Gewinner</span>` : ""}</span>
-      <span class="place-pick" role="radiogroup" aria-label="Platz: ${esc(p.name)}">${Array.from({ length: n }, (_, i) => i + 1).map((x) =>
-        `<button type="button" role="radio" data-place="${x}" aria-checked="${gamePlaces[p.key] === x}" aria-label="${x}. Platz">${x}</button>`).join("")}</span>
-    </div>`).join("");
-}
-$("#game-places").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-place]");
-  if (!b) return;
-  const who = b.closest("[data-who]").dataset.who;
-  const key = who === "me" ? "me" : Number(who);
-  const place = Number(b.dataset.place);
-  gamePlaces[key] = gamePlaces[key] === place ? null : place;
-  const players = gamePlayers();
-  const open = players.filter((p) => !gamePlaces[p.key]);
-  const taken = new Set(players.map((p) => gamePlaces[p.key]).filter(Boolean));
-  if (gamePlaces[key] && open.length === 1 && taken.size === players.length - 1) {
-    gamePlaces[open[0].key] = players.map((_, i) => i + 1).find((x) => !taken.has(x));
-  }
-  const els = $("#game-form").elements;
-  if (gamePlaces.me === 1) els.result.value = "win";
-  else if (gamePlaces.me && els.result.value !== "draw") els.result.value = "loss";
-  renderGamePlaces();
-});
-$("#game-form").addEventListener("input", (e) => { if (/^opp\d$/.test(e.target.name)) renderGamePlaces(); });
-$("#game-form").addEventListener("change", (e) => {
-  if (e.target.name !== "result") return;
-  if (e.target.value === "win" && !gamePlaces.me && gamePlayers().length > 1) gamePlaces.me = 1;
-  if (e.target.value === "loss" && gamePlaces.me === 1) gamePlaces.me = null;
-  renderGamePlaces();
 });
 $("#game-list").addEventListener("click", async (e) => {
   const b = e.target.closest(".game-del");
@@ -4134,29 +4205,20 @@ function oppMeta(o) {
 }
 
 
-// game form: quick picks of known opponents fill the next empty slot
+// game form: quick picks of known opponents
 function renderKnownOpps() {
   const box = $("#game-known-opps");
   const top = oppIndex.slice(0, 12);
   box.hidden = !top.length;
-  box.innerHTML = top.length ? '<em class="opp-known-label">Deine Gegner:</em>' + top.map((o) =>
+  box.innerHTML = top.length ? '<em class="opp-known-label">Zuletzt:</em>' + top.map((o) =>
     `<button type="button" class="chip" data-oid="${esc(o.id)}" title="${esc(oppMeta(o))}">${esc(o.title)}</button>`).join("") : "";
 }
 $("#game-known-opps").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-oid]");
   if (!b) return;
   const o = oppIndex.find((x) => x.id === b.dataset.oid);
-  const els = $("#game-form").elements;
-  const slot = [1, 2, 3].map((n) => els[`opp${n}`]).find((el) => !el.value.trim() || el.dataset.oid === o.id);
-  if (!slot) { toast("Alle drei Gegner-Felder sind belegt.", "error"); return; }
-  slot.value = o.commanders.join(" + ").split(" + ")[0];
-  slot.dataset.oid = o.id;
-  renderGamePlaces();
-  els[slot.name.replace("opp", "oppnote")].focus();
+  if (o) addGameOpp(o.commanders[0], o.id);
 });
-for (const n of [1, 2, 3]) {
-  $(`#game-form [name=opp${n}]`).addEventListener("input", (e) => { delete e.target.dataset.oid; });
-}
 
 async function showOpponents(id) {
   $("#opp-list-view").hidden = !!id;
