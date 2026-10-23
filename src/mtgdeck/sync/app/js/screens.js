@@ -19,7 +19,8 @@ export function gameRow(g, { showDeck = true } = {}) {
   const names = vs.length ? vs : (g.opponents || []).map(shortName);
   const against = names.length ? `gegen ${names.join(", ")}` : "";
   const title = showDeck ? d?.name || g.deck : against || "Partie";
-  const sub = (showDeck ? [against, g.turn ? `Zug ${g.turn}` : ""] : [g.turn ? `Zug ${g.turn}` : "", ago(g.played)]).filter(Boolean).join(" · ");
+  const place = g.place ? `${g.place}. Platz` : "";
+  const sub = (showDeck ? [against, place, g.turn ? `Zug ${g.turn}` : ""] : [place, g.turn ? `Zug ${g.turn}` : "", ago(g.played)]).filter(Boolean).join(" · ");
   const pic = showDeck ? d?.commanders?.[0] : (g.opponent_ids || []).map((id) => oppBy(id)?.commanders?.[0]).find(Boolean) || g.opponents?.[0];
   const pending = isPending(g.id);
   return `<button class="row game-row" type="button" data-game="${esc(g.id)}" data-deck="${esc(g.deck)}">

@@ -1,7 +1,7 @@
 // Sheets for input and quick looks: log a game (with the opponent picker as a second page), record an opponent
 // deck, switch tonight's deck, look at a card, a game, the settings.
 
-import { currentDeck, deckBy, disconnect, dropOp, endDemo, failedOps, gamesOf, isDemo, op, oppBy, oppName, pendingCount, resetDemo, serverCall, setPref, shortName, state, undo, wake } from "./data.js";
+import { PLACES_MAX, cleanPlaces, currentDeck, deckBy, disconnect, dropOp, endDemo, failedOps, gamesOf, isDemo, op, oppBy, oppName, pendingCount, resetDemo, serverCall, setPref, shortName, state, undo, wake } from "./data.js";
 import * as scry from "./scry.js";
 import { roundLogPage, roundSummary } from "./roundlog.js";
 import { art, paint, rememberCard } from "./pieces.js";
@@ -21,7 +21,7 @@ function freshGame() {
   const deck = currentDeck();
   const recent = last && Date.now() - new Date(last.played).getTime() < REMATCH_HOURS * 3600e3;
   const opps = recent ? (last.opponent_ids || []).map((id, i) => ({ id, commander: last.opponents?.[i] || oppBy(id)?.commanders?.[0] || "" })).filter((o) => o.id || o.commander) : [];
-  return { id: uid(), deck: deck?.slug, result: null, opps, rematch: recent && opps.length > 0, issues: [], turn: null, how: null, started: null, mvp: "", note: "" };
+  return { id: uid(), deck: deck?.slug, result: null, place: null, opps, rematch: recent && opps.length > 0, issues: [], turn: null, how: null, started: null, mvp: "", note: "" };
 }
 
 /** The game sheet. ``fromRound`` = a finished round of the Runden-Helfer: the form comes prefilled from it, the
@@ -74,6 +74,7 @@ function gamePage({ push }) {
         return `<span class="chip opp" data-i="${i}">${art(o.commander || known?.commanders?.[0] || "")}<span>${esc(name)}</span>
           <button class="x" type="button" data-remove="${i}" aria-label="${esc(name)} entfernen">${icon("x", "xs")}</button></span>`;
       }).join("")}<button class="chip add" type="button" id="add-opp">${icon("plus")}${g.opps.length ? "Gegner" : "Gegner hinzufügen"}</button></div>
+      ${g.opps.length ? placesHtml(deck) : ""}
       ${g.result === "loss" || g.result === "draw" ? `
         <div class="field-label">Woran lag's? <span class="hint">optional</span></div>
         <div class="chips" id="issues">${issues.slice(0, g.allIssues ? issues.length : 6).map(([k, l]) => `<button class="chip" type="button" data-issue="${k}" aria-pressed="${g.issues.includes(k)}">${esc(l)}</button>`).join("")}
@@ -100,9 +101,15 @@ function gamePage({ push }) {
       sel?.scrollIntoView({ inline: "center", block: "nearest" });
       $("#draft-drop", el)?.addEventListener("click", () => { g = freshGame(); save(KEY_DRAFT, null); redraw(); });
       for (const b of $$("[data-deck]", el)) b.addEventListener("click", () => { g.deck = b.dataset.deck; g.mvp = ""; keep(); redraw(); });
-      for (const b of $$("[data-v]", el)) b.addEventListener("click", () => { g.result = b.dataset.v; vibrate(); keep(); redraw(); });
+      for (const b of $$("[data-v]", el)) b.addEventListener("click", () => {
+        g.result = b.dataset.v;
+        if (g.result === "win" && !g.place && g.opps.length) g.place = 1;  // a win is first place …
+        if (g.result === "loss" && g.place === 1) g.place = null;          // … a loss is not
+        vibrate(); keep(); redraw();
+      });
+      for (const b of $$("[data-place]", el)) b.addEventListener("click", () => { setPlace(b.closest("[data-who]").dataset.who, Number(b.dataset.place)); vibrate(); keep(); redraw(); });
       for (const b of $$("[data-remove]", el)) b.addEventListener("click", () => {
-        g.opps.splice(Number(b.dataset.remove), 1); g.rematch = false; g.started = null; keep(); redraw();
+        g.opps.splice(Number(b.dataset.remove), 1); g.rematch = false; g.started = null; fitPlaces(); keep(); redraw();
       });
       $("#add-opp", el).addEventListener("click", () => push(opponentPicker(g, "Partie", () => { g.rematch = false; g.started = null; keep(); })));
       $("#more-issues", el)?.addEventListener("click", () => { g.allIssues = true; redraw(); });
@@ -131,6 +138,52 @@ function gamePage({ push }) {
   };
 }
 
+// ---------- finishing places 1..N: one row per player (the user first), ties allowed ----------
+const tableSize = () => Math.min(PLACES_MAX, 1 + g.opps.length);
+const placeOf = (who) => (who === "me" ? g.place : g.opps[Number(who)]?.place ?? null);
+function setPlaceOf(who, p) { if (who === "me") g.place = p; else g.opps[Number(who)].place = p; }
+// places that no longer fit the table (an opponent was taken out of the form) are dropped
+function fitPlaces() {
+  const n = tableSize();
+  if (g.place > n) g.place = null;
+  for (const o of g.opps) if (o.place > n) o.place = null;
+}
+
+/** Sets a player's place (the same again clears it). With everyone but one placed on different places the last one
+ *  gets the place that is left; the user's place decides a win or a loss. */
+function setPlace(who, p) {
+  setPlaceOf(who, placeOf(who) === p ? null : p);
+  const all = ["me", ...g.opps.map((_, i) => String(i))];
+  const open = all.filter((w) => !placeOf(w));
+  const taken = new Set(all.map(placeOf).filter(Boolean));
+  if (placeOf(who) && open.length === 1 && taken.size === all.length - 1) {
+    setPlaceOf(open[0], Array.from({ length: all.length }, (_, i) => i + 1).find((x) => !taken.has(x)));
+  }
+  if (g.place === 1) g.result = "win";
+  else if (g.place && g.result !== "draw") g.result = "loss";
+}
+
+function placesHtml(deck) {
+  const n = tableSize();
+  const rows = [
+    { who: "me", name: "Ich", sub: deck?.name || "", pic: deck?.commanders?.[0] || "", colors: deck?.colors || "" },
+    ...g.opps.map((o, i) => {
+      const known = o.id ? oppBy(o.id) : null;
+      return { who: String(i), name: known ? oppName(known) : shortName(o.commander), sub: known?.player || "", pic: o.commander || known?.commanders?.[0] || "", colors: o.colors || known?.colors || "" };
+    }),
+  ];
+  return `<div class="field-label">Platzierung <span class="hint">${n > 2 ? "von 1 bis " + n : "optional"}</span></div>
+    <div class="group places${n > 4 ? " many" : ""}" id="places">${rows.map((r) => {
+      const p = placeOf(r.who);
+      return `<div class="row place-row${p === 1 ? " first" : ""}" data-who="${r.who}">
+        <span class="thumb round" data-bg="${esc(r.colors)}">${r.pic ? art(r.pic, "art", "thumb round") : ""}</span>
+        <span class="main"><span class="title">${esc(r.name)}</span>${p === 1 ? `<span class="subtitle first-label">${icon("trophy", "xs")}Gewinner</span>` : r.sub ? `<span class="subtitle">${esc(r.sub)}</span>` : ""}</span>
+        <span class="place-pick" role="radiogroup" aria-label="Platz: ${esc(r.name)}">${Array.from({ length: n }, (_, k) => k + 1).map((x) =>
+          `<button type="button" role="radio" data-place="${x}" aria-checked="${p === x}" aria-label="${x}. Platz">${x}</button>`).join("")}</span>
+      </div>`;
+    }).join("")}</div>`;
+}
+
 function toggleIn(list, key, btn) {
   const i = list.indexOf(key);
   if (i >= 0) list.splice(i, 1); else list.push(key);
@@ -145,12 +198,13 @@ function saveGame() {
   if (!g?.result) return;
   const deck = deckBy(g.deck);
   const game = { id: g.id, deck: g.deck, result: g.result, turn: g.turn, issues: g.result === "win" ? [] : g.issues,
-    how: g.how, started: g.started === null ? null : g.started === "me" ? "me" : Number(g.started), mvp: g.mvp.trim() || null, note: g.note.trim() };
+    how: g.how, started: g.started === null ? null : g.started === "me" ? "me" : Number(g.started), mvp: g.mvp.trim() || null, note: g.note.trim(),
+    place: cleanPlaces(g.place, [], g.opps.length).place };
   if (g.round) game.round = g.round;
   const opponents = g.opps.map((o) => {
     const commander = o.commander || oppBy(o.id)?.commanders?.[0] || "";
     return { id: o.id || null, commander, colors: o.colors || "", new_id: o.id ? null : uid().slice(0, 8), note: o.note || "",
-      image: o.id ? null : scry.cached(commander)?.image || null };
+      image: o.id ? null : scry.cached(commander)?.image || null, place: o.place || null };
   });
   const entry = op("game.add", { game, opponents });
   setPref("deck", g.deck);
@@ -573,14 +627,15 @@ export function gameDetailSheet(deckSlug, id) {
   const vs = (game.opponent_ids || []).map((oid, i) => ({ o: oppBy(oid), name: game.opponents?.[i] }));
   const line = (label, value) => (value ? `<div class="row"><span class="main"><span class="subtitle">${esc(label)}</span><span class="title wrap">${esc(value)}</span></span></div>` : "");
   const started = game.started === "me" ? "Ich" : typeof game.started === "number" ? shortName(game.opponents?.[game.started]) : "";
+  const oppPlace = (i) => game.opponent_places?.[i] || null;
   openSheet(() => ({
     title: RESULT_TEXT[game.result], left: "", right: `<button class="btn plain" type="button" data-sheet-close><b>Fertig</b></button>`,
-    body: `<div class="group">${line("Deck", d?.name)}${line("Gespielt", dateLong(game.played))}${line("Zug", game.turn)}${line("Entschieden durch", how[game.how])}
+    body: `<div class="group">${line("Deck", d?.name)}${line("Platzierung", placeText(game))}${line("Gespielt", dateLong(game.played))}${line("Zug", game.turn)}${line("Entschieden durch", how[game.how])}
         ${line("Angefangen hat", started)}${line("Woran lag's", (game.issues || []).map((k) => issues[k]).filter(Boolean).join(", "))}${line("Beste Karte", game.mvp)}${line("Notiz", game.note)}</div>
       ${game.round ? `<div class="field-label">Runde</div>${roundSummary(game.round)}<div class="btn-col"><button class="btn tint" type="button" id="round-log">${icon("clock", "sm")}Verlauf ansehen</button></div>` : ""}
-      ${vs.length ? `<div class="field-label">Gegner</div><div class="group">${vs.map(({ o, name }) => `<a class="row" href="${o ? `#/gegner/${esc(o.id)}` : "#/gegner"}" data-sheet-close>
+      ${vs.length ? `<div class="field-label">Gegner</div><div class="group">${vs.map(({ o, name }, i) => `<a class="row${oppPlace(i) === 1 ? " first" : ""}" href="${o ? `#/gegner/${esc(o.id)}` : "#/gegner"}" data-sheet-close>
         <span class="thumb round">${art(o?.commanders?.[0] || name, "art", "thumb round")}</span><span class="main"><span class="title">${esc(o ? oppName(o) : shortName(name))}</span>
-        <span class="subtitle">${esc(o?.player || name || "")}</span></span>${icon("chev-r", "sm chev")}</a>`).join("")}</div>` : ""}
+        <span class="subtitle">${esc(o?.player || name || "")}</span></span>${oppPlace(i) ? `<span class="place-badge${oppPlace(i) === 1 ? " gold" : ""}">${oppPlace(i) === 1 ? icon("trophy", "xs") : ""}${oppPlace(i)}.</span>` : ""}${icon("chev-r", "sm chev")}</a>`).join("")}</div>` : ""}
       <div class="btn-col"><button class="btn danger big" type="button" id="del-game">${icon("trash", "sm")}Partie löschen</button></div>`,
     bind(el) {
       scry.hydrate(el);
@@ -588,14 +643,21 @@ export function gameDetailSheet(deckSlug, id) {
       $("#round-log", el)?.addEventListener("click", () => pushPage(roundLogPage(game.round, RESULT_TEXT[game.result])));
       $("#del-game", el).addEventListener("click", () => {
         const restore = { game: { id: game.id, deck: deckSlug, result: game.result, turn: game.turn ?? null, issues: game.issues || [], how: game.how ?? null,
-          started: game.started ?? null, mvp: game.mvp ?? null, note: game.note || "", played: game.played, ...(game.round ? { round: game.round } : {}) },
-          opponents: (game.opponents || []).map((name, i) => ({ id: game.opponent_ids?.[i] || null, commander: name })) };
+          started: game.started ?? null, mvp: game.mvp ?? null, note: game.note || "", played: game.played, place: game.place ?? null, ...(game.round ? { round: game.round } : {}) },
+          opponents: (game.opponents || []).map((name, i) => ({ id: game.opponent_ids?.[i] || null, commander: name, place: oppPlace(i) })) };
         const entry = op("game.delete", { deck: deckSlug, id, restore });
         closeSheet();
         toast("Partie gelöscht", { action: { label: "Rückgängig", run: () => undo(entry) } });
       });
     },
   }));
+}
+
+/** "2. Platz von 4" (or "2. Platz" without opponents), "" when the place was not noted. */
+export function placeText(game) {
+  if (!game?.place) return "";
+  const n = (game.opponents || []).length;
+  return n ? `${game.place}. Platz von ${n + 1}` : `${game.place}. Platz`;
 }
 
 const OP_LABEL = {

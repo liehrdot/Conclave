@@ -25,7 +25,7 @@ import uuid
 from typing import Any
 
 from .. import maybe as maybe_list
-from ..games import HOW, ISSUES, RESULTS
+from ..games import HOW, ISSUES, RESULTS, clean_places
 from ..opponents import MAX_NOTES, TAGS
 from ..storage import FLAGS, PIN_RANK, _metrics, diff, level_text
 from .files import snapshot_path
@@ -37,7 +37,7 @@ ID_RE = re.compile(r"[A-Za-z0-9_-]{1,40}")
 ISO_RE = re.compile(r"\d{4}-\d\d-\d\dT[\d:.]+(Z|[+-]\d\d:\d\d)?")
 TYPES = ("game.add", "game.delete", "opponent.add", "opponent.update", "opponent.note", "opponent.note_delete", "opponent.delete",
          "deck.new", "deck.edit", "deck.flags", "deck.pin_order", "collection.add", "collection.update")  # fmt: skip
-ROUND_KINDS = ("life", "cmd", "poison", "turn", "note")  # entries in the Runden-Helfer's log (js/round.js)
+ROUND_KINDS = ("life", "cmd", "poison", "turn", "note", "out")  # entries in the Runden-Helfer's log (js/round.js)
 ROUND_EVENTS_MAX = 400
 CATEGORIES = ("Ramp", "Draw", "Removal", "Board Wipe", "Counterspell", "Tutor", "Protection", "Synergy", "Win Condition", "Utility", "Land")
 DECK_CARDS_MAX = 250  # distinct cards in one deck (a Commander deck has at most 99)
@@ -462,6 +462,7 @@ def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
         items = opp_doc["opponents"]
         names: list[str] = []
         ids: list[str | None] = []
+        slot_places: list[Any] = []  # each opponent's finishing place, same order as names
         changed = False
         for slot in (p.get("opponents") or [])[:5]:
             if not isinstance(slot, dict):
@@ -480,6 +481,7 @@ def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
             changed = True
             names.append(_text(slot.get("commander"), 120) or o["commanders"][0])
             ids.append(o["id"])
+            slot_places.append(slot.get("place"))
         played = g.get("played") if isinstance(g.get("played"), str) and ISO_RE.fullmatch(g["played"]) else at  # undo of a delete keeps the date
         entry: dict[str, Any] = {
             "id": game_id, "played": played, "result": result, "opponents": names, "turn": turn, "issues": issues,
@@ -492,6 +494,11 @@ def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
         started = g.get("started")
         if started == "me" or (isinstance(started, int) and 0 <= started < len(names)):
             entry["started"] = started
+        place, opp_places = clean_places(g.get("place"), slot_places, len(names))
+        if place:
+            entry["place"] = place
+        if opp_places:
+            entry["opponent_places"] = opp_places
         round_log = _round(g.get("round"))
         if round_log:
             entry["round"] = round_log

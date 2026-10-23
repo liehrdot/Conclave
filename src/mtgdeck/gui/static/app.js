@@ -2624,11 +2624,12 @@ function renderGames(slug, data) {
     ${st.per_version.length > 1 ? `<p class="game-stats-more">Pro Version: ${st.per_version.map((v) => `v${v.version} ${v.wins}/${v.games}`).join(" · ")}</p>` : ""}
     ${st.mvps.length ? `<p class="game-stats-more">Beste Karten: ${st.mvps.map((m) => `${esc(m.name)}${m.count > 1 ? ` (${m.count}×)` : ""}`).join(", ")}</p>` : ""}
     ${st.opponents.length ? `<p class="game-stats-more">Häufigste Gegner: ${st.opponents.map((o) => esc(o.name)).join(", ")}</p>` : ""}
+    ${st.places ? `<p class="game-stats-more">Platzierung: Ø ${fmtNum(st.places.avg)}${st.places.avg_players ? ` bei ${fmtNum(st.places.avg_players)} Spielern` : ""} · ${st.places.counts.map((c) => `${c.count}× ${c.place}. Platz`).join(" · ")}</p>` : ""}
     ${st.rounds ? roundStatsHtml(st.rounds) : ""}`;
   $("#game-empty").hidden = !!data.games.length;
   $("#game-list").innerHTML = data.games.slice().reverse().map((g) => `<li data-id="${esc(g.id)}">
-      <div class="when"><span class="res ${esc(g.result)}">${esc(data.result_labels[g.result] || g.result)}</span><br><span class="meta">${esc(fmtDate(g.played))}${g.version ? ` · v${esc(g.version)}` : ""}</span></div>
-      <div>${g.opponents.length ? `gegen ${g.opponents.map((o, i) => g.opponent_ids?.[i] ? `<a href="#/opponents/${enc(g.opponent_ids[i])}">${esc(o)}</a>` : esc(o)).join(", ")}` : '<span class="meta">Gegner nicht notiert</span>'}${g.turn ? ` · Zug ${esc(g.turn)}` : ""}${g.how && data.how_labels?.[g.how] ? ` · ${esc(data.how_labels[g.how])}` : ""}
+      <div class="when"><span class="res ${esc(g.result)}">${esc(data.result_labels[g.result] || g.result)}</span>${g.place ? `<br><span class="place${g.place === 1 ? " first" : ""}">${esc(g.place)}. Platz</span>` : ""}<br><span class="meta">${esc(fmtDate(g.played))}${g.version ? ` · v${esc(g.version)}` : ""}</span></div>
+      <div>${g.opponents.length ? `gegen ${g.opponents.map((o, i) => (g.opponent_ids?.[i] ? `<a href="#/opponents/${enc(g.opponent_ids[i])}">${esc(o)}</a>` : esc(o)) + (g.opponent_places?.[i] ? ` <span class="place${g.opponent_places[i] === 1 ? " first" : ""}">(${esc(g.opponent_places[i])}.)</span>` : "")).join(", ")}` : '<span class="meta">Gegner nicht notiert</span>'}${g.turn ? ` · Zug ${esc(g.turn)}` : ""}${g.how && data.how_labels?.[g.how] ? ` · ${esc(data.how_labels[g.how])}` : ""}
         ${g.started === "me" ? '<br><span class="meta">Ich habe angefangen</span>' : Number.isInteger(g.started) && g.opponents[g.started] ? `<br><span class="meta">Angefangen: ${esc(g.opponents[g.started])}</span>` : ""}
         ${g.mvp ? `<br>Beste Karte: <strong>${esc(g.mvp)}</strong>` : ""}${g.note ? `<br><span class="meta">${esc(g.note)}</span>` : ""}
         ${g.issues.length ? `<div class="issues">${g.issues.map((i) => `<span>${esc(data.issue_labels[i] || i)}</span>`).join("")}</div>` : ""}
@@ -2670,11 +2671,12 @@ $("#game-form").addEventListener("submit", async (e) => {
   if (!currentDeck) return;
   const f = new FormData(e.target);
   const slots = [1, 2, 3].map((n) => ({ name: (f.get(`opp${n}`) || "").trim(), note: (f.get(`oppnote${n}`) || "").trim(),
-    id: e.target.elements[`opp${n}`].dataset.oid || null })).filter((s) => s.name);
+    id: e.target.elements[`opp${n}`].dataset.oid || null, place: Number(f.get(`oppplace${n}`)) || null })).filter((s) => s.name);
   const body = {
     result: f.get("result"), turn: f.get("turn") ? Number(f.get("turn")) : null, mvp: f.get("mvp") || null,
     opponents: slots.map((s) => s.name), opponent_ids: slots.map((s) => s.id), opponent_notes: slots.map((s) => s.note),
     remember_opponents: !!f.get("remember_opponents"), issues: f.getAll("issues"), note: f.get("note") || "", how: f.get("how") || null,
+    place: Number(f.get("place")) || null, opponent_places: slots.map((s) => s.place),
   };
   const slug = currentDeck.slug;
   try {
@@ -2685,6 +2687,19 @@ $("#game-form").addEventListener("submit", async (e) => {
     if (body.opponents.length) void refreshOpponents().then(renderKnownOpps);
     toast(body.result === "win" ? "Sieg gespeichert – Glückwunsch!" : "Partie gespeichert.");
   } catch (err) { fail(err); }
+});
+// first place is a win, a later place a loss (a draw stays a draw); a win without a place is first place
+$("#game-form").addEventListener("change", (e) => {
+  const els = e.target.form?.elements;
+  if (!els) return;
+  if (e.target.name === "place" && e.target.value) {
+    const res = els.result.value;
+    if (e.target.value === "1") els.result.value = "win";
+    else if (res !== "draw") els.result.value = "loss";
+  } else if (e.target.name === "result") {
+    if (e.target.value === "win" && !els.place.value && [1, 2, 3].some((n) => els[`opp${n}`].value.trim())) els.place.value = "1";
+    if (e.target.value === "loss" && els.place.value === "1") els.place.value = "";
+  }
 });
 $("#game-list").addEventListener("click", async (e) => {
   const b = e.target.closest(".game-del");

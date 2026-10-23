@@ -153,7 +153,7 @@ export function roundScreen() {
 
       <div class="field-label">Commander-Schaden <span class="hint">tippen zum Eintragen</span></div>
       <div class="dmg-grid">
-        ${cmds.map((c) => `<button class="dmg-tile" type="button" data-cmd="${esc(c.name)}">
+        ${cmds.map((c) => `<button class="dmg-tile" type="button" data-cmd="${esc(c.name)}" data-opp="${c.opp}">
             <span class="dmg-art" data-bg="${esc(c.colors)}">${art(c.name, "art")}</span>
             <span class="dmg-name">${esc(shortName(c.name))}</span>
             <span class="dmg-val"><b data-val></b><small>/21</small></span>
@@ -169,6 +169,9 @@ export function roundScreen() {
         </button>
       </div>
       ${cmds.length ? "" : `<p class="hint-small">Ohne Gegner gibt es keinen Commander-Schaden – Gegner lassen sich beim Start wählen.</p>`}
+      ${r.opps.length ? `<div class="field-label">Wer ist raus? <span class="hint">daraus wird die Platzierung</span></div>
+        <div class="chips out-row" id="r-outs">${r.opps.map((o, i) => `<button class="chip opp out-chip" type="button" data-out="${i}" aria-pressed="false">
+          ${art(o.commander || "", "art")}<span class="out-name">${esc(oppLabel(o))}</span><b class="out-place" data-place></b></button>`).join("")}</div>` : ""}
       <div class="round-bar">
         <button class="icon-btn filled" type="button" id="r-undo" aria-label="Rückgängig">${icon("undo")}</button>
         <button class="btn primary big" type="button" id="r-next"></button>
@@ -196,6 +199,16 @@ function update(el) {
     tile.classList.toggle("hot", n >= (name ? 15 : 7));
     tile.setAttribute("aria-label", `${name ? `Commander-Schaden von ${shortName(name)}` : "Gift"}: ${n} von ${max}. Eintragen`);
   }
+  // who is out, and the place that makes (the first one out is last)
+  const gone = outOpps(t);
+  for (const b of $$("[data-out]", el)) {
+    const k = gone.indexOf(Number(b.dataset.out));
+    const o = r.opps[Number(b.dataset.out)];
+    b.setAttribute("aria-pressed", String(k >= 0));
+    $("[data-place]", b).textContent = k >= 0 ? `${1 + r.opps.length - k}.` : "";
+    b.setAttribute("aria-label", k >= 0 ? `${oppLabel(o)} ist raus, ${1 + r.opps.length - k}. Platz. Zurücknehmen` : `${oppLabel(o)} ist raus`);
+  }
+  for (const tile of $$(".dmg-tile[data-opp]", el)) tile.classList.toggle("gone", gone.includes(Number(tile.dataset.opp)));
   // the latest life loss can be put on someone
   const last = r.events[r.events.length - 1];
   const from = $("#r-from", el);
@@ -211,16 +224,19 @@ function update(el) {
     deltaTimer = setTimeout(() => { delta.className = "life-delta"; }, 1600);
   }
   const out = outReason(r, t);
+  const won = !out && r.opps.length > 0 && gone.length === r.opps.length;
   const box = $("#r-out", el);
-  box.hidden = !out;
-  if (out) {
-    const why = out.kind === "life" ? "Deine Leben sind auf 0" : out.kind === "poison" ? "10 Giftmarken" : `21 Commander-Schaden von ${shortName(out.from)}`;
+  box.hidden = !out && !won;
+  box.classList.toggle("won", won);
+  if (out || won) {
+    const why = won ? "Alle Gegner sind raus" : out.kind === "life" ? "Deine Leben sind auf 0" : out.kind === "poison" ? "10 Giftmarken" : `21 Commander-Schaden von ${shortName(out.from)}`;
     if (box.dataset.why !== why) {
       box.dataset.why = why;
-      box.innerHTML = `<div class="main"><b>Du bist raus</b><span>${esc(why)}.</span></div>
-        <button class="btn" type="button" data-out-undo>Rückgängig</button><button class="btn primary" type="button" data-out-save>Als Niederlage speichern</button>`;
+      const place = 1 + r.opps.length - gone.length;
+      box.innerHTML = `<div class="main"><b>${won ? `${icon("trophy", "sm")}Du hast gewonnen` : "Du bist raus"}</b><span>${esc(why)}${won || r.opps.length < 2 ? "" : ` – ${place}. Platz`}.</span></div>
+        <button class="btn" type="button" data-out-undo>Rückgängig</button><button class="btn primary" type="button" data-out-save>Als ${won ? "Sieg" : "Niederlage"} speichern</button>`;
       $("[data-out-undo]", box).addEventListener("click", () => undoLast(el));
-      $("[data-out-save]", box).addEventListener("click", () => endRound("loss"));
+      $("[data-out-save]", box).addEventListener("click", () => endRound(won ? "win" : "loss"));
       vibrate(40);
     }
   } else box.dataset.why = "";
@@ -238,7 +254,7 @@ function undoEntry(el, i) {
   update(el);
   toast(undoText(e));
 }
-const undoText = (e) => (e.kind === "turn" ? `Zurück in Zug ${e.turn - 1}` : `Zurückgenommen: ${eventText(e)}`);
+const undoText = (e) => (e.kind === "turn" ? `Zurück in Zug ${e.turn - 1}` : e.kind === "out" ? `${shortName(e.from)} ist wieder dabei` : `Zurückgenommen: ${eventText(e)}`);
 
 // a tap = one step; holding jumps by HOLD_STEP, again and again while held. ``step(n)`` gets 1 or HOLD_STEP.
 function repeatable(btn, step) {
@@ -325,6 +341,28 @@ function damageSheet(el, from) {
   });
   openSheet(page);
 }
+// the opponents that are out (indexes into r.opps), first out first – the log names them by their commander
+function outOpps(t = totals(r)) {
+  const idx = [];
+  for (const name of t.out) {
+    const i = r.opps.findIndex((o, j) => o.commander === name && !idx.includes(j));
+    if (i >= 0) idx.push(i);
+  }
+  return idx;
+}
+
+// an opponent is out (logged, so it shows in the log and undo takes it back) – or, tapped again, back in
+function toggleOut(el, i) {
+  const o = r.opps[i];
+  const at = r.events.findIndex((e) => e.kind === "out" && e.from === o.commander);
+  if (at >= 0) { undoEntry(el, at); return; }
+  const entry = log("out", 1, o.commander, false);
+  vibrate(18);
+  update(el);
+  const gone = outOpps();
+  toast(`${oppLabel(o)} ist raus`, { sub: `${1 + r.opps.length - gone.indexOf(i)}. Platz`, action: { label: "Rückgängig", run: () => undoEntry(el, r.events.indexOf(entry)) } });
+}
+
 const oppColors = (name) => commanders(r).find((c) => c.name === name)?.colors || "";
 
 let ticker = null;
@@ -333,6 +371,7 @@ function bindRound(el) {
   ticker = setInterval(() => { if ($("#r-turn") && r) $("#r-turn").textContent = `Zug ${totals(r).turn} · ${minutes(r.started)}`; else clearInterval(ticker); }, 30000);
   for (const b of $$("[data-life]", el)) repeatable(b, (n) => { const dlt = n * Number(b.dataset.life); log("life", dlt, keepFrom(dlt)); update(el); });
   for (const b of $$(".dmg-tile", el)) b.addEventListener("click", () => damageSheet(el, b.dataset.cmd || null));
+  for (const b of $$("[data-out]", el)) b.addEventListener("click", () => toggleOut(el, Number(b.dataset.out)));
   for (const b of $$("[data-from]", el)) b.addEventListener("click", () => {
     const last = r.events[r.events.length - 1];
     if (!last || last.kind !== "life") return;
@@ -373,8 +412,17 @@ function endRound(result) {
   const how = out?.kind === "cmd" ? "commander" : null;
   const round = { start_life: r.start_life, started: r.started, ended: nowIso(), life: t.life, poison: t.poison, turns: t.turn,
     cmd: Object.entries(t.cmd).filter(([, n]) => n).map(([name, dmg]) => ({ name, dmg })), events: r.events };
+  // places: whoever went out first is last; the user, when out, takes the place behind the ones still in
+  const n = 1 + r.opps.length;
+  const opps = r.opps.map((o) => ({ ...o, place: null }));
+  const gone = outOpps(t);
+  gone.forEach((i, k) => { opps[i].place = n - k; });
+  const left = opps.filter((o) => !o.place);
+  let place = null;
+  if (out && r.opps.length) { place = n - gone.length; if (left.length === 1) left[0].place = 1; }
+  else if (r.opps.length && !left.length) place = 1;
   gameSheet({
-    prefill: { id: r.id, deck: r.deck, result: result || (out ? "loss" : null), turn: t.turn <= 60 ? t.turn : null, how, opps: r.opps.map((o) => ({ ...o })) },
+    prefill: { id: r.id, deck: r.deck, result: result || (out ? "loss" : place === 1 ? "win" : null), place, turn: t.turn <= 60 ? t.turn : null, how, opps },
     round,
     onSaved: () => { r = null; persist(); location.hash = "#/tisch"; },
   });

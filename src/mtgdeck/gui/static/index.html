@@ -361,15 +361,25 @@
                 </div>
               </div>
               <div class="field-block">
+                <span class="field-label">Dein Platz <span class="muted">(optional) – Plätze der Gegner neben ihren Namen</span></span>
+                <div class="segmented places" role="radiogroup" aria-label="Dein Platz">
+                  <label><input type="radio" name="place" value="" checked><span>–</span></label>
+                  <label><input type="radio" name="place" value="1"><span>1.</span></label>
+                  <label><input type="radio" name="place" value="2"><span>2.</span></label>
+                  <label><input type="radio" name="place" value="3"><span>3.</span></label>
+                  <label><input type="radio" name="place" value="4"><span>4.</span></label>
+                </div>
+              </div>
+              <div class="field-block">
                 <span class="field-label" id="opp-label">Gegner <span class="muted">(optional) – Commander und was dir aufgefallen ist</span></span>
                 <div class="pick-chips opp-known" id="game-known-opps" hidden></div>
                 <div class="opp-slots" role="group" aria-labelledby="opp-label">
                   <div class="opp-slot"><input name="opp1" list="ac-opp1" placeholder="z. B. Atraxa" aria-label="Commander des ersten Gegners"><datalist id="ac-opp1"></datalist>
-                    <label class="sr-only" for="oppnote1">Aufgefallen beim ersten Gegner</label><input name="oppnote1" id="oppnote1" placeholder="Aufgefallen, z. B. Combo mit Thassa's Oracle"></div>
+                    <label class="sr-only" for="oppnote1">Aufgefallen beim ersten Gegner</label><input name="oppnote1" id="oppnote1" placeholder="Aufgefallen, z. B. Combo mit Thassa's Oracle"><select name="oppplace1" aria-label="Platz des ersten Gegners"><option value="">Platz</option><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
                   <div class="opp-slot"><input name="opp2" list="ac-opp2" placeholder="2. Gegner" aria-label="Commander des zweiten Gegners"><datalist id="ac-opp2"></datalist>
-                    <input name="oppnote2" placeholder="Aufgefallen (optional)" aria-label="Aufgefallen beim zweiten Gegner"></div>
+                    <input name="oppnote2" placeholder="Aufgefallen (optional)" aria-label="Aufgefallen beim zweiten Gegner"><select name="oppplace2" aria-label="Platz des zweiten Gegners"><option value="">Platz</option><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
                   <div class="opp-slot"><input name="opp3" list="ac-opp3" placeholder="3. Gegner" aria-label="Commander des dritten Gegners"><datalist id="ac-opp3"></datalist>
-                    <input name="oppnote3" placeholder="Aufgefallen (optional)" aria-label="Aufgefallen beim dritten Gegner"></div>
+                    <input name="oppnote3" placeholder="Aufgefallen (optional)" aria-label="Aufgefallen beim dritten Gegner"><select name="oppplace3" aria-label="Platz des dritten Gegners"><option value="">Platz</option><option>1</option><option>2</option><option>3</option><option>4</option></select></div>
                 </div>
                 <label class="check small"><input type="checkbox" name="remember_opponents" checked> Neue Gegner unter „Gegnerdecks“ merken</label>
               </div>

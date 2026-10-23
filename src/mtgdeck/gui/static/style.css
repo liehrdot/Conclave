@@ -777,7 +777,7 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .tr-rules { margin-top: var(--space-4); }
 /* opponent decks */
 .opp-slots { display: grid; gap: var(--space-2); }
-.opp-slot { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-2); }
+.opp-slot { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) 92px; gap: var(--space-2); }
 .opp-slot datalist { display: none; }
 .opp-known { margin-bottom: var(--space-2); align-items: center; }
 .opp-known .chip { font-size: var(--fs-sm); }
@@ -1049,6 +1049,9 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .game-list li { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--border); font-size: var(--fs-sm); }
 .game-list li:first-child { border-top: none; }
 .game-list .res { font-weight: 700; }
+.game-list .place { font-weight: 700; font-variant-numeric: tabular-nums; }
+.game-list .place.first { color: var(--warn); }
+.segmented.places { max-width: 360px; }
 .game-list .res.win { color: var(--ok); } .game-list .res.loss { color: var(--bad); } .game-list .res.draw { color: var(--muted); }
 .game-list .meta { color: var(--muted); }
 .game-list .issues { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
