@@ -3,9 +3,9 @@
 
 import { currentDeck, deckBy, disconnect, dropOp, endDemo, failedOps, gamesOf, isDemo, op, oppBy, oppName, pendingCount, resetDemo, serverCall, setPref, shortName, state, undo, wake } from "./data.js";
 import * as scry from "./scry.js";
-import { roundLogPage, roundSummary } from "./round.js";
-import { art, paint, rememberCard } from "./screens.js";
-import { closeSheet, openSheet, popPage, pushPage, redraw, toast } from "./ui.js";
+import { roundLogPage, roundSummary } from "./roundlog.js";
+import { art, paint, rememberCard } from "./pieces.js";
+import { closeSheet, openSheet, pushPage, redraw, toast } from "./ui.js";
 import { $, $$, RESULT_TEXT, ago, dateLong, debounce, esc, genitive, icon, load, mana, pips, plural, rulesText, save, uid, vibrate } from "./util.js";
 
 const KEY_DRAFT = "amtisch.draft.game";
@@ -408,7 +408,8 @@ function bindCommanderSearch(el, { partner = false, onPick }) {
 // ======================================================================================
 // Neues Deck: commander (+ partner), name, bracket – then the builder opens (js/build.js)
 // ======================================================================================
-export function newDeckSheet() {
+/** ``onCreate({name, commanders, colors, bracket})`` creates the deck – screens.js passes build.js' createDeck. */
+export function newDeckSheet(onCreate) {
   const f = { commander: null, partner: null, name: "", bracket: 3 };
   const page = () => {
     const auto = f.commander ? [f.commander.name, ...(f.partner ? [f.partner.name] : [])].map(shortName).join(" & ") : "";
@@ -433,13 +434,13 @@ export function newDeckSheet() {
         for (const b of $$("[data-b]", el)) b.addEventListener("click", () => { f.bracket = Number(b.dataset.b); redraw(); });
         $("#deck-go", el).addEventListener("click", () => {
           const commanders = [f.commander.name, ...(f.partner ? [f.partner.name] : [])];
-          closeSheet();
-          void import("./build.js").then((m) => m.createDeck({ name: f.name.trim() || auto, commanders, colors: joinColors(f.commander.colors, f.partner?.colors), bracket: f.bracket }));
+          f.create = { name: f.name.trim() || auto, commanders, colors: joinColors(f.commander.colors, f.partner?.colors), bracket: f.bracket };
+          closeSheet();  // the builder opens once the sheet is gone (its back step would undo the new hash)
         });
       },
     };
   };
-  openSheet(page, { full: true });
+  openSheet(page, { full: true, onClose: () => { if (f.create) onCreate(f.create); } });
 }
 
 // ======================================================================================

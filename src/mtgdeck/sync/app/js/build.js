@@ -8,7 +8,7 @@
 import { deckBy, onChange, op, serverCall, state } from "./data.js";
 import { cardSheet } from "./forms.js";
 import * as scry from "./scry.js";
-import { art, CAT_LABELS, CATS, paint } from "./screens.js";
+import { art, CAT_LABELS, CATS, paint } from "./pieces.js";
 import { closeSheet, openSheet, redraw as redrawSheet, toast } from "./ui.js";
 import { $, $$, debounce, esc, icon, load, mana, pips, plural, reducedMotion, save, vibrate } from "./util.js";
 

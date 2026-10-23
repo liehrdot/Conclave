@@ -1,16 +1,16 @@
 // The tabs and their detail screens. Each screen returns {html, fab, bar, bind}; main.js draws it.
 
 import { currentDeck, deckBy, failedOps, gamesOf, isDemo, isPending, op, oppBy, oppName, oppSub, pendingCount, serverCall, setPref, shortName, state, undo } from "./data.js";
-import { draftCount, tabletSized } from "./build.js";
+import { createDeck, draftCount, tabletSized } from "./build.js";
 import { roundCard, running, startSheet } from "./round.js";
 import { cardSheet, editOpponentSheet, gameDetailSheet, gameSheet, newDeckSheet, opponentSheet, settingsSheet, switchDeckSheet } from "./forms.js";
 import { addByName } from "./scan.js";
 import * as scry from "./scry.js";
+import { art, CAT_LABELS, CATS, paint } from "./pieces.js";
 import { present, toast } from "./ui.js";
-import { $, $$, RESULT_TEXT, ago, artFallback, debounce, esc, icon, mana, pips, plural, recordText, reducedMotion, uid, vibrate } from "./util.js";
+import { $, $$, RESULT_TEXT, ago, debounce, esc, icon, mana, pips, plural, recordText, reducedMotion, uid, vibrate } from "./util.js";
 
 // ---------- shared pieces ----------
-export const art = (name, kind = "art", cls = "") => `<img data-card="${esc(name)}" data-kind="${kind}" alt="" class="${cls}" loading="lazy">`;
 const thumb = (name, colors, cls = "thumb") => `<span class="${cls}" data-bg="${esc(colors || "")}">${art(name, "art", cls)}</span>`;
 
 export function gameRow(g, { showDeck = true } = {}) {
@@ -158,7 +158,7 @@ export function decks() {
         <p class="hint-small">Spielst du gerade nicht – Karten daraus kannst du für andere Decks nehmen.</p>
         <div class="group">${shelved.map(row).join("")}</div>` : ""}`
       : empty("decks", "Noch keine Decks", tabletSized() ? "Leg hier ein neues an – oder baue und importiere Decks am PC, nach dem Abgleich erscheinen sie hier." : "Baue Decks am PC oder auf dem iPad – nach dem Abgleich erscheinen sie hier.")}`;
-  return { html, fab: tabletSized() ? { label: "Neues Deck", run: newDeckSheet } : null, bar: { title: "Decks", watch: ".large-title h1" }, bind: bindPinDrag };
+  return { html, fab: tabletSized() ? { label: "Neues Deck", run: () => newDeckSheet(createDeck) } : null, bar: { title: "Decks", watch: ".large-title h1" }, bind: bindPinDrag };
 }
 
 /** Drag a pinned deck by its grip into a new place among the pinned decks; sent as one "deck.pin_order". */
@@ -217,10 +217,6 @@ function setFlag(d, key) {
 }
 
 const SEGMENTS = [["rule0", "Rule 0"], ["karten", "Karten"], ["partien", "Partien"]];
-export const CATS = ["Ramp", "Draw", "Removal", "Board Wipe", "Counterspell", "Tutor", "Protection", "Synergy", "Win Condition", "Utility", "Land"];
-export const CAT_LABELS = { Ramp: "Ramp", Draw: "Kartenzug", Removal: "Removal", "Board Wipe": "Board Wipes", Counterspell: "Counterspells",
-  Tutor: "Tutoren", Protection: "Schutz", Synergy: "Synergie", "Win Condition": "Siegbedingung", Utility: "Sonstiges", Land: "Länder", "": "Sonstiges" };
-
 export function deck(slug, seg = "rule0") {
   const d = deckBy(slug);
   if (!d) return { html: empty("decks", "Deck nicht gefunden", "Vielleicht wurde es am PC gelöscht."), bar: { title: "Deck", back: { href: "#/decks", label: "Decks" }, always: true } };
@@ -554,14 +550,4 @@ function bindDescribe(el) {
     reveal();
   });
   render();
-}
-
-// colour backgrounds while artwork loads (CSSOM, so no inline styles are needed in the markup)
-export function paint(root) {
-  for (const el of root.querySelectorAll("[data-bg]")) if (!el.style.background) el.style.background = artFallback(el.dataset.bg);
-}
-
-export function rememberCard(name) {
-  const list = [name, ...(state.prefs.recentCards || []).filter((n) => n !== name)].slice(0, 12);
-  setPref("recentCards", list);
 }

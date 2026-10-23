@@ -5,7 +5,7 @@ from __future__ import annotations
 from conftest import deck_lines, save_deck
 from fastapi.testclient import TestClient
 
-from mtgdeck import health, rule0, storage, tablerules
+from mtgdeck import deckedit, health, rule0, storage, tablerules
 from mtgdeck.gui import app as gui
 from mtgdeck.validate import validate_deck
 
@@ -87,10 +87,32 @@ async def test_check_all_and_revalidate():
     assert rows["plain-deck"]["ok"] and rows["plain-deck"]["uses"]
 
     await tablerules.update(rs["id"], add=["Cultivate"])
-    assert await tablerules.revalidate_decks(rs["id"]) == ["plain-deck"]
+    assert await deckedit.revalidate_decks(rs["id"]) == ["plain-deck"]
     deck = storage.load("plain-deck")
     assert not deck["validation"]["table_rule"]["compliant"]
     assert deck["version"] == 1  # re-validation alone makes no new version
+
+
+async def test_revalidate_decks_skips_what_it_cannot_check(monkeypatch):
+    rs = await tablerules.create("Freitag")
+    await save_deck(name="Plain Deck", commanders=MEREN, cards=deck_lines(["1 Filler Y"]), bracket=3, table_rule=rs["id"])
+    listed = storage.list_decks()
+    monkeypatch.setattr(storage, "list_decks", lambda: [{"slug": "gone"}, *listed])  # deleted meanwhile
+    v1 = storage.load("plain-deck")["validation"]
+
+    def conflict(*a, **k):
+        raise storage.ConflictError("saved meanwhile")
+
+    with monkeypatch.context() as m:
+        m.setattr(storage, "save", conflict)
+        assert await deckedit.revalidate_decks(rs["id"]) == []
+
+    async def offline(deck):
+        raise RuntimeError("keine Verbindung")
+
+    monkeypatch.setattr(deckedit, "revalidate", offline)
+    assert await deckedit.revalidate_decks(rs["id"]) == []
+    assert storage.load("plain-deck")["validation"] == v1  # the old check stays
 
 
 def test_gui_routes():

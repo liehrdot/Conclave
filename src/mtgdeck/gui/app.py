@@ -950,7 +950,7 @@ async def api_tablerule_update(rule_id: str, req: TableRuleIn) -> dict[str, Any]
         raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    out["revalidated"] = await tablerules.revalidate_decks(rule_id)
+    out["revalidated"] = await deckedit.revalidate_decks(rule_id)
     return out
 
 

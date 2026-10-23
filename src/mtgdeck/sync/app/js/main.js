@@ -8,7 +8,8 @@ import { builder } from "./build.js";
 import { sammlung } from "./collection.js";
 import { roundScreen } from "./round.js";
 import * as scry from "./scry.js";
-import { deck, decks, gegner, karten, opponent, paint, tisch } from "./screens.js";
+import { paint } from "./pieces.js";
+import { deck, decks, gegner, karten, opponent, tisch } from "./screens.js";
 import { clearToast, sheetIsOpen, toast, topbar } from "./ui.js";
 import { $, $$, esc, icon, reducedMotion } from "./util.js";
 
