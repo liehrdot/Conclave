@@ -1416,12 +1416,9 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .about-card-text { min-width: 0; text-shadow: 0 1px 3px rgb(0 0 0 / .8); }
 .about-card-text b { display: block; font-size: var(--fs-lg); font-weight: 600; }
 .about-card-text .muted { display: block; color: #c9d1cb; }
-.about-card-socials { display: flex; gap: var(--space-2); margin-left: auto; }
-.about-card-socials .brand-icon { width: 30px; height: 30px; padding: 7px; border-radius: 50%; background: rgb(11 14 13 / .75); color: var(--accent); }
-.about-card > .icon { flex: none; color: #c9d1cb; }
+.about-card > .icon { flex: none; margin-left: auto; color: #c9d1cb; }
 .about-back { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--muted); text-decoration: none; margin-bottom: var(--space-2); }
 .about-back:hover { color: var(--text); }
-@media (max-width: 860px) { .about-card-socials { display: none; } .about-card { padding: var(--space-4); gap: var(--space-3); } .about-card img { width: 60px; height: 60px; } }
-@media (prefers-reduced-motion: reduce) { .about-banner, .about-avatar { animation: none !important; } }
+@media (max-width: 860px) { @media (prefers-reduced-motion: reduce) { .about-banner, .about-avatar { animation: none !important; } }
 @media (max-width: 1100px) { .about-banner { inset: 0 calc(-1 * var(--space-5)); } }
 @media (max-width: 860px) { .about-hero { height: 190px; } .about-banner { inset: 0 calc(-1 * var(--space-4)); } .about-avatar { width: 104px; height: 104px; } }
