@@ -52,6 +52,35 @@ async def test_preview_suggests_commander_from_hint():
         assert p["card_count"] == 100
 
 
+async def test_preview_puts_colour_fitting_commanders_first():
+    text = "1 Krenko, Mob Boss\n1 Atraxa, Praetors' Voice\n1 Meren of Clan Nel Toth\n1 Sol Ring\n10 Forest\n10 Swamp"
+    p = await deckimport.preview(importers.import_text(text))
+    cands = p["commander_candidates"]
+    assert [c["name"] for c in cands][0] == "Krenko, Mob Boss"  # WUBRG: none covers it, the list order stays
+    assert not any(c["fits"] for c in cands) and p["suggested"] == []
+    p = await deckimport.preview(importers.import_text(text.replace("1 Krenko, Mob Boss\n", "")))
+    cands = p["commander_candidates"]
+    assert [(c["name"], c["fits"]) for c in cands] == [("Atraxa, Praetors' Voice", True), ("Meren of Clan Nel Toth", False)]
+    assert p["suggested"] == ["Atraxa, Praetors' Voice"] and cands[0]["type_line"].startswith("Legendary Creature")
+
+
+async def test_preview_finds_partners_that_cover_the_colours_together(monkeypatch):
+    async def fake_resolve(names):
+        def card(name, ci, text=""):
+            return {"name": name, "type_line": "Legendary Creature — Human", "color_identity": list(ci), "oracle_text": text}
+        found = {"Thrasios, Triton Hero": card("Thrasios, Triton Hero", "GU", "Partner"),
+                 "Tymna the Weaver": card("Tymna the Weaver", "WB", "Partner"),
+                 "Meren of Clan Nel Toth": card("Meren of Clan Nel Toth", "BG"),
+                 "Sol Ring": {"name": "Sol Ring", "type_line": "Artifact", "color_identity": []}}  # fmt: skip
+        return found, {}, []
+
+    monkeypatch.setattr(deckimport, "resolve", fake_resolve)
+    p = await deckimport.preview(importers.import_text("1 Meren of Clan Nel Toth\n1 Sol Ring\n1 Thrasios, Triton Hero\n1 Tymna the Weaver"))
+    assert [(c["name"], c["fits"], c["pairs"]) for c in p["commander_candidates"]] == [
+        ("Thrasios, Triton Hero", True, True), ("Tymna the Weaver", True, True), ("Meren of Clan Nel Toth", False, False)]
+    assert p["suggested"] == ["Thrasios, Triton Hero", "Tymna the Weaver"]
+
+
 async def test_save_estimates_bracket():
     p = await deckimport.preview(await importers.import_url("https://archidekt.com/decks/4242"))
     saved = await deckimport.save(name=p["name"], commanders=p["commanders"], cards=p["cards"], categories=p["categories"])
