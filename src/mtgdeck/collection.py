@@ -453,6 +453,63 @@ def decks_by_card() -> dict[str, list[dict[str, Any]]]:
     return out
 
 
+def _same_card(entry_name: str, name: str) -> bool:
+    """An entry is this card when the names match or one is the other's front face („A // B“ vs. „A“)."""
+    a, b = entry_name.lower(), name.lower()
+    return a == b or a.split(" // ")[0] == b.split(" // ")[0]
+
+
+def card_copies(name: str, slug: str) -> dict[str, Any]:
+    """Every collection entry of one card, for moving copies into the deck ``slug``: ``here`` = copies whose Ort is
+    this deck, ``elsewhere`` = the rest, each with ``used_by`` = the deck it lies in when that deck plays the card."""
+    deck = storage.load(slug)
+    need = 1 if name in deck.get("commanders", []) else 0
+    need += sum(int(c.get("qty", 1)) for c in deck.get("cards", []) if c["name"] == name)
+    plays = {d["slug"]: d["name"] for d in decks_by_card().get(name, [])}
+    here, elsewhere = [], []
+    for e in load():
+        if not _same_card(e["name"], name):
+            continue
+        row = {k: e.get(k) for k in ("id", "qty", "proxy", "foil", "lang", "place", "place_deck", *PRINTING_KEYS)}
+        sid = e.get("scryfall_id") or ""
+        row["image"] = row["image"] or (_scan(sid) if _SCRYFALL_ID.match(sid) else None)
+        if e.get("place_deck") == slug:
+            here.append(row)
+        else:
+            row["used_by"] = plays.get(e.get("place_deck") or "")
+            elsewhere.append(row)
+    elsewhere.sort(key=lambda r: (bool(r["used_by"]), bool(r["proxy"]), not r["foil"], (r["place"] or "").lower()))
+    here.sort(key=lambda r: (bool(r["proxy"]), not r["foil"]))
+    return {"name": name, "need": need, "placed": sum(r["qty"] for r in here), "here": here, "elsewhere": elsewhere}
+
+
+def move_to_deck(entry_id: str, slug: str, qty: int | None = None) -> dict[str, Any]:
+    """Put ``qty`` copies (all when None) of one entry into the deck ``slug`` (its Ort becomes the deck; the other
+    copies stay where they were). Returns ``{id, qty, place, place_deck}``: the entry in the deck now (it may have
+    merged with one already there) and where the copies came from, for undoing it."""
+    label, slug = clean_place(storage.load(slug).get("name") or slug, slug)  # FileNotFoundError: no such deck
+    if not slug:
+        raise KeyError(entry_id)
+    with locked(COLLECTION_FILE):
+        entries = load()
+        entry = next((e for e in entries if e["id"] == entry_id), None)
+        if entry is None:
+            raise KeyError(entry_id)
+        came = {"place": entry.get("place") or "", "place_deck": entry.get("place_deck") or ""}
+        n = entry["qty"] if qty is None else max(1, min(int(qty), entry["qty"]))
+        if n < entry["qty"]:
+            entry["qty"] -= n
+            entry = {**entry, "id": uuid.uuid4().hex[:12], "qty": n}
+            entries.append(entry)
+        entry["place"], entry["place_deck"] = label, slug
+        there = next((e for e in entries if e is not entry and _key(e) == _key(entry)), None)
+        if there is not None:  # the same copy already lies in the deck: it keeps its id, so the undo can find it
+            there["qty"] += entry["qty"]
+            entries = [e for e in entries if e is not entry]
+        _write(_merge(entries))
+    return {"id": (there or entry)["id"], "qty": n, **came}
+
+
 async def deck_ownership(deck: dict[str, Any], *, card_data: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     """Compare a deck with the collection: per card real/proxy/missing, totals, shopping list."""
     entries = load()

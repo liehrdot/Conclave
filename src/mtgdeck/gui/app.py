@@ -1226,6 +1226,31 @@ async def api_ownership(slug: str) -> dict[str, Any]:
     return await collection.deck_ownership(deck)
 
 
+@app.get("/api/decks/{slug}/copies")
+async def api_deck_copies(slug: str, name: str) -> dict[str, Any]:
+    """One card's collection copies: those in this deck and those at other places (to move them here)."""
+    try:
+        return collection.card_copies(name, slug)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+class CopyMove(BaseModel):
+    id: str = Field(max_length=40)
+    qty: int | None = Field(default=None, ge=1, le=100000)
+
+
+@app.post("/api/decks/{slug}/copies/move")
+async def api_deck_copies_move(slug: str, req: CopyMove) -> dict[str, Any]:
+    """Move copies of a collection entry into this deck (Ort = the deck); returns where they came from for undo."""
+    try:
+        return collection.move_to_deck(req.id, slug, req.qty)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(404, "Eintrag nicht gefunden") from exc
+
+
 @app.get("/api/decks/{slug}/buylist")
 async def api_buylist(slug: str, owned: bool = True, proxies: bool = True) -> dict[str, Any]:
     """Einkaufsliste: the cards still to buy (``owned=false``: the whole deck, no collection check; proxies included

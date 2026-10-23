@@ -1175,6 +1175,20 @@
   </div>
 </dialog>
 
+<dialog id="own-copies" class="dialog own-copies-dialog" aria-labelledby="own-copies-title">
+  <h2 id="own-copies-title">Deine Exemplare</h2>
+  <p id="own-copies-text" class="muted small"></p>
+  <div class="segmented small" role="radiogroup" aria-label="Welche Exemplare?" id="own-copies-filter">
+    <label><input type="radio" name="ownfilter" value="all" checked><span>Alle</span></label>
+    <label><input type="radio" name="ownfilter" value="real"><span>Echt</span></label>
+    <label><input type="radio" name="ownfilter" value="proxy"><span>Proxy</span></label>
+  </div>
+  <div id="own-copies-list" class="own-copies-list"></div>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="own-copies-close">Schließen</button>
+  </div>
+</dialog>
+
 <dialog id="picker" class="dialog">
   <div class="dialog-head">
     <h2 id="picker-title"></h2>
