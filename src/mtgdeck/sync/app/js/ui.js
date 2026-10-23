@@ -26,19 +26,28 @@ function swapOverlay(old, close) {
 // ---------- the visible area: sheets sit on its bottom edge, above the keyboard ----------
 // iOS can make the layout viewport taller than the screen (above all in a Home Screen app), and the keyboard only
 // shrinks the visual viewport – so sheets are placed from visualViewport (--vvt, --vvh), never with bottom: 0.
+// iOS can also keep the keyboard's smaller height after the keyboard went away (after a sheet with a text field, or
+// back from the camera app): without a focused text field and without pinch zoom there is no keyboard, so the
+// full height counts – otherwise a sheet opened then floats halfway up the screen.
 const vv = window.visualViewport;
 let fullH = 0, fullW = 0;
+const typing = () => document.activeElement?.matches?.("input:not([type=checkbox], [type=radio], [type=button], [type=file]), textarea, [contenteditable]");
 function onViewport() {
   if (!vv) return;
-  const root = document.documentElement.style;
-  root.setProperty("--vvt", `${vv.offsetTop}px`);
-  root.setProperty("--vvh", `${vv.height}px`);
   if (vv.width !== fullW) { fullW = vv.width; fullH = 0; }  // turned: measure again
   fullH = Math.max(fullH, vv.height);
-  document.body.classList.toggle("kb-open", fullH - vv.height > 120);
+  const keyboard = typing() || vv.scale > 1.01 ? fullH - vv.height > 120 : false;
+  const root = document.documentElement.style;
+  root.setProperty("--vvt", `${keyboard || vv.scale > 1.01 ? vv.offsetTop : 0}px`);
+  root.setProperty("--vvh", `${keyboard || vv.scale > 1.01 ? vv.height : fullH}px`);
+  document.body.classList.toggle("kb-open", keyboard);
 }
 vv?.addEventListener("resize", onViewport);
 vv?.addEventListener("scroll", onViewport);
+addEventListener("focusin", onViewport);
+addEventListener("focusout", () => setTimeout(onViewport, 0));
+addEventListener("pageshow", onViewport);
+document.addEventListener("visibilitychange", onViewport);
 onViewport();
 
 // content runs under the status bar of an installed app: once scrolled, a quiet backdrop keeps the clock readable
@@ -60,6 +69,7 @@ export function openSheet(render, { full = false, onClose = null } = {}) {
   if (replacing) finishClose(true);
   pages = [render];
   sheetClose = onClose;
+  onViewport();  // measured now, never a stale keyboard height
   d.className = `sheet${full ? " full" : ""} entering`;
   d.removeAttribute("style");
   draw("");
