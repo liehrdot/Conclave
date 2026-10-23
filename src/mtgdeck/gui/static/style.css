@@ -1051,7 +1051,19 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .game-list .res { font-weight: 700; }
 .game-list .place { font-weight: 700; font-variant-numeric: tabular-nums; }
 .game-list .place.first { color: var(--warn); }
-.segmented.places { max-width: 360px; }
+/* finishing places in the game form (like the phone's game sheet) */
+.place-rows { display: grid; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; max-width: 560px; }
+.place-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); }
+.place-row + .place-row { border-top: 1px solid var(--border); }
+.place-row.first { background: var(--warn-soft); }
+.place-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.place-row .first-label { color: var(--warn); font-weight: 700; margin-left: var(--space-2); display: inline-flex; align-items: center; gap: 4px; }
+.place-row .first-label .icon { width: 14px; height: 14px; }
+.place-pick { display: flex; gap: 6px; flex: none; }
+.place-pick button { width: 32px; height: 32px; border-radius: 50%; border: 0; padding: 0; background: var(--surface-2); color: var(--muted); font: inherit; font-weight: 700; cursor: pointer; }
+.place-pick button:hover { box-shadow: inset 0 0 0 1px var(--border-strong); }
+.place-pick button[aria-checked="true"] { background: var(--text); color: var(--bg, #fff); }
+.place-pick button[data-place="1"][aria-checked="true"] { background: #f2b632; color: #241800; }
 .game-list .res.win { color: var(--ok); } .game-list .res.loss { color: var(--bad); } .game-list .res.draw { color: var(--muted); }
 .game-list .meta { color: var(--muted); }
 .game-list .issues { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }

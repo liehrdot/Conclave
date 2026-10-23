@@ -327,7 +327,7 @@ Aufbau (bewusst schlicht: eine Hauptaktion pro Seite, Selteneres eingeklappt):
   - **Partien:** die Bilanz und die gespielten Partien stehen zuerst. „Partie festhalten“ ist zugeklappt, sobald schon Partien da sind – Ergebnis, Gegner-Commander, letzter Zug, was schiefging
     (Schnellwahl wie „zu wenige Länder“, „kein Weg zu gewinnen“), beste Karte, Notiz. Die Bilanz zeigt
     Siegquote, Ø Zug, häufigste Probleme, Ergebnis pro Version, beste Karten und Gegner, dazu die Platzierung
-    (Ø Platz, wie oft welcher Platz) – „Dein Platz“ und der Platz je Gegner stehen im Formular und in der Liste.
+    (Ø Platz, wie oft welcher Platz) – „Platzierung“ im Formular hat wie am Handy eine Zeile je Spieler mit den Plätzen 1 bis N; die Plätze stehen auch in der Liste.
     Partien aus dem Runden-Helfer des Handys haben „Runde ansehen“: Lebenskurve, Commander-Schaden und was in
     jedem Zug passiert ist. Die Bilanz zeigt dazu, wer dir über alle Runden den meisten Schaden gemacht hat und in
     welchem eigenen Zug du im Schnitt am meisten Leben verlierst.

@@ -2671,35 +2671,68 @@ $("#game-form").addEventListener("submit", async (e) => {
   if (!currentDeck) return;
   const f = new FormData(e.target);
   const slots = [1, 2, 3].map((n) => ({ name: (f.get(`opp${n}`) || "").trim(), note: (f.get(`oppnote${n}`) || "").trim(),
-    id: e.target.elements[`opp${n}`].dataset.oid || null, place: Number(f.get(`oppplace${n}`)) || null })).filter((s) => s.name);
+    id: e.target.elements[`opp${n}`].dataset.oid || null, place: gamePlaces[n] })).filter((s) => s.name);
   const body = {
     result: f.get("result"), turn: f.get("turn") ? Number(f.get("turn")) : null, mvp: f.get("mvp") || null,
     opponents: slots.map((s) => s.name), opponent_ids: slots.map((s) => s.id), opponent_notes: slots.map((s) => s.note),
     remember_opponents: !!f.get("remember_opponents"), issues: f.getAll("issues"), note: f.get("note") || "", how: f.get("how") || null,
-    place: Number(f.get("place")) || null, opponent_places: slots.map((s) => s.place),
+    place: slots.length ? gamePlaces.me : null, opponent_places: slots.map((s) => s.place),
   };
   const slug = currentDeck.slug;
   try {
     const data = await api(`/api/decks/${enc(slug)}/games`, { method: "POST", body });
     e.target.reset();
     for (const n of [1, 2, 3]) delete e.target.elements[`opp${n}`].dataset.oid;
+    resetGamePlaces();
     if (currentDeck?.slug === slug) renderGames(slug, data);
     if (body.opponents.length) void refreshOpponents().then(renderKnownOpps);
     toast(body.result === "win" ? "Sieg gespeichert – Glückwunsch!" : "Partie gespeichert.");
   } catch (err) { fail(err); }
 });
-// first place is a win, a later place a loss (a draw stays a draw); a win without a place is first place
-$("#game-form").addEventListener("change", (e) => {
-  const els = e.target.form?.elements;
-  if (!els) return;
-  if (e.target.name === "place" && e.target.value) {
-    const res = els.result.value;
-    if (e.target.value === "1") els.result.value = "win";
-    else if (res !== "draw") els.result.value = "loss";
-  } else if (e.target.name === "result") {
-    if (e.target.value === "win" && !els.place.value && [1, 2, 3].some((n) => els[`opp${n}`].value.trim())) els.place.value = "1";
-    if (e.target.value === "loss" && els.place.value === "1") els.place.value = "";
+// finishing places like the phone's game sheet: one row per player (me + the opponents typed in), places 1..N,
+// ties allowed; with all but one placed on different places the last one gets the place left; my 1st place is a
+// win, a later one a loss (a draw stays a draw), and a win without a place is 1st place
+let gamePlaces = { me: null, 1: null, 2: null, 3: null };
+const gamePlayers = () => {
+  const els = $("#game-form").elements;
+  return [{ key: "me", name: "Ich" }, ...[1, 2, 3].map((n) => ({ key: n, name: els[`opp${n}`].value.trim() })).filter((p) => p.name)];
+};
+function resetGamePlaces() { gamePlaces = { me: null, 1: null, 2: null, 3: null }; renderGamePlaces(); }
+function renderGamePlaces() {
+  const players = gamePlayers();
+  const n = players.length;
+  for (const p of players) if (gamePlaces[p.key] > n) gamePlaces[p.key] = null;
+  $("#game-places-box").hidden = n < 2;
+  $("#game-places").innerHTML = n < 2 ? "" : players.map((p) => `<div class="place-row${gamePlaces[p.key] === 1 ? " first" : ""}" data-who="${p.key}">
+      <span class="place-name">${esc(p.name)}${gamePlaces[p.key] === 1 ? ` <span class="first-label">${icon("trophy")}Gewinner</span>` : ""}</span>
+      <span class="place-pick" role="radiogroup" aria-label="Platz: ${esc(p.name)}">${Array.from({ length: n }, (_, i) => i + 1).map((x) =>
+        `<button type="button" role="radio" data-place="${x}" aria-checked="${gamePlaces[p.key] === x}" aria-label="${x}. Platz">${x}</button>`).join("")}</span>
+    </div>`).join("");
+}
+$("#game-places").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-place]");
+  if (!b) return;
+  const who = b.closest("[data-who]").dataset.who;
+  const key = who === "me" ? "me" : Number(who);
+  const place = Number(b.dataset.place);
+  gamePlaces[key] = gamePlaces[key] === place ? null : place;
+  const players = gamePlayers();
+  const open = players.filter((p) => !gamePlaces[p.key]);
+  const taken = new Set(players.map((p) => gamePlaces[p.key]).filter(Boolean));
+  if (gamePlaces[key] && open.length === 1 && taken.size === players.length - 1) {
+    gamePlaces[open[0].key] = players.map((_, i) => i + 1).find((x) => !taken.has(x));
   }
+  const els = $("#game-form").elements;
+  if (gamePlaces.me === 1) els.result.value = "win";
+  else if (gamePlaces.me && els.result.value !== "draw") els.result.value = "loss";
+  renderGamePlaces();
+});
+$("#game-form").addEventListener("input", (e) => { if (/^opp\d$/.test(e.target.name)) renderGamePlaces(); });
+$("#game-form").addEventListener("change", (e) => {
+  if (e.target.name !== "result") return;
+  if (e.target.value === "win" && !gamePlaces.me && gamePlayers().length > 1) gamePlaces.me = 1;
+  if (e.target.value === "loss" && gamePlaces.me === 1) gamePlaces.me = null;
+  renderGamePlaces();
 });
 $("#game-list").addEventListener("click", async (e) => {
   const b = e.target.closest(".game-del");
@@ -4118,6 +4151,7 @@ $("#game-known-opps").addEventListener("click", (e) => {
   if (!slot) { toast("Alle drei Gegner-Felder sind belegt.", "error"); return; }
   slot.value = o.commanders.join(" + ").split(" + ")[0];
   slot.dataset.oid = o.id;
+  renderGamePlaces();
   els[slot.name.replace("opp", "oppnote")].focus();
 });
 for (const n of [1, 2, 3]) {
