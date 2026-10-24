@@ -348,8 +348,8 @@ def cors_origins() -> list[str]:
     return [o.strip().rstrip("/") for o in items if o.strip()]
 
 
-class _Cors:
-    """CORS for ``CORS_PATHS`` only; every other route stays same-origin."""
+class Cors:
+    """CORS for ``CORS_PATHS`` only; every other route stays same-origin. Conclave Cloud wraps itself in it too."""
 
     def __init__(self, app: Any, origins: list[str]) -> None:
         self.app = app
@@ -391,7 +391,7 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
     app.state.store, app.state.devices = store, devices
     origins = cors_origins()
     if origins:
-        app.add_middleware(_Cors, origins=origins)
+        app.add_middleware(Cors, origins=origins)
 
     @app.middleware("http")
     async def _headers(request: Request, call_next: Any) -> Any:
