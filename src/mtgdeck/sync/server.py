@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -55,6 +56,12 @@ MAX_INFO_BYTES = 4096
 CLAIM_FAILS, CLAIM_WINDOW = 20, 600  # at most 20 wrong codes per 10 minutes
 BACKUP_KEEP = 14
 AI_CACHE_DAYS, AI_CACHE_MAX = 180, 5000  # remembered AI card searches (same description + model = no new request)
+# Other web apps that may use the phone app's API from their own address (CORS), e.g. the life counter
+# Conclave Table: pairing, the read model, the ops and signing itself off. Tokens go in the Authorization
+# header, never cookies, so a page elsewhere still needs a device token of its own. MTG_SYNC_CORS_ORIGINS
+# replaces the list (comma-separated; empty = none).
+CORS_ORIGINS = ("https://conclave-table.duckdns.org",)
+CORS_PATHS = ("/api/pair/claim", "/api/app/data", "/api/app/status", "/api/app/ops", "/api/devices/")
 APP_DIR = Path(__file__).parent / "app"  # the phone app ("Am Tisch"), served under /app/
 OCR_DIR = "tesseract"  # vendor/tesseract: the card scanner's text recognition (~6 MB) – loaded when used, never precached
 # connect-src lists the image CDN too: the service worker (which gets this header with sw.js) fetches the card images;
@@ -335,6 +342,28 @@ def _qr_svg(text: str) -> str | None:
     return segno.make(text, error="m").svg_inline(scale=5, border=2, dark="#000", light="#fff", omitsize=True)
 
 
+def cors_origins() -> list[str]:
+    raw = os.environ.get("MTG_SYNC_CORS_ORIGINS")
+    items = CORS_ORIGINS if raw is None else raw.split(",")
+    return [o.strip().rstrip("/") for o in items if o.strip()]
+
+
+class _Cors:
+    """CORS for ``CORS_PATHS`` only; every other route stays same-origin."""
+
+    def __init__(self, app: Any, origins: list[str]) -> None:
+        self.app = app
+        self.cors = CORSMiddleware(app, allow_origins=origins, allow_methods=["GET", "POST", "DELETE"],
+                                   allow_headers=["Authorization", "Content-Type", "If-None-Match"],
+                                   expose_headers=["ETag"], max_age=600)  # fmt: skip
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] == "http" and scope["path"].startswith(CORS_PATHS):
+            await self.cors(scope, receive, send)
+        else:
+            await self.app(scope, receive, send)
+
+
 def create_app(data: Path | None = None, public_url: str | None = None) -> FastAPI:
     folder = Path(data) if data else data_dir()
     db_file = folder / "sync.sqlite"
@@ -360,6 +389,9 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
 
     app = FastAPI(title="Conclave Sync", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.store, app.state.devices = store, devices
+    origins = cors_origins()
+    if origins:
+        app.add_middleware(_Cors, origins=origins)
 
     @app.middleware("http")
     async def _headers(request: Request, call_next: Any) -> Any:
