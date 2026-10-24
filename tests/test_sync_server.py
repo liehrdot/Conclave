@@ -346,3 +346,39 @@ def test_restore_takes_only_backups_from_the_backup_folder(tmp_path):
     for given in ("fehlt.sqlite", str(tmp_path / "sync-20261001.sqlite"), "../backups/sync-20261001.sqlite"):
         with pytest.raises(SystemExit):
             _find_backup(folder, given)
+
+
+TABLE = "https://conclave-table.duckdns.org"
+
+
+def test_cors_lets_conclave_table_pair_and_read(tmp_path, monkeypatch):
+    monkeypatch.delenv("MTG_SYNC_CORS_ORIGINS", raising=False)
+    app = create_app(tmp_path / "server")
+    client = TestClient(app)
+    pre = client.options("/api/pair/claim", headers={"Origin": TABLE, "Access-Control-Request-Method": "POST",
+                                                     "Access-Control-Request-Headers": "content-type"})  # fmt: skip
+    assert pre.status_code == 200 and pre.headers["access-control-allow-origin"] == TABLE
+    code = app.state.devices.new_code(by="console")["code"]
+    got = client.post("/api/pair/claim", json={"code": code, "name": "Table", "kind": "other"}, headers={"Origin": TABLE})
+    assert got.headers["access-control-allow-origin"] == TABLE
+    auth = {"Authorization": f"Bearer {got.json()['token']}", "Origin": TABLE}
+    data = client.get("/api/app/data", headers=auth)
+    assert data.status_code == 200 and data.headers["access-control-allow-origin"] == TABLE
+    assert "etag" in data.headers["access-control-expose-headers"].lower()
+    # other origins and other routes get nothing
+    other = client.get("/api/app/data", headers={**auth, "Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in other.headers
+    sync = client.get("/api/sync/changes", headers=auth)
+    assert "access-control-allow-origin" not in sync.headers
+
+
+def test_cors_origins_from_env(tmp_path, monkeypatch):
+    monkeypatch.setenv("MTG_SYNC_CORS_ORIGINS", "")
+    client = TestClient(create_app(tmp_path / "server"))
+    assert "access-control-allow-origin" not in client.get("/api/health", headers={"Origin": TABLE}).headers
+    pre = client.options("/api/app/data", headers={"Origin": TABLE, "Access-Control-Request-Method": "GET"})
+    assert "access-control-allow-origin" not in pre.headers
+    monkeypatch.setenv("MTG_SYNC_CORS_ORIGINS", "https://table.example/, https://other.example")
+    client = TestClient(create_app(tmp_path / "server2"))
+    got = client.get("/api/app/status", headers={"Origin": "https://table.example"})
+    assert got.headers["access-control-allow-origin"] == "https://table.example"

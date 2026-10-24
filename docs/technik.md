@@ -464,6 +464,7 @@ Der Button unter „Einstellungen → Kartendatenbank“ lädt die Scryfall-Bulk
 | `MTG_SYNC_DIR` | `./.sync` | Sync-Zustand dieses Geräts (Verbindung, Stand, Basisdateien, Konfliktprotokoll) |
 | `MTG_SYNC_AUTO` | `1` | `0` = kein automatischer Abgleich im Hintergrund (nur per Knopf) |
 | `MTG_SYNC_DATA` / `MTG_SYNC_PUBLIC_URL` / `MTG_SYNC_HOST` / `MTG_SYNC_PORT` | `./sync-data` / – / `0.0.0.0` / `8080` | nur der Sync-Server (`mtg-sync-server`) |
+| `MTG_SYNC_CORS_ORIGINS` | `https://conclave-table.duckdns.org` | Sync-Server: Web-Apps anderer Adressen, die koppeln und die App-API nutzen dürfen (Komma-Liste, leer = keine) |
 | `MTG_AI_KEY` / `MTG_AI_MODEL` / `MTG_AI_URL` | – / `claude-haiku-5-5` / `https://api.anthropic.com/v1` | Sync-Server: Claude-API-Schlüssel und Modell für die Kartensuche mit KI im Handy (sonst in der Handy-App einstellbar); die Adresse nur für Tests |
 | `MTG_AUTOFILL_PATH` / `MTG_MPCFILL_SERVER` / `MTG_CARDBACK` / `MTG_UPSCALER_PATH` | – | überschreiben die Proxy-Einstellungen (`mtgdeck.settings.json`) |
 | `MTG_GUI_HOST` / `MTG_GUI_PORT` | `127.0.0.1` / `8765` | GUI-Adresse |
