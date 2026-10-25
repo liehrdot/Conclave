@@ -1,0 +1,4571 @@
+{
+ "about": "See docs/app-api.md; written by scripts/app_fixtures.py.",
+ "bases": {
+  "collection-update-merge": {
+   "collection": [
+    {
+     "collector_number": null,
+     "foil": false,
+     "id": "c2",
+     "lang": "en",
+     "name": "Forest",
+     "place": "",
+     "place_deck": "meren",
+     "price_eur": null,
+     "proxy": false,
+     "qty": 10,
+     "scryfall_id": null,
+     "set": null,
+     "set_name": null
+    },
+    {
+     "collector_number": "263",
+     "foil": false,
+     "id": "c1",
+     "lang": "en",
+     "name": "Sol Ring",
+     "place": "Binder",
+     "place_deck": "",
+     "price_eur": "1.20",
+     "proxy": false,
+     "qty": 2,
+     "scryfall_id": "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021",
+     "set": "c21",
+     "set_name": "Commander 2021"
+    },
+    {
+     "collector_number": "263",
+     "foil": false,
+     "id": "c4x",
+     "lang": "en",
+     "name": "Sol Ring",
+     "place": "Kiste",
+     "place_deck": "",
+     "price_eur": "1.20",
+     "proxy": false,
+     "qty": 1,
+     "scryfall_id": "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021",
+     "set": "c21",
+     "set_name": "Commander 2021"
+    }
+   ],
+   "decks": [
+    {
+     "bracket": 2,
+     "cards": [
+      {
+       "category": "Ramp",
+       "name": "Sol Ring",
+       "qty": 1
+      }
+     ],
+     "checking": false,
+     "colors": "RWB",
+     "commanders": [
+      "Kaalia of the Vast"
+     ],
+     "description": "",
+     "legal": true,
+     "level": "Bracket 2",
+     "maybe": [],
+     "name": "Kaalia",
+     "pin_rank": 0,
+     "pinned": true,
+     "proxy": false,
+     "record": {
+      "draws": 0,
+      "games": 0,
+      "last": null,
+      "losses": 0,
+      "wins": 0
+     },
+     "rule0": {
+      "rows": [
+       {
+        "flag": false,
+        "label": "Stufe",
+        "value": "Bracket 2 (Core)"
+       },
+       {
+        "flag": false,
+        "label": "Commander",
+        "value": "Kaalia of the Vast"
+       },
+       {
+        "flag": false,
+        "label": "Tempo",
+        "value": "frühestes Spielende nach Bracket: Zug 8+"
+       },
+       {
+        "flag": false,
+        "label": "Game Changer",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "2-Karten-Combos",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Tutoren",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Extra-Züge",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Land-Zerstörung",
+        "value": "keine"
+       }
+      ],
+      "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+     },
+     "shelved": false,
+     "slug": "kaalia",
+     "speed": null,
+     "tier": null,
+     "updated": "2026-09-05T10:00:00+00:00",
+     "version": 1
+    },
+    {
+     "bracket": 3,
+     "cards": [
+      {
+       "category": "Land",
+       "name": "Forest",
+       "qty": 30
+      },
+      {
+       "category": "Ramp",
+       "name": "Sakura-Tribe Elder",
+       "qty": 1
+      },
+      {
+       "category": "Ramp",
+       "name": "Sol Ring",
+       "qty": 1
+      }
+     ],
+     "checking": false,
+     "colors": "BG",
+     "commanders": [
+      "Meren of Clan Nel Toth"
+     ],
+     "description": "Opfern und zurückholen.",
+     "legal": true,
+     "level": "oberes Bracket 3",
+     "maybe": [
+      {
+       "category": "Draw",
+       "name": "Grim Backwoods"
+      }
+     ],
+     "name": "Meren",
+     "pin_rank": null,
+     "pinned": false,
+     "proxy": false,
+     "record": {
+      "draws": 0,
+      "games": 1,
+      "last": "2026-10-02T20:00:00+00:00",
+      "losses": 0,
+      "wins": 1
+     },
+     "rule0": {
+      "rows": [
+       {
+        "flag": false,
+        "label": "Stufe",
+        "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+       },
+       {
+        "flag": false,
+        "label": "Commander",
+        "value": "Meren of Clan Nel Toth"
+       },
+       {
+        "flag": false,
+        "label": "Spielweise",
+        "value": "Opfern und zurückholen."
+       },
+       {
+        "flag": false,
+        "label": "Tempo",
+        "value": "frühestes Spielende nach Bracket: Zug 6+"
+       },
+       {
+        "flag": false,
+        "label": "Game Changer",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "2-Karten-Combos",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Tutoren",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Extra-Züge",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Land-Zerstörung",
+        "value": "keine"
+       }
+      ],
+      "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+     },
+     "shelved": false,
+     "slug": "meren",
+     "speed": null,
+     "tier": "high",
+     "updated": "2026-10-01T10:00:00+00:00",
+     "version": 2
+    }
+   ],
+   "games": [
+    {
+     "deck": "meren",
+     "id": "g1",
+     "issues": [],
+     "mvp": null,
+     "note": "",
+     "opponent_ids": [
+      "o1"
+     ],
+     "opponents": [
+      "Atraxa, Praetors' Voice"
+     ],
+     "played": "2026-10-02T20:00:00+00:00",
+     "result": "win",
+     "turn": 9,
+     "version": 2
+    }
+   ],
+   "opponents": [
+    {
+     "bracket": 4,
+     "colors": "WUBG",
+     "commanders": [
+      "Atraxa, Praetors' Voice"
+     ],
+     "created": "2026-09-01T00:00:00+00:00",
+     "id": "o1",
+     "label": "",
+     "notes": [
+      {
+       "at": "2026-10-02T21:00:00+00:00",
+       "deck_slug": "meren",
+       "game_id": "g1",
+       "id": "n1",
+       "text": "Hält Interaktion für Meren zurück"
+      }
+     ],
+     "player": "Tim",
+     "record": {
+      "draws": 0,
+      "games": 1,
+      "last": "2026-10-02T20:00:00+00:00",
+      "losses": 0,
+      "per_deck": [
+       {
+        "games": 1,
+        "losses": 0,
+        "name": "Meren",
+        "slug": "meren",
+        "wins": 1
+       }
+      ],
+      "wins": 1
+     },
+     "tags": [
+      "combo"
+     ],
+     "title": "Atraxa, Praetors' Voice",
+     "updated": "2026-10-02T21:00:00+00:00"
+    },
+    {
+     "bracket": null,
+     "colors": "R",
+     "commanders": [
+      "Krenko, Mob Boss"
+     ],
+     "created": "2026-09-01T00:00:00+00:00",
+     "id": "o2",
+     "label": "Goblins",
+     "notes": [],
+     "player": "Lisa",
+     "record": {
+      "draws": 0,
+      "games": 0,
+      "last": null,
+      "losses": 0,
+      "per_deck": [],
+      "wins": 0
+     },
+     "tags": [],
+     "title": "Goblins (Krenko, Mob Boss)",
+     "updated": "2026-09-01T00:00:00+00:00"
+    }
+   ],
+   "options": {
+    "how": [
+     [
+      "combat",
+      "Kampfschaden"
+     ],
+     [
+      "commander",
+      "Commander-Schaden"
+     ],
+     [
+      "combo",
+      "Combo"
+     ],
+     [
+      "alt",
+      "alternative Siegbedingung"
+     ],
+     [
+      "concede",
+      "Aufgabe"
+     ],
+     [
+      "other",
+      "anders"
+     ]
+    ],
+    "issues": [
+     [
+      "few_lands",
+      "zu wenige Länder"
+     ],
+     [
+      "flood",
+      "zu viele Länder gezogen"
+     ],
+     [
+      "colors",
+      "falsche Farben / Farbprobleme"
+     ],
+     [
+      "slow",
+      "zu langsam"
+     ],
+     [
+      "no_draw",
+      "Hand leer, zu wenig Kartenzug"
+     ],
+     [
+      "no_removal",
+      "keine Antwort auf Bedrohungen"
+     ],
+     [
+      "wiped",
+      "Board Wipe hat mich zurückgeworfen"
+     ],
+     [
+      "commander_removed",
+      "Commander ständig entfernt"
+     ],
+     [
+      "no_win",
+      "kein Weg zu gewinnen"
+     ],
+     [
+      "combo",
+      "gegen eine Combo verloren"
+     ],
+     [
+      "fliers",
+      "gegen Flieger / Ausweichen verloren"
+     ],
+     [
+      "too_strong",
+      "Deck war zu stark für die Runde"
+     ]
+    ],
+    "results": {
+     "draw": "Unentschieden",
+     "loss": "Niederlage",
+     "win": "Sieg"
+    },
+    "tags": [
+     [
+      "combo",
+      "Combo"
+     ],
+     [
+      "fast",
+      "schnell & aggressiv"
+     ],
+     [
+      "stax",
+      "Stax / Lock"
+     ],
+     [
+      "wipes",
+      "viele Board Wipes"
+     ],
+     [
+      "counters",
+      "viele Counterspells"
+     ],
+     [
+      "removal",
+      "viel Removal"
+     ],
+     [
+      "fliers",
+      "Flieger"
+     ],
+     [
+      "tokens",
+      "Token-Schwärme"
+     ],
+     [
+      "graveyard",
+      "Friedhof / Reanimation"
+     ],
+     [
+      "lifegain",
+      "Lifegain"
+     ],
+     [
+      "voltron",
+      "Voltron / Commander-Schaden"
+     ],
+     [
+      "artifacts",
+      "Artefakte"
+     ],
+     [
+      "spells",
+      "Spellslinger"
+     ],
+     [
+      "theft",
+      "Diebstahl / Kontrolle"
+     ],
+     [
+      "lands",
+      "Landzerstörung"
+     ],
+     [
+      "politics",
+      "Politik / Gruppenspiel"
+     ]
+    ]
+   },
+   "players": [
+    "Lisa",
+    "Tim"
+   ],
+   "version": 1
+  },
+  "default": {
+   "collection": [
+    {
+     "collector_number": null,
+     "foil": false,
+     "id": "c2",
+     "lang": "en",
+     "name": "Forest",
+     "place": "",
+     "place_deck": "meren",
+     "price_eur": null,
+     "proxy": false,
+     "qty": 10,
+     "scryfall_id": null,
+     "set": null,
+     "set_name": null
+    },
+    {
+     "collector_number": "263",
+     "foil": false,
+     "id": "c1",
+     "lang": "en",
+     "name": "Sol Ring",
+     "place": "Binder",
+     "place_deck": "",
+     "price_eur": "1.20",
+     "proxy": false,
+     "qty": 2,
+     "scryfall_id": "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021",
+     "set": "c21",
+     "set_name": "Commander 2021"
+    }
+   ],
+   "decks": [
+    {
+     "bracket": 2,
+     "cards": [
+      {
+       "category": "Ramp",
+       "name": "Sol Ring",
+       "qty": 1
+      }
+     ],
+     "checking": false,
+     "colors": "RWB",
+     "commanders": [
+      "Kaalia of the Vast"
+     ],
+     "description": "",
+     "legal": true,
+     "level": "Bracket 2",
+     "maybe": [],
+     "name": "Kaalia",
+     "pin_rank": 0,
+     "pinned": true,
+     "proxy": false,
+     "record": {
+      "draws": 0,
+      "games": 0,
+      "last": null,
+      "losses": 0,
+      "wins": 0
+     },
+     "rule0": {
+      "rows": [
+       {
+        "flag": false,
+        "label": "Stufe",
+        "value": "Bracket 2 (Core)"
+       },
+       {
+        "flag": false,
+        "label": "Commander",
+        "value": "Kaalia of the Vast"
+       },
+       {
+        "flag": false,
+        "label": "Tempo",
+        "value": "frühestes Spielende nach Bracket: Zug 8+"
+       },
+       {
+        "flag": false,
+        "label": "Game Changer",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "2-Karten-Combos",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Tutoren",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Extra-Züge",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Land-Zerstörung",
+        "value": "keine"
+       }
+      ],
+      "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+     },
+     "shelved": false,
+     "slug": "kaalia",
+     "speed": null,
+     "tier": null,
+     "updated": "2026-09-05T10:00:00+00:00",
+     "version": 1
+    },
+    {
+     "bracket": 3,
+     "cards": [
+      {
+       "category": "Land",
+       "name": "Forest",
+       "qty": 30
+      },
+      {
+       "category": "Ramp",
+       "name": "Sakura-Tribe Elder",
+       "qty": 1
+      },
+      {
+       "category": "Ramp",
+       "name": "Sol Ring",
+       "qty": 1
+      }
+     ],
+     "checking": false,
+     "colors": "BG",
+     "commanders": [
+      "Meren of Clan Nel Toth"
+     ],
+     "description": "Opfern und zurückholen.",
+     "legal": true,
+     "level": "oberes Bracket 3",
+     "maybe": [
+      {
+       "category": "Draw",
+       "name": "Grim Backwoods"
+      }
+     ],
+     "name": "Meren",
+     "pin_rank": null,
+     "pinned": false,
+     "proxy": false,
+     "record": {
+      "draws": 0,
+      "games": 1,
+      "last": "2026-10-02T20:00:00+00:00",
+      "losses": 0,
+      "wins": 1
+     },
+     "rule0": {
+      "rows": [
+       {
+        "flag": false,
+        "label": "Stufe",
+        "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+       },
+       {
+        "flag": false,
+        "label": "Commander",
+        "value": "Meren of Clan Nel Toth"
+       },
+       {
+        "flag": false,
+        "label": "Spielweise",
+        "value": "Opfern und zurückholen."
+       },
+       {
+        "flag": false,
+        "label": "Tempo",
+        "value": "frühestes Spielende nach Bracket: Zug 6+"
+       },
+       {
+        "flag": false,
+        "label": "Game Changer",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "2-Karten-Combos",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Tutoren",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Extra-Züge",
+        "value": "keine"
+       },
+       {
+        "flag": false,
+        "label": "Land-Zerstörung",
+        "value": "keine"
+       }
+      ],
+      "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+     },
+     "shelved": false,
+     "slug": "meren",
+     "speed": null,
+     "tier": "high",
+     "updated": "2026-10-01T10:00:00+00:00",
+     "version": 2
+    }
+   ],
+   "games": [
+    {
+     "deck": "meren",
+     "id": "g1",
+     "issues": [],
+     "mvp": null,
+     "note": "",
+     "opponent_ids": [
+      "o1"
+     ],
+     "opponents": [
+      "Atraxa, Praetors' Voice"
+     ],
+     "played": "2026-10-02T20:00:00+00:00",
+     "result": "win",
+     "turn": 9,
+     "version": 2
+    }
+   ],
+   "opponents": [
+    {
+     "bracket": 4,
+     "colors": "WUBG",
+     "commanders": [
+      "Atraxa, Praetors' Voice"
+     ],
+     "created": "2026-09-01T00:00:00+00:00",
+     "id": "o1",
+     "label": "",
+     "notes": [
+      {
+       "at": "2026-10-02T21:00:00+00:00",
+       "deck_slug": "meren",
+       "game_id": "g1",
+       "id": "n1",
+       "text": "Hält Interaktion für Meren zurück"
+      }
+     ],
+     "player": "Tim",
+     "record": {
+      "draws": 0,
+      "games": 1,
+      "last": "2026-10-02T20:00:00+00:00",
+      "losses": 0,
+      "per_deck": [
+       {
+        "games": 1,
+        "losses": 0,
+        "name": "Meren",
+        "slug": "meren",
+        "wins": 1
+       }
+      ],
+      "wins": 1
+     },
+     "tags": [
+      "combo"
+     ],
+     "title": "Atraxa, Praetors' Voice",
+     "updated": "2026-10-02T21:00:00+00:00"
+    },
+    {
+     "bracket": null,
+     "colors": "R",
+     "commanders": [
+      "Krenko, Mob Boss"
+     ],
+     "created": "2026-09-01T00:00:00+00:00",
+     "id": "o2",
+     "label": "Goblins",
+     "notes": [],
+     "player": "Lisa",
+     "record": {
+      "draws": 0,
+      "games": 0,
+      "last": null,
+      "losses": 0,
+      "per_deck": [],
+      "wins": 0
+     },
+     "tags": [],
+     "title": "Goblins (Krenko, Mob Boss)",
+     "updated": "2026-09-01T00:00:00+00:00"
+    }
+   ],
+   "options": {
+    "how": [
+     [
+      "combat",
+      "Kampfschaden"
+     ],
+     [
+      "commander",
+      "Commander-Schaden"
+     ],
+     [
+      "combo",
+      "Combo"
+     ],
+     [
+      "alt",
+      "alternative Siegbedingung"
+     ],
+     [
+      "concede",
+      "Aufgabe"
+     ],
+     [
+      "other",
+      "anders"
+     ]
+    ],
+    "issues": [
+     [
+      "few_lands",
+      "zu wenige Länder"
+     ],
+     [
+      "flood",
+      "zu viele Länder gezogen"
+     ],
+     [
+      "colors",
+      "falsche Farben / Farbprobleme"
+     ],
+     [
+      "slow",
+      "zu langsam"
+     ],
+     [
+      "no_draw",
+      "Hand leer, zu wenig Kartenzug"
+     ],
+     [
+      "no_removal",
+      "keine Antwort auf Bedrohungen"
+     ],
+     [
+      "wiped",
+      "Board Wipe hat mich zurückgeworfen"
+     ],
+     [
+      "commander_removed",
+      "Commander ständig entfernt"
+     ],
+     [
+      "no_win",
+      "kein Weg zu gewinnen"
+     ],
+     [
+      "combo",
+      "gegen eine Combo verloren"
+     ],
+     [
+      "fliers",
+      "gegen Flieger / Ausweichen verloren"
+     ],
+     [
+      "too_strong",
+      "Deck war zu stark für die Runde"
+     ]
+    ],
+    "results": {
+     "draw": "Unentschieden",
+     "loss": "Niederlage",
+     "win": "Sieg"
+    },
+    "tags": [
+     [
+      "combo",
+      "Combo"
+     ],
+     [
+      "fast",
+      "schnell & aggressiv"
+     ],
+     [
+      "stax",
+      "Stax / Lock"
+     ],
+     [
+      "wipes",
+      "viele Board Wipes"
+     ],
+     [
+      "counters",
+      "viele Counterspells"
+     ],
+     [
+      "removal",
+      "viel Removal"
+     ],
+     [
+      "fliers",
+      "Flieger"
+     ],
+     [
+      "tokens",
+      "Token-Schwärme"
+     ],
+     [
+      "graveyard",
+      "Friedhof / Reanimation"
+     ],
+     [
+      "lifegain",
+      "Lifegain"
+     ],
+     [
+      "voltron",
+      "Voltron / Commander-Schaden"
+     ],
+     [
+      "artifacts",
+      "Artefakte"
+     ],
+     [
+      "spells",
+      "Spellslinger"
+     ],
+     [
+      "theft",
+      "Diebstahl / Kontrolle"
+     ],
+     [
+      "lands",
+      "Landzerstörung"
+     ],
+     [
+      "politics",
+      "Politik / Gruppenspiel"
+     ]
+    ]
+   },
+   "players": [
+    "Lisa",
+    "Tim"
+   ],
+   "version": 1
+  }
+ },
+ "cases": [
+  {
+   "about": "A game against an opponent deck picked by id; its note goes to that opponent.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 2,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 0,
+      "pinned": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     },
+     {
+      "bracket": 3,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder",
+        "qty": 1
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 2,
+       "last": "2026-10-10T20:00:00+00:00",
+       "losses": 1,
+       "wins": 1
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-01T10:00:00+00:00",
+      "version": 2
+     }
+    ],
+    "games": [
+     {
+      "deck": "meren",
+      "how": "combo",
+      "id": "g2",
+      "issues": [],
+      "mvp": null,
+      "note": "",
+      "opponent_ids": [
+       "o1"
+      ],
+      "opponent_places": [
+       1
+      ],
+      "opponents": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "place": 2,
+      "played": "2026-10-10T20:00:00+00:00",
+      "result": "loss",
+      "turn": 11,
+      "version": 2
+     },
+     {
+      "deck": "meren",
+      "id": "g1",
+      "issues": [],
+      "mvp": null,
+      "note": "",
+      "opponent_ids": [
+       "o1"
+      ],
+      "opponents": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "played": "2026-10-02T20:00:00+00:00",
+      "result": "win",
+      "turn": 9,
+      "version": 2
+     }
+    ],
+    "opponents": [
+     {
+      "bracket": 4,
+      "colors": "WUBG",
+      "commanders": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o1",
+      "label": "",
+      "notes": [
+       {
+        "at": "2026-10-02T21:00:00+00:00",
+        "deck_slug": "meren",
+        "game_id": "g1",
+        "id": "n1",
+        "text": "Hält Interaktion für Meren zurück"
+       }
+      ],
+      "player": "Tim",
+      "record": {
+       "draws": 0,
+       "games": 2,
+       "last": "2026-10-10T20:00:00+00:00",
+       "losses": 1,
+       "per_deck": [
+        {
+         "games": 2,
+         "losses": 1,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [
+       "combo"
+      ],
+      "title": "Atraxa, Praetors' Voice",
+      "updated": "2026-10-10T20:00:00+00:00"
+     },
+     {
+      "bracket": null,
+      "colors": "R",
+      "commanders": [
+       "Krenko, Mob Boss"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o2",
+      "label": "Goblins",
+      "notes": [],
+      "player": "Lisa",
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "per_deck": [],
+       "wins": 0
+      },
+      "tags": [],
+      "title": "Goblins (Krenko, Mob Boss)",
+      "updated": "2026-09-01T00:00:00+00:00"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "game-add-known-opponent",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-game-add-known-opponent",
+    "payload": {
+     "game": {
+      "deck": "meren",
+      "how": "combo",
+      "id": "g2",
+      "place": 2,
+      "result": "loss",
+      "turn": 11
+     },
+     "opponents": [
+      {
+       "commander": "Atraxa, Praetors' Voice",
+       "id": "o1",
+       "place": 1
+      }
+     ]
+    },
+    "type": "game.add"
+   }
+  },
+  {
+   "about": "No id: the newest opponent deck with this commander is linked, a new one is made for an unknown commander.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 2,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 0,
+      "pinned": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     },
+     {
+      "bracket": 3,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder",
+        "qty": 1
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 2,
+       "last": "2026-10-10T20:00:00+00:00",
+       "losses": 0,
+       "wins": 2
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-01T10:00:00+00:00",
+      "version": 2
+     }
+    ],
+    "games": [
+     {
+      "deck": "meren",
+      "id": "g3",
+      "issues": [],
+      "mvp": null,
+      "note": "",
+      "opponent_ids": [
+       "o2",
+       "o9"
+      ],
+      "opponent_places": [
+       2,
+       3
+      ],
+      "opponents": [
+       "Krenko, Mob Boss",
+       "Edgar Markov"
+      ],
+      "place": 1,
+      "played": "2026-10-10T20:00:00+00:00",
+      "result": "win",
+      "started": "me",
+      "turn": null,
+      "version": 2
+     },
+     {
+      "deck": "meren",
+      "id": "g1",
+      "issues": [],
+      "mvp": null,
+      "note": "",
+      "opponent_ids": [
+       "o1"
+      ],
+      "opponents": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "played": "2026-10-02T20:00:00+00:00",
+      "result": "win",
+      "turn": 9,
+      "version": 2
+     }
+    ],
+    "opponents": [
+     {
+      "bracket": null,
+      "colors": "R",
+      "commanders": [
+       "Krenko, Mob Boss"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o2",
+      "label": "Goblins",
+      "notes": [],
+      "player": "Lisa",
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-10T20:00:00+00:00",
+       "losses": 0,
+       "per_deck": [
+        {
+         "games": 1,
+         "losses": 0,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [],
+      "title": "Goblins (Krenko, Mob Boss)",
+      "updated": "2026-10-10T20:00:00+00:00"
+     },
+     {
+      "bracket": null,
+      "colors": "WBR",
+      "commanders": [
+       "Edgar Markov"
+      ],
+      "created": "2026-10-10T20:00:00+00:00",
+      "id": "o9",
+      "label": "",
+      "notes": [],
+      "player": "",
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-10T20:00:00+00:00",
+       "losses": 0,
+       "per_deck": [
+        {
+         "games": 1,
+         "losses": 0,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [],
+      "title": "Edgar Markov",
+      "updated": "2026-10-10T20:00:00+00:00"
+     },
+     {
+      "bracket": 4,
+      "colors": "WUBG",
+      "commanders": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o1",
+      "label": "",
+      "notes": [
+       {
+        "at": "2026-10-02T21:00:00+00:00",
+        "deck_slug": "meren",
+        "game_id": "g1",
+        "id": "n1",
+        "text": "Hält Interaktion für Meren zurück"
+       }
+      ],
+      "player": "Tim",
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "per_deck": [
+        {
+         "games": 1,
+         "losses": 0,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [
+       "combo"
+      ],
+      "title": "Atraxa, Praetors' Voice",
+      "updated": "2026-10-02T21:00:00+00:00"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "game-add-by-commander",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-game-add-by-commander",
+    "payload": {
+     "game": {
+      "deck": "meren",
+      "id": "g3",
+      "place": 1,
+      "result": "win",
+      "started": "me"
+     },
+     "opponents": [
+      {
+       "commander": "Krenko, Mob Boss",
+       "place": 2
+      },
+      {
+       "colors": "RWB",
+       "commander": "Edgar Markov",
+       "new_id": "o9",
+       "place": 3
+      }
+     ]
+    },
+    "type": "game.add"
+   }
+  },
+  {
+   "about": "A game with its round log, as Conclave Table sends it.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 2,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 0,
+      "pinned": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     },
+     {
+      "bracket": 3,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder",
+        "qty": 1
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 2,
+       "last": "2026-10-10T20:00:00+00:00",
+       "losses": 0,
+       "wins": 2
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-01T10:00:00+00:00",
+      "version": 2
+     }
+    ],
+    "games": [
+     {
+      "deck": "meren",
+      "id": "g4",
+      "issues": [],
+      "mvp": null,
+      "note": "",
+      "opponent_ids": [
+       "o2"
+      ],
+      "opponents": [
+       "Krenko, Mob Boss"
+      ],
+      "played": "2026-10-10T20:00:00+00:00",
+      "result": "win",
+      "round": {
+       "cmd": [
+        {
+         "dmg": 9,
+         "name": "Krenko, Mob Boss"
+        }
+       ],
+       "ended": "2026-10-10T20:00:00+00:00",
+       "events": [
+        {
+         "at": "2026-10-10T19:20:00+00:00",
+         "delta": -5,
+         "kind": "life",
+         "life": 35,
+         "turn": 3
+        },
+        {
+         "at": "2026-10-10T19:40:00+00:00",
+         "delta": -9,
+         "from": "Krenko, Mob Boss",
+         "kind": "cmd",
+         "life": 26,
+         "turn": 5
+        }
+       ],
+       "life": 12,
+       "poison": 0,
+       "start_life": 40,
+       "started": "2026-10-10T19:00:00+00:00",
+       "turns": 7
+      },
+      "turn": null,
+      "version": 2
+     },
+     {
+      "deck": "meren",
+      "id": "g1",
+      "issues": [],
+      "mvp": null,
+      "note": "",
+      "opponent_ids": [
+       "o1"
+      ],
+      "opponents": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "played": "2026-10-02T20:00:00+00:00",
+      "result": "win",
+      "turn": 9,
+      "version": 2
+     }
+    ],
+    "opponents": [
+     {
+      "bracket": null,
+      "colors": "R",
+      "commanders": [
+       "Krenko, Mob Boss"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o2",
+      "label": "Goblins",
+      "notes": [],
+      "player": "Lisa",
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-10T20:00:00+00:00",
+       "losses": 0,
+       "per_deck": [
+        {
+         "games": 1,
+         "losses": 0,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [],
+      "title": "Goblins (Krenko, Mob Boss)",
+      "updated": "2026-10-10T20:00:00+00:00"
+     },
+     {
+      "bracket": 4,
+      "colors": "WUBG",
+      "commanders": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o1",
+      "label": "",
+      "notes": [
+       {
+        "at": "2026-10-02T21:00:00+00:00",
+        "deck_slug": "meren",
+        "game_id": "g1",
+        "id": "n1",
+        "text": "Hält Interaktion für Meren zurück"
+       }
+      ],
+      "player": "Tim",
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "per_deck": [
+        {
+         "games": 1,
+         "losses": 0,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [
+       "combo"
+      ],
+      "title": "Atraxa, Praetors' Voice",
+      "updated": "2026-10-02T21:00:00+00:00"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "game-add-with-round",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-game-add-with-round",
+    "payload": {
+     "game": {
+      "deck": "meren",
+      "id": "g4",
+      "result": "win",
+      "round": {
+       "cmd": [
+        {
+         "dmg": 9,
+         "name": "Krenko, Mob Boss"
+        }
+       ],
+       "ended": "2026-10-10T20:00:00+00:00",
+       "events": [
+        {
+         "at": "2026-10-10T19:20:00+00:00",
+         "delta": -5,
+         "kind": "life",
+         "life": 35,
+         "turn": 3
+        },
+        {
+         "at": "2026-10-10T19:40:00+00:00",
+         "delta": -9,
+         "from": "Krenko, Mob Boss",
+         "kind": "cmd",
+         "life": 26,
+         "turn": 5
+        }
+       ],
+       "life": 12,
+       "poison": 0,
+       "start_life": 40,
+       "started": "2026-10-10T19:00:00+00:00",
+       "turns": 7
+      }
+     },
+     "opponents": [
+      {
+       "commander": "Krenko, Mob Boss",
+       "id": "o2"
+      }
+     ]
+    },
+    "type": "game.add"
+   }
+  },
+  {
+   "about": "The same game id again (the phone resent it): nothing changes.",
+   "after": {},
+   "base": "default",
+   "name": "game-add-twice",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-game-add-twice",
+    "payload": {
+     "game": {
+      "deck": "meren",
+      "id": "g1",
+      "result": "loss"
+     },
+     "opponents": []
+    },
+    "type": "game.add"
+   }
+  },
+  {
+   "about": "A game needs a result.",
+   "base": "default",
+   "error": "Ergebnis fehlt",
+   "name": "game-add-no-result",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-game-add-no-result",
+    "payload": {
+     "game": {
+      "deck": "meren",
+      "id": "g5"
+     },
+     "opponents": []
+    },
+    "type": "game.add"
+   }
+  },
+  {
+   "about": "The deck was deleted on the PC meanwhile.",
+   "base": "default",
+   "error": "Dieses Deck gibt es nicht mehr – am PC gelöscht?",
+   "name": "game-add-deleted-deck",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-game-add-deleted-deck",
+    "payload": {
+     "game": {
+      "deck": "gone",
+      "id": "g6",
+      "result": "win"
+     },
+     "opponents": []
+    },
+    "type": "game.add"
+   }
+  },
+  {
+   "about": "A game is deleted.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 2,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 0,
+      "pinned": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     },
+     {
+      "bracket": 3,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder",
+        "qty": 1
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-01T10:00:00+00:00",
+      "version": 2
+     }
+    ],
+    "games": [],
+    "opponents": [
+     {
+      "bracket": 4,
+      "colors": "WUBG",
+      "commanders": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o1",
+      "label": "",
+      "notes": [
+       {
+        "at": "2026-10-02T21:00:00+00:00",
+        "deck_slug": "meren",
+        "game_id": "g1",
+        "id": "n1",
+        "text": "Hält Interaktion für Meren zurück"
+       }
+      ],
+      "player": "Tim",
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "per_deck": [],
+       "wins": 0
+      },
+      "tags": [
+       "combo"
+      ],
+      "title": "Atraxa, Praetors' Voice",
+      "updated": "2026-10-02T21:00:00+00:00"
+     },
+     {
+      "bracket": null,
+      "colors": "R",
+      "commanders": [
+       "Krenko, Mob Boss"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o2",
+      "label": "Goblins",
+      "notes": [],
+      "player": "Lisa",
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "per_deck": [],
+       "wins": 0
+      },
+      "tags": [],
+      "title": "Goblins (Krenko, Mob Boss)",
+      "updated": "2026-09-01T00:00:00+00:00"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "game-delete",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-game-delete",
+    "payload": {
+     "deck": "meren",
+     "id": "g1"
+    },
+    "type": "game.delete"
+   }
+  },
+  {
+   "about": "A new opponent deck with a first note.",
+   "after": {
+    "opponents": [
+     {
+      "bracket": 4,
+      "colors": "WUBG",
+      "commanders": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o1",
+      "label": "",
+      "notes": [
+       {
+        "at": "2026-10-02T21:00:00+00:00",
+        "deck_slug": "meren",
+        "game_id": "g1",
+        "id": "n1",
+        "text": "Hält Interaktion für Meren zurück"
+       }
+      ],
+      "player": "Tim",
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "per_deck": [
+        {
+         "games": 1,
+         "losses": 0,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [
+       "combo"
+      ],
+      "title": "Atraxa, Praetors' Voice",
+      "updated": "2026-10-02T21:00:00+00:00"
+     },
+     {
+      "bracket": null,
+      "colors": "WBR",
+      "commanders": [
+       "Edgar Markov"
+      ],
+      "created": "2026-10-10T20:00:00+00:00",
+      "id": "o3",
+      "label": "",
+      "notes": [
+       {
+        "at": "2026-10-10T20:00:00+00:00",
+        "deck_slug": null,
+        "game_id": null,
+        "id": "n5",
+        "text": "Viele Token"
+       }
+      ],
+      "player": "Max",
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "per_deck": [],
+       "wins": 0
+      },
+      "tags": [],
+      "title": "Edgar Markov",
+      "updated": "2026-10-10T20:00:00+00:00"
+     },
+     {
+      "bracket": null,
+      "colors": "R",
+      "commanders": [
+       "Krenko, Mob Boss"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o2",
+      "label": "Goblins",
+      "notes": [],
+      "player": "Lisa",
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "per_deck": [],
+       "wins": 0
+      },
+      "tags": [],
+      "title": "Goblins (Krenko, Mob Boss)",
+      "updated": "2026-09-01T00:00:00+00:00"
+     }
+    ],
+    "players": [
+     "Lisa",
+     "Max",
+     "Tim"
+    ]
+   },
+   "base": "default",
+   "name": "opponent-add",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-opponent-add",
+    "payload": {
+     "note": "Viele Token",
+     "note_id": "n5",
+     "opponent": {
+      "colors": "RWB",
+      "commanders": [
+       "Edgar Markov"
+      ],
+      "id": "o3",
+      "player": "Max",
+      "tags": [
+       "aggro"
+      ]
+     }
+    },
+    "type": "opponent.add"
+   }
+  },
+  {
+   "about": "An opponent deck needs a commander.",
+   "base": "default",
+   "error": "Bitte den Commander des Gegners angeben.",
+   "name": "opponent-add-no-commander",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-opponent-add-no-commander",
+    "payload": {
+     "opponent": {
+      "commanders": [],
+      "id": "o4"
+     }
+    },
+    "type": "opponent.add"
+   }
+  },
+  {
+   "about": "Name, player and bracket of an opponent deck change; games stay linked by id.",
+   "after": {
+    "opponents": [
+     {
+      "bracket": 4,
+      "colors": "WUBG",
+      "commanders": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o1",
+      "label": "",
+      "notes": [
+       {
+        "at": "2026-10-02T21:00:00+00:00",
+        "deck_slug": "meren",
+        "game_id": "g1",
+        "id": "n1",
+        "text": "Hält Interaktion für Meren zurück"
+       }
+      ],
+      "player": "Tim",
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "per_deck": [
+        {
+         "games": 1,
+         "losses": 0,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [
+       "combo"
+      ],
+      "title": "Atraxa, Praetors' Voice",
+      "updated": "2026-10-02T21:00:00+00:00"
+     },
+     {
+      "bracket": 3,
+      "colors": "R",
+      "commanders": [
+       "Krenko, Mob Boss"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o2",
+      "label": "Krenko Tokens",
+      "notes": [],
+      "player": "Lisa M.",
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "per_deck": [],
+       "wins": 0
+      },
+      "tags": [],
+      "title": "Krenko Tokens (Krenko, Mob Boss)",
+      "updated": "2026-10-10T20:00:00+00:00"
+     }
+    ],
+    "players": [
+     "Lisa M.",
+     "Tim"
+    ]
+   },
+   "base": "default",
+   "name": "opponent-update",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-opponent-update",
+    "payload": {
+     "bracket": 3,
+     "id": "o2",
+     "label": "Krenko Tokens",
+     "player": "Lisa M."
+    },
+    "type": "opponent.update"
+   }
+  },
+  {
+   "about": "The commander changes: colours and artwork follow.",
+   "after": {
+    "opponents": [
+     {
+      "bracket": 4,
+      "colors": "WUBG",
+      "commanders": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o1",
+      "label": "",
+      "notes": [
+       {
+        "at": "2026-10-02T21:00:00+00:00",
+        "deck_slug": "meren",
+        "game_id": "g1",
+        "id": "n1",
+        "text": "Hält Interaktion für Meren zurück"
+       }
+      ],
+      "player": "Tim",
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "per_deck": [
+        {
+         "games": 1,
+         "losses": 0,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [
+       "combo"
+      ],
+      "title": "Atraxa, Praetors' Voice",
+      "updated": "2026-10-02T21:00:00+00:00"
+     },
+     {
+      "bracket": null,
+      "colors": "R",
+      "commanders": [
+       "Krenko, Tin Street Kingpin"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o2",
+      "label": "Goblins",
+      "notes": [],
+      "player": "Lisa",
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "per_deck": [],
+       "wins": 0
+      },
+      "tags": [],
+      "title": "Goblins (Krenko, Tin Street Kingpin)",
+      "updated": "2026-10-10T20:00:00+00:00"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "opponent-update-commander",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-opponent-update-commander",
+    "payload": {
+     "colors": "R",
+     "commanders": [
+      "Krenko, Tin Street Kingpin"
+     ],
+     "id": "o2"
+    },
+    "type": "opponent.update"
+   }
+  },
+  {
+   "about": "A note on an opponent deck.",
+   "after": {
+    "opponents": [
+     {
+      "bracket": 4,
+      "colors": "WUBG",
+      "commanders": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o1",
+      "label": "",
+      "notes": [
+       {
+        "at": "2026-10-02T21:00:00+00:00",
+        "deck_slug": "meren",
+        "game_id": "g1",
+        "id": "n1",
+        "text": "Hält Interaktion für Meren zurück"
+       }
+      ],
+      "player": "Tim",
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "per_deck": [
+        {
+         "games": 1,
+         "losses": 0,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [
+       "combo"
+      ],
+      "title": "Atraxa, Praetors' Voice",
+      "updated": "2026-10-02T21:00:00+00:00"
+     },
+     {
+      "bracket": null,
+      "colors": "R",
+      "commanders": [
+       "Krenko, Mob Boss"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o2",
+      "label": "Goblins",
+      "notes": [
+       {
+        "at": "2026-10-10T20:00:00+00:00",
+        "deck_slug": null,
+        "game_id": null,
+        "id": "n6",
+        "text": "Wipe bereithalten"
+       }
+      ],
+      "player": "Lisa",
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "per_deck": [],
+       "wins": 0
+      },
+      "tags": [],
+      "title": "Goblins (Krenko, Mob Boss)",
+      "updated": "2026-10-10T20:00:00+00:00"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "opponent-note",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-opponent-note",
+    "payload": {
+     "id": "o2",
+     "note_id": "n6",
+     "text": "Wipe bereithalten"
+    },
+    "type": "opponent.note"
+   }
+  },
+  {
+   "about": "A note is deleted.",
+   "after": {
+    "opponents": [
+     {
+      "bracket": 4,
+      "colors": "WUBG",
+      "commanders": [
+       "Atraxa, Praetors' Voice"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o1",
+      "label": "",
+      "notes": [],
+      "player": "Tim",
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "per_deck": [
+        {
+         "games": 1,
+         "losses": 0,
+         "name": "Meren",
+         "slug": "meren",
+         "wins": 1
+        }
+       ],
+       "wins": 1
+      },
+      "tags": [
+       "combo"
+      ],
+      "title": "Atraxa, Praetors' Voice",
+      "updated": "2026-10-02T21:00:00+00:00"
+     },
+     {
+      "bracket": null,
+      "colors": "R",
+      "commanders": [
+       "Krenko, Mob Boss"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o2",
+      "label": "Goblins",
+      "notes": [],
+      "player": "Lisa",
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "per_deck": [],
+       "wins": 0
+      },
+      "tags": [],
+      "title": "Goblins (Krenko, Mob Boss)",
+      "updated": "2026-09-01T00:00:00+00:00"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "opponent-note-delete",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-opponent-note-delete",
+    "payload": {
+     "id": "o1",
+     "note_id": "n1"
+    },
+    "type": "opponent.note_delete"
+   }
+  },
+  {
+   "about": "An opponent deck is deleted; its games keep the commander name.",
+   "after": {
+    "opponents": [
+     {
+      "bracket": null,
+      "colors": "R",
+      "commanders": [
+       "Krenko, Mob Boss"
+      ],
+      "created": "2026-09-01T00:00:00+00:00",
+      "id": "o2",
+      "label": "Goblins",
+      "notes": [],
+      "player": "Lisa",
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "per_deck": [],
+       "wins": 0
+      },
+      "tags": [],
+      "title": "Goblins (Krenko, Mob Boss)",
+      "updated": "2026-09-01T00:00:00+00:00"
+     }
+    ],
+    "players": [
+     "Lisa"
+    ]
+   },
+   "base": "default",
+   "name": "opponent-delete",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-opponent-delete",
+    "payload": {
+     "id": "o1"
+    },
+    "type": "opponent.delete"
+   }
+  },
+  {
+   "about": "An empty deck with its commander, built on the tablet; the PC checks it later.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 2,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 0,
+      "pinned": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     },
+     {
+      "bracket": 3,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder",
+        "qty": 1
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "wins": 1
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-01T10:00:00+00:00",
+      "version": 2
+     },
+     {
+      "bracket": 3,
+      "cards": [],
+      "checking": true,
+      "colors": "",
+      "commanders": [
+       "Edgar Markov"
+      ],
+      "description": "",
+      "legal": null,
+      "level": "Bracket 3",
+      "maybe": [],
+      "name": "Vampire",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 3 (Upgraded)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Edgar Markov"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Vampire – Rule 0\nStufe: Bracket 3 (Upgraded)\nCommander: Edgar Markov\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "edgar",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-10-10T20:00:00+00:00",
+      "version": 1
+     }
+    ]
+   },
+   "base": "default",
+   "name": "deck-new",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-new",
+    "payload": {
+     "deck": {
+      "bracket": 3,
+      "commanders": [
+       "Edgar Markov"
+      ],
+      "name": "Vampire",
+      "slug": "edgar"
+     }
+    },
+    "type": "deck.new"
+   }
+  },
+  {
+   "about": "The slug is taken.",
+   "base": "default",
+   "error": "Ein Deck mit diesem Namen gibt es schon – bitte anders nennen.",
+   "name": "deck-new-taken",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-new-taken",
+    "payload": {
+     "deck": {
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "slug": "meren"
+     }
+    },
+    "type": "deck.new"
+   }
+  },
+  {
+   "about": "Cards added, removed, counted and moved; the maybe list follows.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 2,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 0,
+      "pinned": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     },
+     {
+      "bracket": 3,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 28
+       },
+       {
+        "category": "Utility",
+        "name": "Sol Ring",
+        "qty": 2
+       },
+       {
+        "category": "Land",
+        "name": "Swamp",
+        "qty": 2
+       }
+      ],
+      "checking": true,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Phyrexian Arena"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "wins": 1
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-10T20:00:00+00:00",
+      "version": 3
+     }
+    ]
+   },
+   "base": "default",
+   "name": "deck-edit",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-edit",
+    "payload": {
+     "add": [
+      {
+       "category": "Land",
+       "name": "Swamp",
+       "qty": 2
+      },
+      {
+       "name": "Sol Ring",
+       "qty": 1
+      }
+     ],
+     "deck": "meren",
+     "maybe_add": [
+      {
+       "category": "Draw",
+       "name": "Phyrexian Arena"
+      }
+     ],
+     "maybe_remove": [
+      "Grim Backwoods"
+     ],
+     "remove": [
+      "Sakura-Tribe Elder"
+     ],
+     "set_category": {
+      "Sol Ring": "Utility"
+     },
+     "set_qty": {
+      "Forest": 28
+     }
+    },
+    "type": "deck.edit"
+   }
+  },
+  {
+   "about": "A deck card moves onto the maybe list.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 2,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 0,
+      "pinned": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     },
+     {
+      "bracket": 3,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": true,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "wins": 1
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-10T20:00:00+00:00",
+      "version": 3
+     }
+    ]
+   },
+   "base": "default",
+   "name": "deck-edit-to-maybe",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-edit-to-maybe",
+    "payload": {
+     "deck": "meren",
+     "maybe_add": [
+      {
+       "name": "Sakura-Tribe Elder"
+      }
+     ]
+    },
+    "type": "deck.edit"
+   }
+  },
+  {
+   "about": "Nothing changes: no new version.",
+   "after": {},
+   "base": "default",
+   "name": "deck-edit-nothing",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-edit-nothing",
+    "payload": {
+     "deck": "meren",
+     "set_qty": {
+      "Sol Ring": 1
+     }
+    },
+    "type": "deck.edit"
+   }
+  },
+  {
+   "about": "The commander cannot go into the 99.",
+   "base": "default",
+   "error": "Meren of Clan Nel Toth ist der Commander des Decks.",
+   "name": "deck-edit-commander",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-edit-commander",
+    "payload": {
+     "add": [
+      {
+       "name": "Meren of Clan Nel Toth"
+      }
+     ],
+     "deck": "meren"
+    },
+    "type": "deck.edit"
+   }
+  },
+  {
+   "about": "A deck is pinned.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 3,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder",
+        "qty": 1
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "wins": 1
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-01T10:00:00+00:00",
+      "version": 2
+     },
+     {
+      "bracket": 2,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 0,
+      "pinned": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     }
+    ]
+   },
+   "base": "default",
+   "name": "deck-flags-pin",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-flags-pin",
+    "payload": {
+     "deck": "meren",
+     "pinned": true
+    },
+    "type": "deck.flags"
+   }
+  },
+  {
+   "about": "A deck is shelved and unpinned (its pin rank goes).",
+   "after": {
+    "decks": [
+     {
+      "bracket": 3,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder",
+        "qty": 1
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "wins": 1
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-01T10:00:00+00:00",
+      "version": 2
+     },
+     {
+      "bracket": 2,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": true,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     }
+    ]
+   },
+   "base": "default",
+   "name": "deck-flags-shelve",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-flags-shelve",
+    "payload": {
+     "deck": "kaalia",
+     "pinned": false,
+     "shelved": true
+    },
+    "type": "deck.flags"
+   }
+  },
+  {
+   "about": "The pinned decks get their dragged order; unpinned ones are left alone.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 2,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 1,
+      "pinned": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     },
+     {
+      "bracket": 3,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder",
+        "qty": 1
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "wins": 1
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-01T10:00:00+00:00",
+      "version": 2
+     }
+    ]
+   },
+   "base": "default",
+   "name": "deck-pin-order",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-pin-order",
+    "payload": {
+     "slugs": [
+      "meren",
+      "kaalia"
+     ]
+    },
+    "type": "deck.pin_order"
+   }
+  },
+  {
+   "about": "A scanned card that is not in the collection yet.",
+   "after": {
+    "collection": [
+     {
+      "collector_number": "283",
+      "foil": false,
+      "id": "c3",
+      "lang": "de",
+      "name": "Arcane Signet",
+      "place": "Binder",
+      "place_deck": "",
+      "price_eur": "0.35",
+      "proxy": false,
+      "qty": 1,
+      "scryfall_id": "c6ec4b0c-ba8e-4f1d-9a59-bd95cc7b6b1c",
+      "set": "m3c",
+      "set_name": "Modern Horizons 3 Commander"
+     },
+     {
+      "collector_number": null,
+      "foil": false,
+      "id": "c2",
+      "lang": "en",
+      "name": "Forest",
+      "place": "",
+      "place_deck": "meren",
+      "price_eur": null,
+      "proxy": false,
+      "qty": 10,
+      "scryfall_id": null,
+      "set": null,
+      "set_name": null
+     },
+     {
+      "collector_number": "263",
+      "foil": false,
+      "id": "c1",
+      "lang": "en",
+      "name": "Sol Ring",
+      "place": "Binder",
+      "place_deck": "",
+      "price_eur": "1.20",
+      "proxy": false,
+      "qty": 2,
+      "scryfall_id": "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021",
+      "set": "c21",
+      "set_name": "Commander 2021"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "collection-add-new",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-collection-add-new",
+    "payload": {
+     "entry": {
+      "collector_number": "283",
+      "id": "c3",
+      "lang": "de",
+      "name": "Arcane Signet",
+      "place": "Binder",
+      "price_eur": "0.35",
+      "qty": 1,
+      "scryfall_id": "c6ec4b0c-ba8e-4f1d-9a59-bd95cc7b6b1c",
+      "set": "M3C",
+      "set_name": "Modern Horizons 3 Commander"
+     }
+    },
+    "type": "collection.add"
+   }
+  },
+  {
+   "about": "The same printing at the same place: more copies of the entry.",
+   "after": {
+    "collection": [
+     {
+      "collector_number": null,
+      "foil": false,
+      "id": "c2",
+      "lang": "en",
+      "name": "Forest",
+      "place": "",
+      "place_deck": "meren",
+      "price_eur": null,
+      "proxy": false,
+      "qty": 10,
+      "scryfall_id": null,
+      "set": null,
+      "set_name": null
+     },
+     {
+      "collector_number": "263",
+      "foil": false,
+      "id": "c1",
+      "lang": "en",
+      "name": "Sol Ring",
+      "place": "Binder",
+      "place_deck": "",
+      "price_eur": "1.20",
+      "proxy": false,
+      "qty": 3,
+      "scryfall_id": "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021",
+      "set": "c21",
+      "set_name": "Commander 2021"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "collection-add-more",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-collection-add-more",
+    "payload": {
+     "entry": {
+      "collector_number": "263",
+      "id": "c4",
+      "name": "Sol Ring",
+      "place": "binder",
+      "qty": 1,
+      "scryfall_id": "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021",
+      "set": "c21"
+     }
+    },
+    "type": "collection.add"
+   }
+  },
+  {
+   "about": "A negative quantity takes copies away again (undo of an add).",
+   "after": {
+    "collection": [
+     {
+      "collector_number": null,
+      "foil": false,
+      "id": "c2",
+      "lang": "en",
+      "name": "Forest",
+      "place": "",
+      "place_deck": "meren",
+      "price_eur": null,
+      "proxy": false,
+      "qty": 10,
+      "scryfall_id": null,
+      "set": null,
+      "set_name": null
+     }
+    ]
+   },
+   "base": "default",
+   "name": "collection-add-undo",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-collection-add-undo",
+    "payload": {
+     "entry": {
+      "name": "Sol Ring",
+      "place": "Binder",
+      "qty": -2,
+      "scryfall_id": "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021"
+     }
+    },
+    "type": "collection.add"
+   }
+  },
+  {
+   "about": "Fewer copies.",
+   "after": {
+    "collection": [
+     {
+      "collector_number": null,
+      "foil": false,
+      "id": "c2",
+      "lang": "en",
+      "name": "Forest",
+      "place": "",
+      "place_deck": "meren",
+      "price_eur": null,
+      "proxy": false,
+      "qty": 7,
+      "scryfall_id": null,
+      "set": null,
+      "set_name": null
+     },
+     {
+      "collector_number": "263",
+      "foil": false,
+      "id": "c1",
+      "lang": "en",
+      "name": "Sol Ring",
+      "place": "Binder",
+      "place_deck": "",
+      "price_eur": "1.20",
+      "proxy": false,
+      "qty": 2,
+      "scryfall_id": "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021",
+      "set": "c21",
+      "set_name": "Commander 2021"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "collection-update-qty",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-collection-update-qty",
+    "payload": {
+     "id": "c2",
+     "qty": 7
+    },
+    "type": "collection.update"
+   }
+  },
+  {
+   "about": "Quantity 0 deletes the entry.",
+   "after": {
+    "collection": [
+     {
+      "collector_number": null,
+      "foil": false,
+      "id": "c2",
+      "lang": "en",
+      "name": "Forest",
+      "place": "",
+      "place_deck": "meren",
+      "price_eur": null,
+      "proxy": false,
+      "qty": 10,
+      "scryfall_id": null,
+      "set": null,
+      "set_name": null
+     }
+    ]
+   },
+   "base": "default",
+   "name": "collection-update-delete",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-collection-update-delete",
+    "payload": {
+     "id": "c1",
+     "qty": 0
+    },
+    "type": "collection.update"
+   }
+  },
+  {
+   "about": "Moved to where an equal entry already is: the two become one.",
+   "after": {
+    "collection": [
+     {
+      "collector_number": null,
+      "foil": false,
+      "id": "c2",
+      "lang": "en",
+      "name": "Forest",
+      "place": "",
+      "place_deck": "meren",
+      "price_eur": null,
+      "proxy": false,
+      "qty": 10,
+      "scryfall_id": null,
+      "set": null,
+      "set_name": null
+     },
+     {
+      "collector_number": "263",
+      "foil": false,
+      "id": "c1",
+      "lang": "en",
+      "name": "Sol Ring",
+      "place": "Binder",
+      "place_deck": "",
+      "price_eur": "1.20",
+      "proxy": false,
+      "qty": 3,
+      "scryfall_id": "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021",
+      "set": "c21",
+      "set_name": "Commander 2021"
+     }
+    ]
+   },
+   "base": "collection-update-merge",
+   "name": "collection-update-merge",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-collection-update-merge",
+    "payload": {
+     "id": "c4x",
+     "place": "Binder"
+    },
+    "type": "collection.update"
+   }
+  },
+  {
+   "about": "Another place: from a deck into a box.",
+   "after": {
+    "collection": [
+     {
+      "collector_number": null,
+      "foil": false,
+      "id": "c2",
+      "lang": "en",
+      "name": "Forest",
+      "place": "Kiste 3",
+      "place_deck": "",
+      "price_eur": null,
+      "proxy": false,
+      "qty": 10,
+      "scryfall_id": null,
+      "set": null,
+      "set_name": null
+     },
+     {
+      "collector_number": "263",
+      "foil": false,
+      "id": "c1",
+      "lang": "en",
+      "name": "Sol Ring",
+      "place": "Binder",
+      "place_deck": "",
+      "price_eur": "1.20",
+      "proxy": false,
+      "qty": 2,
+      "scryfall_id": "4cbc6901-6a4a-4d0a-83ea-7eefa3b35021",
+      "set": "c21",
+      "set_name": "Commander 2021"
+     }
+    ]
+   },
+   "base": "default",
+   "name": "collection-update-place",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-collection-update-place",
+    "payload": {
+     "id": "c2",
+     "place": "Kiste 3",
+     "place_deck": ""
+    },
+    "type": "collection.update"
+   }
+  },
+  {
+   "about": "An operation the server does not know.",
+   "base": "default",
+   "error": "Unbekannte Aktion: chat.ask",
+   "name": "unknown-type",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-unknown-type",
+    "payload": {},
+    "type": "chat.ask"
+   }
+  }
+ ],
+ "version": 1
+}
