@@ -40,6 +40,14 @@ TAGS: dict[str, tuple[str, str]] = {
     "lands": ("Landzerstörung", "genug Länder und Ramp, robuste Manabasis"),
     "politics": ("Politik / Gruppenspiel", "eigene Bedrohung klein wirken lassen, flexible Antworten"),
 }  # fmt: skip
+# the tag labels in English, for the native phone apps (read model ``options_en``)
+TAGS_EN: dict[str, str] = {
+    "combo": "Combo", "fast": "fast & aggressive", "stax": "Stax / lock", "wipes": "lots of board wipes",
+    "counters": "lots of counterspells", "removal": "lots of removal", "fliers": "Fliers", "tokens": "Token swarms",
+    "graveyard": "Graveyard / reanimation", "lifegain": "Lifegain", "voltron": "Voltron / commander damage",
+    "artifacts": "Artifacts", "spells": "Spellslinger", "theft": "Theft / control", "lands": "Land destruction",
+    "politics": "Politics / group play",
+}  # fmt: skip
 
 
 def _file() -> Path:
