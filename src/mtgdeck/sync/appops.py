@@ -37,7 +37,7 @@ ID_RE = re.compile(r"[A-Za-z0-9_-]{1,40}")
 ISO_RE = re.compile(r"\d{4}-\d\d-\d\dT[\d:.]+(Z|[+-]\d\d:\d\d)?")
 TYPES = ("game.add", "game.delete", "opponent.add", "opponent.update", "opponent.note", "opponent.note_delete", "opponent.delete",
          "deck.new", "deck.edit", "deck.flags", "deck.pin_order", "collection.add", "collection.update")  # fmt: skip
-ROUND_KINDS = ("life", "cmd", "poison", "turn", "note", "out")  # entries in the Runden-Helfer's log (js/round.js)
+ROUND_KINDS = ("life", "cmd", "poison", "turn", "note", "out")  # entries in a game's round log (Conclave Table; formerly the phone's Runden-Helfer)
 ROUND_EVENTS_MAX = 400
 CATEGORIES = ("Ramp", "Draw", "Removal", "Board Wipe", "Counterspell", "Tutor", "Protection", "Synergy", "Win Condition", "Utility", "Land")
 DECK_CARDS_MAX = 250  # distinct cards in one deck (a Commander deck has at most 99)
@@ -140,7 +140,7 @@ def _iso(value: Any) -> str | None:
 
 
 def _round(value: Any) -> dict[str, Any] | None:
-    """The log of the phone's Runden-Helfer, cleaned: the user's life at the start and end, poison, turns,
+    """A game's round log (from Conclave Table, formerly the phone's Runden-Helfer), cleaned: the user's life at the start and end, poison, turns,
     commander damage per opposing commander and the changes turn by turn (``ROUND_EVENTS_MAX`` at most)."""
     if not isinstance(value, dict) or _int(value.get("start_life"), 1, 999) is None:
         return None

@@ -224,14 +224,10 @@ ein Befehl auf dem Server.
     beim nächsten Abgleich.
   - **Neue Versionen:** Sie kommen mit dem Server-Update. Die App bietet dann „Neu laden“ an.
   - **Abmelden:** in der App unter *Einstellungen* oder am PC in der Geräteliste.
-  - **Runden-Helfer:** „Runde starten“ auf dem Tisch-Tab zählt während der Partie deine Leben, den
-    Commander-Schaden je Gegner, Gift und deine Züge und hält jede Änderung pro Zug fest. Tippen zählt 1, Halten
-    springt in Fünferschritten; Commander-Schaden und Gift trägst du nach Antippen der Kachel in einem eigenen Blatt
-    ein. Bist du raus oder beendest du die Runde, öffnet sich das Partie-Formular vorbelegt; die Partie wird mit dem
-    ganzen Verlauf gespeichert. „Beenden“ → „Ohne Ergebnis abbrechen“ verwirft eine Runde, ohne etwas zu speichern.
-    Unter „Wer ist raus?“ tippst du an, wer ausscheidet; daraus werden die Plätze 1 bis N im Partie-Formular
-    („Platzierung“, auch ohne Runde von Hand wählbar, der 1. Platz ist golden markiert).
-    Am PC steht die Runde nach dem Abgleich im Deck unter *Partien* („Runde ansehen“).
+  - **Leben zählen:** macht Conclave Table, der Lebenszähler für den ganzen Tisch („Leben zählen“ auf dem
+    Tisch-Tab). Er speichert die fertige Partie mit Plätzen und deinem Verlauf hierher; die App zeigt sie mit
+    Lebenskurve und „Verlauf ansehen“. Das Partie-Formular hat „Platzierung“ (Plätze 1 bis N, der 1. golden markiert).
+    Am PC steht der Verlauf nach dem Abgleich im Deck unter *Partien* („Runde ansehen“).
   - **Vorschau:** „Erst mal mit Beispieldaten ansehen“ zeigt die App ohne Kopplung.
 
 ## Desktop-App (Windows)
@@ -328,7 +324,7 @@ Aufbau (bewusst schlicht: eine Hauptaktion pro Seite, Selteneres eingeklappt):
     (Schnellwahl wie „zu wenige Länder“, „kein Weg zu gewinnen“), beste Karte, Notiz. Die Bilanz zeigt
     Siegquote, Ø Zug, häufigste Probleme, Ergebnis pro Version, beste Karten und Gegner, dazu die Platzierung
     (Ø Platz, wie oft welcher Platz) – „Platzierung“ im Formular hat wie am Handy eine Zeile je Spieler mit den Plätzen 1 bis N; die Plätze stehen auch in der Liste.
-    Partien aus dem Runden-Helfer des Handys haben „Runde ansehen“: Lebenskurve, Commander-Schaden und was in
+    Partien mit Verlauf (aus Conclave Table, ältere aus dem früheren Runden-Helfer des Handys) haben „Runde ansehen“: Lebenskurve, Commander-Schaden und was in
     jedem Zug passiert ist. Die Bilanz zeigt dazu, wer dir über alle Runden den meisten Schaden gemacht hat und in
     welchem eigenen Zug du im Schnitt am meisten Leben verlierst.
     Gespeichert in `decks/.games/<slug>.json`.

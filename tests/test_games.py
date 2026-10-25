@@ -91,7 +91,7 @@ def _add_rounds(slug):
     for rnd in (ROUND_A, ROUND_B):
         games.add(slug, result="loss", opponents=["Krenko, Mob Boss"])
         items = games.games(slug)
-        items[-1]["round"] = rnd  # what sync/appops writes for a game from the phone's Runden-Helfer
+        items[-1]["round"] = rnd  # what sync/appops writes for a game with a round log (Conclave Table)
         games._write(slug, items)
 
 

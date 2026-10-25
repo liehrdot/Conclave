@@ -321,7 +321,7 @@ schneller.
 - kein Konto und kein Login außer der Kopplung;
 - keine Benachrichtigungen, keine Bewertungsbitten;
 - kein Deck-Bearbeiten auf dem Handy (dafür ist der PC da);
-- kein Zähler für alle Spieler am Tisch. Der Runden-Helfer (unten) zählt nur die eigenen Werte.
+- kein Lebenszähler: den macht Conclave Table, das fertige Partien hierher speichert (siehe „Runden-Protokolle“ unten).
 
 ## Sammlung und Karten-Scanner
 
@@ -334,38 +334,17 @@ schneller.
 - „Name eingeben“ ist der Weg ohne Kamera; im Karten-Tab hat jede Karte „Zur Sammlung“.
 - Gespeichert wird als Operation `collection.add` / `collection.update` (wie am PC: gleiche Ausgabe = mehr Exemplare).
 
-## Runden-Helfer
+## Runden-Protokolle
 
-Ein persönlicher Begleiter für die eigene Runde – kein Zähler für den ganzen Tisch. Er zeigt groß die eigenen Leben,
-darunter Commander-Schaden je gegnerischem Commander (Partner zählen einzeln), Gift und den eigenen Zug.
+Live gezählt wird mit Conclave Table, dem Lebenszähler für den ganzen Tisch (eigenes Repo). Er speichert eine fertige
+Partie als `game.add` mit den Plätzen und dem eigenen Verlauf als `round`. Der frühere Runden-Helfer der App ist
+deshalb entfernt (2026-10-25); auf dem Tisch-Tab führt „Leben zählen“ zu Conclave Table.
 
-- **Start:** „Runde starten“ auf dem Tisch-Tab: Deck, Gegner (aus der letzten Partie innerhalb von 8 h vorbelegt),
-  Startleben 40/30/20.
-- **Bedienen:** − und + neben der Zahl: Tippen = 1, gedrückt halten springt in Fünferschritten. Nach einem
-  Lebensverlust bietet die Karte „Schaden von“ mit den Gegnern an. „Zug N beginnt“ zählt den eigenen Zug hoch und
-  zeigt kurz, was der letzte Zug gekostet hat. Doppeltippen zoomt nirgends in der App (Zwei-Finger-Zoom bleibt).
-- **Commander-Schaden und Gift:** Eine Kachel antippen ändert noch nichts, sie öffnet ein Blatt: großes − und + weit
-  auseinander (Tippen = 1, Halten = 5), Schnellwahl +1/+2/+3 und beim Commander seine Stärke („+5 Stärke“), dazu
-  „Danach 12 / 21“ und was es kostet („Kostet dich auch 5 Leben: 40 → 35“, „Damit bist du raus“). Erst
-  „+5 eintragen“ zählt; ein Minus-Betrag korrigiert („2 abziehen“, die Leben kommen zurück). Danach bietet der Hinweis
-  „Rückgängig“ an. So richtet ein versehentlicher Tipp auf eine Kachel keinen Schaden an (Rückgängig statt
-  Rückfrage, große getrennte Tippflächen – nach Baymard und den 48-dp/8-dp-Vorgaben von Material).
-- **Protokoll:** Jede Änderung landet mit Zug, Uhrzeit und dem Lebensstand danach im Verlauf; Tipps auf denselben
-  Zähler innerhalb von 4 s werden ein Eintrag („−5“). Im Verlauf lassen sich Notizen zum laufenden Zug festhalten.
-  Rückgängig nimmt die letzte Änderung zurück, Notizen bleiben. Alle Werte werden aus dem Protokoll berechnet.
-- **Raus:** bei 0 Leben, 10 Gift oder 21 Commander-Schaden erscheint „Du bist raus“ mit „Als Niederlage speichern“.
-- **Platzierung:** „Wer ist raus?“ hat einen Knopf je Gegner. Antippen hält fest, dass er raus ist (im Verlauf als
-  „Krenko ist raus“), noch mal antippen nimmt es zurück. Wer zuerst rausgeht, wird Letzter. Sind alle Gegner raus,
-  erscheint „Du hast gewonnen“ mit „Als Sieg speichern“. Beim Speichern sind die Plätze im Partie-Formular
-  vorbelegt; dort steht unter den Gegnern „Platzierung“ mit einer Zeile je Spieler und den Plätzen 1 bis N
-  (Gleichstand erlaubt). Ist nur noch einer offen, bekommt er den übrigen Platz; der eigene 1. Platz macht die
-  Partie zum Sieg, ein späterer zur Niederlage. Der 1. Platz ist golden markiert.
-- **Ende:** „Beenden“ fragt „Als Partie speichern“ oder „Ohne Ergebnis abbrechen“ (verwirft die Runde, der Hinweis
-  bietet „Rückgängig“ an). Speichern öffnet das Partie-Formular vorbelegt (Deck, Ergebnis, Zug, Gegner, bei
-  Commander-Schaden „Entschieden durch“). Erst das Speichern dort beendet die Runde und schickt sie als Partie an den Server, mit dem
-  Protokoll als `round`. Bis dahin liegt die Runde nur auf dem Handy (localStorage) und übersteht Neuladen; sie steht
-  als Karte auf dem Tisch-Tab, und der Bildschirm bleibt an.
-- **Danach:** Die Partie zeigt Endstand, eine Lebenskurve pro Zug, den Commander-Schaden und den ganzen Verlauf.
+- **Platzierung:** Im Partie-Formular steht unter den Gegnern „Platzierung“ mit einer Zeile je Spieler und den
+  Plätzen 1 bis N (Gleichstand erlaubt). Ist nur noch einer offen, bekommt er den übrigen Platz; der eigene 1. Platz
+  macht die Partie zum Sieg, ein späterer zur Niederlage. Der 1. Platz ist golden markiert.
+- **Danach:** Eine Partie mit Verlauf zeigt Endstand, eine Lebenskurve pro Zug, den Commander-Schaden und unter
+  „Verlauf ansehen“ jeden Zug.
 - **Am PC:** Nach dem Abgleich zeigt der Partien-Tab des Decks unter der Partie „Runde ansehen“ (Lebenskurve,
   Endstand, Commander-Schaden, Tabelle Zug für Zug mit Notizen). Die Bilanz fasst alle Runden zusammen: wer am meisten
   Schaden gemacht hat und wie viel Leben ein eigener Zug im Schnitt kostet (der schwerste ist rot).
