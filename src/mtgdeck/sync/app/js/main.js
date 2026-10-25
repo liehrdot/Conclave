@@ -6,14 +6,16 @@ import { applyTheme } from "./forms.js";
 import { codeFrom, welcome } from "./pair.js";
 import { builder } from "./build.js";
 import { sammlung } from "./collection.js";
-import { roundScreen } from "./round.js";
 import * as scry from "./scry.js";
 import { paint } from "./pieces.js";
 import { deck, decks, gegner, karten, opponent, tisch } from "./screens.js";
 import { clearToast, sheetIsOpen, toast, topbar } from "./ui.js";
 import { $, $$, esc, icon, reducedMotion } from "./util.js";
 
-const TABS = ["tisch", "decks", "gegner", "karten", "sammlung", "runde", "bauen"];  // "runde" = the Runden-Helfer, "bauen" = deck builder: no tabs of their own
+// the former Runden-Helfer kept a running round here; that screen is gone (Conclave Table counts life now)
+try { localStorage.removeItem("amtisch.round"); } catch { /* storage blocked: nothing to clean */ }
+
+const TABS = ["tisch", "decks", "gegner", "karten", "sammlung", "bauen"];  // "bauen" = deck builder: no tab of its own
 const scrolls = {};
 let current = null;  // {key, depth}
 let linkCode = null;  // code from a pairing link
@@ -28,7 +30,6 @@ function screenFor(r) {
   if (!state.snap) return { html: `<div class="empty">${icon("cloud")}<h3>Lade deine Daten …</h3><p>Einen Moment – beim ersten Mal braucht es Netz.</p></div>`, bar: { title: "Conclave" } };
   if (r.tab === "decks" && r.id) return deck(r.id, r.seg || "rule0");
   if (r.tab === "gegner" && r.id) return opponent(r.id);
-  if (r.tab === "runde") return roundScreen();
   if (r.tab === "bauen") return builder(r.id);
   return { tisch, decks, gegner, karten, sammlung }[r.tab]();
 }
@@ -48,10 +49,9 @@ function draw({ keepScroll = false } = {}) {
   main.classList.toggle("has-fab", fabOn);
   document.body.classList.toggle("has-fab", fabOn);
   document.body.classList.toggle("no-tabs", state.mode === "none");
-  document.body.classList.toggle("immersive", !!s.immersive);  // the round screen, the builder: no tab bar
+  document.body.classList.toggle("immersive", !!s.immersive);  // the builder: no tab bar
   document.body.classList.toggle("wide", !!s.wide);  // the builder uses the whole width of an iPad
   if (!s.wide) document.body.classList.remove("has-build-bar");
-  keepAwake(!!s.wake);
   const fab = $("#fab");
   fab.hidden = !fabOn;
   if (fabOn) {
@@ -84,20 +84,6 @@ function route() {
     void document.startViewTransition(() => draw()).finished.finally(() => document.documentElement.classList.remove(dir));
   } else draw();
 }
-
-// the screen stays on while a round runs
-let wakeLock = null;
-function keepAwake(on) {
-  if (on && !wakeLock && navigator.wakeLock) {
-    wakeLock = navigator.wakeLock.request("screen").catch(() => null);
-  } else if (!on && wakeLock) {
-    wakeLock.then((w) => w?.release?.());
-    wakeLock = null;
-  }
-}
-document.addEventListener("visibilitychange", () => {  // the system drops the lock when the app is hidden
-  if (document.visibilityState === "visible" && wakeLock && document.body.classList.contains("immersive")) { wakeLock = null; keepAwake(true); }
-});
 
 // a tap on the active tab goes back to its top
 for (const a of $$(".tabbar a")) a.addEventListener("click", (e) => {

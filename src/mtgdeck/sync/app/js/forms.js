@@ -24,20 +24,18 @@ function freshGame() {
   return { id: uid(), deck: deck?.slug, result: null, place: null, opps, rematch: recent && opps.length > 0, issues: [], turn: null, how: null, started: null, mvp: "", note: "" };
 }
 
-/** The game sheet. ``fromRound`` = a finished round of the Runden-Helfer: the form comes prefilled from it, the
- *  round's log goes along with the game, and ``fromRound.onSaved`` runs once the game is saved. */
-export function gameSheet(fromRound = null) {
-  const draft = fromRound ? null : load(KEY_DRAFT, null);
+/** The game sheet; an unsaved game stays as a draft until the next time. */
+export function gameSheet() {
+  const draft = load(KEY_DRAFT, null);
   const restored = !!(draft && state.snap.decks.some((d) => d.slug === draft.deck));
-  g = fromRound ? { ...freshGame(), ...fromRound.prefill, round: fromRound.round, rematch: false } : restored ? draft : freshGame();
+  g = restored ? draft : freshGame();
   g.restored = restored;
   openSheet(gamePage, { full: true, onClose: () => {
-    if (g?.round) { if (g.saved) fromRound.onSaved?.(); }
-    else if (g) save(KEY_DRAFT, g.saved ? null : g);
+    if (g) save(KEY_DRAFT, g.saved ? null : g);
     g = null;
   } });
 }
-const keep = () => { if (g && !g.round) save(KEY_DRAFT, g); };
+const keep = () => { if (g) save(KEY_DRAFT, g); };
 
 // reasons for a loss: the ones that happen to you most first, then a sensible default order
 const ISSUE_ORDER = ["combo", "few_lands", "slow", "no_removal", "wiped", "no_draw", "commander_removed", "flood", "colors", "no_win", "fliers", "too_strong"];
@@ -60,7 +58,6 @@ function gamePage({ push }) {
   return {
     title: "Partie",
     body: `
-      ${g.round ? roundSummary(g.round) : ""}
       ${g.restored ? `<div class="draft-note">${icon("note", "xs")} Entwurf wiederhergestellt<button class="btn" type="button" id="draft-drop">Verwerfen</button></div>` : ""}
       <div class="field-label">Dein Deck</div>
       <div class="chips scroll" id="deck-pick" role="radiogroup" aria-label="Dein Deck">${decks.map((d) => `<button class="deckpill" type="button" role="radio" data-deck="${esc(d.slug)}" aria-pressed="${d.slug === g.deck}" aria-checked="${d.slug === g.deck}">
@@ -200,7 +197,6 @@ function saveGame() {
   const game = { id: g.id, deck: g.deck, result: g.result, turn: g.turn, issues: g.result === "win" ? [] : g.issues,
     how: g.how, started: g.started === null ? null : g.started === "me" ? "me" : Number(g.started), mvp: g.mvp.trim() || null, note: g.note.trim(),
     place: cleanPlaces(g.place, [], g.opps.length).place };
-  if (g.round) game.round = g.round;
   const opponents = g.opps.map((o) => {
     const commander = o.commander || oppBy(o.id)?.commanders?.[0] || "";
     return { id: o.id || null, commander, colors: o.colors || "", new_id: o.id ? null : uid().slice(0, 8), note: o.note || "",
@@ -230,10 +226,10 @@ function celebrate(game, deck) {
   return `${shortName(deck?.name)}: ${mine.filter((x) => x.result === "win").length}:${mine.filter((x) => x.result === "loss").length}`;
 }
 
-// ---- opponent picker (second page of the game sheet and of the round start) ----
+// ---- opponent picker (second page of the game sheet) ----
 let pickQuery = "";
 /** A sheet page that picks opponents into ``target.opps``; ``onChange`` runs after every change. */
-export const opponentPicker = (target, backLabel, onChange) => (api) => pickerPage(api, target, backLabel, onChange);
+const opponentPicker = (target, backLabel, onChange) => (api) => pickerPage(api, target, backLabel, onChange);
 function pickerPage({ pop }, g, backLabel, onChange) {
   const keep = onChange;
   const chosen = new Set(g.opps.map((o) => o.id).filter(Boolean));

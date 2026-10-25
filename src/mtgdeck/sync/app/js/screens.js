@@ -2,7 +2,6 @@
 
 import { currentDeck, deckBy, failedOps, gamesOf, isDemo, isPending, op, oppBy, oppName, oppSub, pendingCount, serverCall, setPref, shortName, state, undo } from "./data.js";
 import { createDeck, draftCount, tabletSized } from "./build.js";
-import { roundCard, running, startSheet } from "./round.js";
 import { cardSheet, editOpponentSheet, gameDetailSheet, gameSheet, newDeckSheet, opponentSheet, settingsSheet, switchDeckSheet } from "./forms.js";
 import { addByName } from "./scan.js";
 import * as scry from "./scry.js";
@@ -38,6 +37,9 @@ function bindGames(el) {
 const empty = (ic, title, text, extra = "") => `<div class="empty">${icon(ic)}<h3>${esc(title)}</h3><p>${esc(text)}</p>${extra}</div>`;
 
 // ---------- Tisch ----------
+// the life counter for the whole table; it saves finished games here (game.add with places and its round log)
+const TABLE_URL = "https://conclave-table.duckdns.org/";
+
 export function tisch() {
   const s = state.snap;
   const d = currentDeck();
@@ -58,7 +60,6 @@ export function tisch() {
         </div>
       </article>`
       : empty("decks", "Noch keine Decks", "Deine Decks kommen vom PC, sobald er abgeglichen hat.")}
-    ${roundCard()}
     ${statusLine()}
     ${installHint()}
     <div class="section-head"><h2>Letzte Partien</h2></div>
@@ -70,16 +71,17 @@ export function tisch() {
         <span class="main"><span class="title">Gegnerdeck festhalten</span><span class="subtitle">Jemand hat ein neues Deck dabei</span></span>${icon("chev-r", "sm chev")}</button>
       <a class="row" href="#/karten"><span class="res win" aria-hidden="true">${icon("search", "sm")}</span>
         <span class="main"><span class="title">Karte nachschlagen</span><span class="subtitle">Text auf Deutsch, auch für Karten deiner Decks</span></span>${icon("chev-r", "sm chev")}</a>
+      <a class="row" href="${TABLE_URL}" target="_blank" rel="noopener"><span class="res loss" aria-hidden="true">${icon("heart", "sm")}</span>
+        <span class="main"><span class="title">Leben zählen</span><span class="subtitle">Mit Conclave Table – die Partie landet danach hier</span></span>${icon("chev-r", "sm chev")}</a>
     </div>`;
   return {
-    html, fab: running() ? { label: "Zur Runde", icon: "heart", run: () => { location.hash = "#/runde"; } } : d ? { label: "Partie eintragen", run: () => gameSheet() } : null,
+    html, fab: d ? { label: "Partie eintragen", run: () => gameSheet() } : null,
     bar: { title: "Am Tisch", watch: ".large-title h1" },
     bind(el) {
       $("#open-settings", el).addEventListener("click", settingsSheet);
       $("#switch-deck", el)?.addEventListener("click", switchDeckSheet);
       $("#show-r0", el)?.addEventListener("click", () => showRule0(d));
       $("#quick-opp", el).addEventListener("click", () => opponentSheet());
-      $("#round-start", el)?.addEventListener("click", startSheet);
       $("#status-line", el)?.addEventListener("click", settingsSheet);
       $("#install-hint .x", el)?.addEventListener("click", () => { setPref("installHintDone", true); window.dispatchEvent(new Event("redraw")); });
       $("#install-now", el)?.addEventListener("click", async () => {

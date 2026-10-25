@@ -1,11 +1,11 @@
-// A round's numbers, summary and log: shared by the Runden-Helfer (round.js) and the game sheets (forms.js).
+// A saved game's round log (``game.round``: from Conclave Table, or from the phone's former Runden-Helfer):
+// its numbers, the summary and the turn-by-turn log in the game detail (forms.js).
 
 import { shortName } from "./data.js";
-import { redraw as redrawSheet, toast } from "./ui.js";
-import { $, esc, icon, nowIso, plural } from "./util.js";
+import { esc, icon, plural } from "./util.js";
 
-// ---------- the round's numbers, always derived from its log (so undo is just "drop the last entry") ----------
-/** {life, poison, turn, cmd: {name: n}, from: {name: n}, out: [commander, …]} of a round (or a saved ``game.round``);
+// ---------- the round's numbers, always derived from its log ----------
+/** {life, poison, turn, cmd: {name: n}, from: {name: n}, out: [commander, …]} of a saved ``game.round``;
  *  ``out`` = the opponents that are out, first out first (by their commander). */
 export function totals(round) {
   const t = { life: round.start_life, poison: 0, turn: 1, cmd: {}, from: {}, out: [] };
@@ -26,8 +26,8 @@ export function totals(round) {
   return t;
 }
 
-// ---------- summary and log – used live and for saved games ----------
-/** One group with the round's end state, for the game sheet and the game detail. */
+// ---------- summary and log ----------
+/** One group with the round's end state, for the game detail. */
 export function roundSummary(round) {
   const cmd = (round.cmd || []).filter((c) => c.dmg).sort((a, b) => b.dmg - a.dmg);
   return `<div class="round-sum">
@@ -65,9 +65,9 @@ export function eventText(e) {
   return "";
 }
 
-/** A sheet page with the round's log, turn by turn (newest first). ``live`` adds a note field for the current turn. */
-export function roundLogPage(round, title, { live = false, onNote = null } = {}) {
-  return ({ pop }) => {
+/** A sheet page with the round's log, turn by turn (newest first), pushed into the game detail. */
+export function roundLogPage(round, title) {
+  return () => {
     const t = totals(round);
     const turns = [];
     for (let n = t.turn; n >= 1; n--) {
@@ -75,29 +75,15 @@ export function roundLogPage(round, title, { live = false, onNote = null } = {})
       const lifeEnd = [...(round.events || [])].reverse().find((e) => e.turn <= n && typeof e.life === "number")?.life ?? round.start_life;
       turns.push({ n, ev, lifeEnd });
     }
-    const page = !!pop && !live;  // pushed into another sheet (the game detail)
     return {
-      title: live ? "Verlauf" : `Verlauf · ${title}`,
-      left: page ? `<button class="back-btn" type="button" data-sheet-back>${icon("chev-l")}<span>Partie</span></button>` : `<button class="btn plain" type="button" data-sheet-close>Schließen</button>`,
+      title: `Verlauf · ${title}`,
+      left: `<button class="back-btn" type="button" data-sheet-back>${icon("chev-l")}<span>Partie</span></button>`,
       body: `
-        ${live ? `<form class="note-add" id="r-note"><textarea class="textarea" name="text" rows="2" placeholder="Notiz zu Zug ${t.turn} – was ist passiert?" enterkeyhint="done"></textarea>
-          <div class="btn-row-end"><button class="btn tint" type="submit">Notiz speichern</button></div></form>` : ""}
-        ${turns.map(({ n, ev, lifeEnd }) => `<div class="cat-head"><span>Zug ${n}${live && n === t.turn ? " · läuft" : ""}</span><span>${esc(lifeEnd)} Leben</span></div>
+        ${turns.map(({ n, ev, lifeEnd }) => `<div class="cat-head"><span>Zug ${n}</span><span>${esc(lifeEnd)} Leben</span></div>
           <div class="group">${ev.length ? [...ev].reverse().map((e) => `<div class="row log-row ${e.kind}${e.delta > 0 ? " gain" : ""}"><span class="log-dot" aria-hidden="true"></span>
             <span class="main"><span class="title wrap">${esc(eventText(e))}</span><span class="subtitle">${esc(new Date(e.at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }))}${typeof e.life === "number" && e.kind !== "note" ? ` · ${e.life} Leben` : ""}</span></span></div>`).join("")
             : `<div class="row"><span class="main"><span class="subtitle">Nichts passiert</span></span></div>`}</div>`).join("")}
         <p class="hint-small">Start mit ${esc(round.start_life)} Leben · ${esc(new Date(round.started).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }))}</p>`,
-      bind(el) {
-        $("#r-note", el)?.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const text = e.target.text.value.trim();
-          if (!text) return;
-          round.events.push({ turn: totals(round).turn, kind: "note", delta: 0, text: text.slice(0, 500), at: nowIso() });
-          onNote?.();
-          redrawSheet();
-          toast("Notiz gespeichert", { ok: true });
-        });
-      },
     };
   };
 }

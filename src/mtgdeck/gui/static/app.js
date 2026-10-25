@@ -2644,11 +2644,11 @@ function renderGames(slug, data) {
       <button type="button" class="icon-btn game-del" aria-label="Partie löschen" title="Partie löschen">${icon("x")}</button></li>`).join("");
 }
 
-// rounds counted with the phone's Runden-Helfer: what they say over all games, and one round turn by turn
+// rounds counted with Conclave Table (or the phone's former Runden-Helfer): what they say over all games, and one round turn by turn
 const cmdShort = (name) => String(name || "").split(",")[0].split(" // ")[0];
 function roundStatsHtml(r) {
   const maxLost = Math.max(1, ...r.per_turn.map((t) => t.avg_lost));
-  return `<h3 class="small muted round-stats-head">Aus dem Runden-Helfer · ${r.rounds} ${r.rounds === 1 ? "Runde" : "Runden"}</h3>
+  return `<h3 class="small muted round-stats-head">Aus den Runden-Protokollen · ${r.rounds} ${r.rounds === 1 ? "Runde" : "Runden"}</h3>
     ${r.sources.length ? `<p class="game-stats-more">Am meisten Schaden: ${r.sources.slice(0, 3).map((x) => `<strong>${esc(cmdShort(x.name))}</strong> ${x.damage}${x.cmd ? ` (${x.cmd} Commander-Schaden)` : ""}${r.rounds > 1 ? ` in ${x.rounds} ${x.rounds === 1 ? "Runde" : "Runden"}` : ""}`).join(" · ")}</p>` : ""}
     ${r.per_turn.some((t) => t.avg_lost) ? `<p class="game-stats-more">Leben verloren pro eigenem Zug${r.rounds > 1 ? " (Schnitt)" : ""}:</p>
       <ul class="issue-bars turn-bars">${r.per_turn.slice(0, 10).map((t) => `<li${r.worst_turn?.turn === t.turn ? ' class="worst"' : ""}><span>Zug ${t.turn}</span><span class="bar"><i style="width:${(t.avg_lost / maxLost) * 100}%"></i></span><span>${t.avg_lost ? "−" + fmtNum(t.avg_lost) : "0"}</span></li>`).join("")}</ul>` : ""}

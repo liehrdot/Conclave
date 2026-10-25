@@ -144,7 +144,7 @@ def stats(items: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def learn_focus(items: list[dict[str, Any]], top: int = 3) -> str:
-    """What to work on, from the most common problems and the Runden-Helfer's logs (empty without either)."""
+    """What to work on, from the most common problems and the games' round logs (empty without either)."""
     st = stats(items)
     parts = [f"{ISSUES[i['key']][1]} ({i['count']}× „{i['label']}“)" for i in st["issues"][:top]]
     r = st["rounds"]
@@ -173,7 +173,7 @@ def places(items: list[dict[str, Any]]) -> dict[str, Any] | None:
     }  # fmt: skip
 
 
-# ---------- the phone's Runden-Helfer: ``game["round"]`` (cleaned by sync/appops._round) ----------
+# ---------- round logs (Conclave Table, formerly the phone's Runden-Helfer): ``game["round"]`` (cleaned by sync/appops._round) ----------
 def _event_text(e: dict[str, Any]) -> str:
     d, src = int(e.get("delta") or 0), e.get("from")
     von = f" von {src}" if src else ""
@@ -219,7 +219,7 @@ def round_turns(rnd: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def rounds(items: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """What the Runden-Helfer's logs say over all games: who dealt the most damage (commander damage plus life
+    """What the round logs say over all games: who dealt the most damage (commander damage plus life
     losses put on an opponent), life lost per own turn and the worst turn. None without logged rounds."""
     logged = [g["round"] for g in items if isinstance(g.get("round"), dict)]
     if not logged:
