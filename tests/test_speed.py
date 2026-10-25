@@ -16,6 +16,10 @@ async def test_total_mana_value_counts_commanders_not_lands():
     assert abs(s["nonland_mana_value"] - s["avg_cmc_nonland"] * nonland) < 1
 
 
+def test_english_tiers_cover_every_tier():
+    assert [k for _, k, _, _ in speed.TIERS] == list(speed.TIERS_EN)
+
+
 def test_tiers():
     assert speed.tier(126)[1] == "Sehr schnell"
     assert speed.tier(140)[1] == "Sehr schnell"
@@ -34,6 +38,10 @@ def test_rate_from_a_checked_deck():
     rows = {row["label"]: row for row in rule0.build({**deck, "bracket": 4, "slug": "x"})["rows"]}
     assert rows["Tempo"]["value"].startswith("Sehr schnell (Gesamt-Manawert 128")
     assert appdata._deck("x", deck, [])["speed"]["label"] == "Sehr schnell"
+    assert speed.line(deck, "en") == "Very fast (total mana value 128, avg 1.80)"
+    en = speed.rate(deck, lang="en")
+    assert (en["label"], en["tiers"][-1]["label"]) == ("Very fast", "Slow")
+    assert appdata._deck("x", deck, [])["speed"]["label_en"] == "Very fast"
 
 
 def test_rate_old_check_and_unfinished_deck():
@@ -42,6 +50,8 @@ def test_rate_old_check_and_unfinished_deck():
     r = speed.rate(old)
     assert (r["total"], r["exact"], r["complete"], r["cards"]) == (60, False, False, 41)
     assert "erst 41 von 100" in r["summary"]
+    assert "with only 41 of 100" in speed.rate(old, lang="en")["summary"]
+    assert speed.line(old, "en").endswith(", only 41 cards)")
 
 
 def _card(name, cost, cmc, type_line, text="", pt=None):
@@ -85,4 +95,6 @@ def test_cheap_combo_makes_the_deck_at_least_fast():
     assert tempo["combo"] == {"cards": ["A", "B"], "mana_value": 5}
     r = speed.rate(deck, {**tempo, "effective": 230})
     assert r["label"] == "Schnell" and "A + B" in r["text"]
+    en = speed.rate(deck, {**tempo, "effective": 230}, lang="en")
+    assert en["label"] == "Fast" and en["text"].startswith("A cheap two-card combo (A + B) can win early.")
     assert "Combo A + B" in speed.line({**deck, "validation": {**deck["validation"], "stats": {**deck["validation"]["stats"], "tempo": tempo}}})

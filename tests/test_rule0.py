@@ -34,3 +34,19 @@ async def test_rule0_route_and_proxy():
     r = TestClient(app).get("/api/decks/proxy-guide/rule0").json()
     assert any(x["label"] == "Proxys" for x in r["rows"])
     assert TestClient(app).get("/api/decks/nope/rule0").status_code == 404
+
+
+async def test_rule0_in_english():
+    deck = await _save(extra=["1 Demonic Tutor", "1 Time Warp"], fillers=None, power_profile={"tier": "high", "allow_two_card_combos": False})
+    r = rule0.build(deck, lang="en")
+    rows = {x["label"]: x for x in r["rows"]}
+    assert rows["Level"]["value"].startswith("upper Bracket 3 (Upgraded)")
+    assert rows["Play style"]["value"] == "Opfern und zurückholen."  # the deck's own text stays as written
+    assert rows["Game Changers"]["value"] == "1: Demonic Tutor" and rows["Game Changers"]["flag"]
+    assert rows["Extra turns"]["value"] == "Time Warp"
+    assert rows["Two-card combos"]["value"] == "none"
+    assert rows["House rules"]["value"] == "no two-card combos"
+    assert rows["Speed"]["value"].endswith("earliest game end by bracket: turn 6+")
+    assert r["text"].startswith("Guide – Rule 0\nLevel: ") and r["text"].endswith("Does this fit your table?")
+    assert [x["flag"] for x in r["rows"]] == [x["flag"] for x in rule0.build(deck)["rows"]]
+    assert rule0._names([str(i) for i in range(8)], lang="en").endswith("0, 1, 2, 3, 4, 5 and 2 more")

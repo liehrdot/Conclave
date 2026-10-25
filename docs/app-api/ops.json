@@ -67,6 +67,7 @@
      "description": "",
      "legal": true,
      "level": "Bracket 2",
+     "level_en": "Bracket 2",
      "maybe": [],
      "name": "Kaalia",
      "pin_rank": 0,
@@ -124,6 +125,51 @@
       ],
       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
      },
+     "rule0_en": {
+      "rows": [
+       {
+        "flag": false,
+        "label": "Level",
+        "value": "Bracket 2 (Core)"
+       },
+       {
+        "flag": false,
+        "label": "Commander",
+        "value": "Kaalia of the Vast"
+       },
+       {
+        "flag": false,
+        "label": "Speed",
+        "value": "earliest game end by bracket: turn 8+"
+       },
+       {
+        "flag": false,
+        "label": "Game Changers",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Two-card combos",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Tutors",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Extra turns",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Land destruction",
+        "value": "none"
+       }
+      ],
+      "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+     },
      "shelved": false,
      "slug": "kaalia",
      "speed": null,
@@ -158,6 +204,7 @@
      "description": "Opfern und zurückholen.",
      "legal": true,
      "level": "oberes Bracket 3",
+     "level_en": "upper Bracket 3",
      "maybe": [
       {
        "category": "Draw",
@@ -224,6 +271,56 @@
        }
       ],
       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+     },
+     "rule0_en": {
+      "rows": [
+       {
+        "flag": false,
+        "label": "Level",
+        "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+       },
+       {
+        "flag": false,
+        "label": "Commander",
+        "value": "Meren of Clan Nel Toth"
+       },
+       {
+        "flag": false,
+        "label": "Play style",
+        "value": "Opfern und zurückholen."
+       },
+       {
+        "flag": false,
+        "label": "Speed",
+        "value": "earliest game end by bracket: turn 6+"
+       },
+       {
+        "flag": false,
+        "label": "Game Changers",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Two-card combos",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Tutors",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Extra turns",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Land destruction",
+        "value": "none"
+       }
+      ],
+      "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
      },
      "shelved": false,
      "slug": "meren",
@@ -464,6 +561,155 @@
      [
       "politics",
       "Politik / Gruppenspiel"
+     ]
+    ]
+   },
+   "options_en": {
+    "how": [
+     [
+      "combat",
+      "combat damage"
+     ],
+     [
+      "commander",
+      "commander damage"
+     ],
+     [
+      "combo",
+      "combo"
+     ],
+     [
+      "alt",
+      "alternative win condition"
+     ],
+     [
+      "concede",
+      "concession"
+     ],
+     [
+      "other",
+      "other"
+     ]
+    ],
+    "issues": [
+     [
+      "few_lands",
+      "too few lands"
+     ],
+     [
+      "flood",
+      "drew too many lands"
+     ],
+     [
+      "colors",
+      "wrong colours / colour problems"
+     ],
+     [
+      "slow",
+      "too slow"
+     ],
+     [
+      "no_draw",
+      "empty hand, too little card draw"
+     ],
+     [
+      "no_removal",
+      "no answer to threats"
+     ],
+     [
+      "wiped",
+      "a board wipe set me back"
+     ],
+     [
+      "commander_removed",
+      "commander removed again and again"
+     ],
+     [
+      "no_win",
+      "no way to win"
+     ],
+     [
+      "combo",
+      "lost to a combo"
+     ],
+     [
+      "fliers",
+      "lost to fliers / evasion"
+     ],
+     [
+      "too_strong",
+      "deck was too strong for the table"
+     ]
+    ],
+    "results": {
+     "draw": "Draw",
+     "loss": "Loss",
+     "win": "Win"
+    },
+    "tags": [
+     [
+      "combo",
+      "Combo"
+     ],
+     [
+      "fast",
+      "fast & aggressive"
+     ],
+     [
+      "stax",
+      "Stax / lock"
+     ],
+     [
+      "wipes",
+      "lots of board wipes"
+     ],
+     [
+      "counters",
+      "lots of counterspells"
+     ],
+     [
+      "removal",
+      "lots of removal"
+     ],
+     [
+      "fliers",
+      "Fliers"
+     ],
+     [
+      "tokens",
+      "Token swarms"
+     ],
+     [
+      "graveyard",
+      "Graveyard / reanimation"
+     ],
+     [
+      "lifegain",
+      "Lifegain"
+     ],
+     [
+      "voltron",
+      "Voltron / commander damage"
+     ],
+     [
+      "artifacts",
+      "Artifacts"
+     ],
+     [
+      "spells",
+      "Spellslinger"
+     ],
+     [
+      "theft",
+      "Theft / control"
+     ],
+     [
+      "lands",
+      "Land destruction"
+     ],
+     [
+      "politics",
+      "Politics / group play"
      ]
     ]
    },
@@ -524,6 +770,7 @@
      "description": "",
      "legal": true,
      "level": "Bracket 2",
+     "level_en": "Bracket 2",
      "maybe": [],
      "name": "Kaalia",
      "pin_rank": 0,
@@ -581,6 +828,51 @@
       ],
       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
      },
+     "rule0_en": {
+      "rows": [
+       {
+        "flag": false,
+        "label": "Level",
+        "value": "Bracket 2 (Core)"
+       },
+       {
+        "flag": false,
+        "label": "Commander",
+        "value": "Kaalia of the Vast"
+       },
+       {
+        "flag": false,
+        "label": "Speed",
+        "value": "earliest game end by bracket: turn 8+"
+       },
+       {
+        "flag": false,
+        "label": "Game Changers",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Two-card combos",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Tutors",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Extra turns",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Land destruction",
+        "value": "none"
+       }
+      ],
+      "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+     },
      "shelved": false,
      "slug": "kaalia",
      "speed": null,
@@ -615,6 +907,7 @@
      "description": "Opfern und zurückholen.",
      "legal": true,
      "level": "oberes Bracket 3",
+     "level_en": "upper Bracket 3",
      "maybe": [
       {
        "category": "Draw",
@@ -681,6 +974,56 @@
        }
       ],
       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+     },
+     "rule0_en": {
+      "rows": [
+       {
+        "flag": false,
+        "label": "Level",
+        "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+       },
+       {
+        "flag": false,
+        "label": "Commander",
+        "value": "Meren of Clan Nel Toth"
+       },
+       {
+        "flag": false,
+        "label": "Play style",
+        "value": "Opfern und zurückholen."
+       },
+       {
+        "flag": false,
+        "label": "Speed",
+        "value": "earliest game end by bracket: turn 6+"
+       },
+       {
+        "flag": false,
+        "label": "Game Changers",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Two-card combos",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Tutors",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Extra turns",
+        "value": "none"
+       },
+       {
+        "flag": false,
+        "label": "Land destruction",
+        "value": "none"
+       }
+      ],
+      "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
      },
      "shelved": false,
      "slug": "meren",
@@ -924,6 +1267,155 @@
      ]
     ]
    },
+   "options_en": {
+    "how": [
+     [
+      "combat",
+      "combat damage"
+     ],
+     [
+      "commander",
+      "commander damage"
+     ],
+     [
+      "combo",
+      "combo"
+     ],
+     [
+      "alt",
+      "alternative win condition"
+     ],
+     [
+      "concede",
+      "concession"
+     ],
+     [
+      "other",
+      "other"
+     ]
+    ],
+    "issues": [
+     [
+      "few_lands",
+      "too few lands"
+     ],
+     [
+      "flood",
+      "drew too many lands"
+     ],
+     [
+      "colors",
+      "wrong colours / colour problems"
+     ],
+     [
+      "slow",
+      "too slow"
+     ],
+     [
+      "no_draw",
+      "empty hand, too little card draw"
+     ],
+     [
+      "no_removal",
+      "no answer to threats"
+     ],
+     [
+      "wiped",
+      "a board wipe set me back"
+     ],
+     [
+      "commander_removed",
+      "commander removed again and again"
+     ],
+     [
+      "no_win",
+      "no way to win"
+     ],
+     [
+      "combo",
+      "lost to a combo"
+     ],
+     [
+      "fliers",
+      "lost to fliers / evasion"
+     ],
+     [
+      "too_strong",
+      "deck was too strong for the table"
+     ]
+    ],
+    "results": {
+     "draw": "Draw",
+     "loss": "Loss",
+     "win": "Win"
+    },
+    "tags": [
+     [
+      "combo",
+      "Combo"
+     ],
+     [
+      "fast",
+      "fast & aggressive"
+     ],
+     [
+      "stax",
+      "Stax / lock"
+     ],
+     [
+      "wipes",
+      "lots of board wipes"
+     ],
+     [
+      "counters",
+      "lots of counterspells"
+     ],
+     [
+      "removal",
+      "lots of removal"
+     ],
+     [
+      "fliers",
+      "Fliers"
+     ],
+     [
+      "tokens",
+      "Token swarms"
+     ],
+     [
+      "graveyard",
+      "Graveyard / reanimation"
+     ],
+     [
+      "lifegain",
+      "Lifegain"
+     ],
+     [
+      "voltron",
+      "Voltron / commander damage"
+     ],
+     [
+      "artifacts",
+      "Artifacts"
+     ],
+     [
+      "spells",
+      "Spellslinger"
+     ],
+     [
+      "theft",
+      "Theft / control"
+     ],
+     [
+      "lands",
+      "Land destruction"
+     ],
+     [
+      "politics",
+      "Politics / group play"
+     ]
+    ]
+   },
    "players": [
     "Lisa",
     "Tim"
@@ -953,6 +1445,7 @@
       "description": "",
       "legal": true,
       "level": "Bracket 2",
+      "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
       "pin_rank": 0,
@@ -1010,6 +1503,51 @@
        ],
        "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "kaalia",
       "speed": null,
@@ -1044,6 +1582,7 @@
       "description": "Opfern und zurückholen.",
       "legal": true,
       "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
       "maybe": [
        {
         "category": "Draw",
@@ -1110,6 +1649,56 @@
         }
        ],
        "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
       },
       "shelved": false,
       "slug": "meren",
@@ -1273,6 +1862,7 @@
       "description": "",
       "legal": true,
       "level": "Bracket 2",
+      "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
       "pin_rank": 0,
@@ -1330,6 +1920,51 @@
        ],
        "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "kaalia",
       "speed": null,
@@ -1364,6 +1999,7 @@
       "description": "Opfern und zurückholen.",
       "legal": true,
       "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
       "maybe": [
        {
         "category": "Draw",
@@ -1430,6 +2066,56 @@
         }
        ],
        "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
       },
       "shelved": false,
       "slug": "meren",
@@ -1639,6 +2325,7 @@
       "description": "",
       "legal": true,
       "level": "Bracket 2",
+      "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
       "pin_rank": 0,
@@ -1696,6 +2383,51 @@
        ],
        "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "kaalia",
       "speed": null,
@@ -1730,6 +2462,7 @@
       "description": "Opfern und zurückholen.",
       "legal": true,
       "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
       "maybe": [
        {
         "category": "Draw",
@@ -1796,6 +2529,56 @@
         }
        ],
        "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
       },
       "shelved": false,
       "slug": "meren",
@@ -2076,6 +2859,7 @@
       "description": "",
       "legal": true,
       "level": "Bracket 2",
+      "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
       "pin_rank": 0,
@@ -2133,6 +2917,51 @@
        ],
        "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "kaalia",
       "speed": null,
@@ -2167,6 +2996,7 @@
       "description": "Opfern und zurückholen.",
       "legal": true,
       "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
       "maybe": [
        {
         "category": "Draw",
@@ -2233,6 +3063,56 @@
         }
        ],
        "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
       },
       "shelved": false,
       "slug": "meren",
@@ -2862,6 +3742,7 @@
       "description": "",
       "legal": true,
       "level": "Bracket 2",
+      "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
       "pin_rank": 0,
@@ -2919,6 +3800,51 @@
        ],
        "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "kaalia",
       "speed": null,
@@ -2953,6 +3879,7 @@
       "description": "Opfern und zurückholen.",
       "legal": true,
       "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
       "maybe": [
        {
         "category": "Draw",
@@ -3020,6 +3947,56 @@
        ],
        "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "meren",
       "speed": null,
@@ -3038,6 +4015,7 @@
       "description": "",
       "legal": null,
       "level": "Bracket 3",
+      "level_en": "Bracket 3",
       "maybe": [],
       "name": "Vampire",
       "pin_rank": null,
@@ -3094,6 +4072,51 @@
         }
        ],
        "text": "Vampire – Rule 0\nStufe: Bracket 3 (Upgraded)\nCommander: Edgar Markov\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 3 (Upgraded)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Edgar Markov"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Vampire – Rule 0\nLevel: Bracket 3 (Upgraded)\nCommander: Edgar Markov\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
       },
       "shelved": false,
       "slug": "edgar",
@@ -3162,6 +4185,7 @@
       "description": "",
       "legal": true,
       "level": "Bracket 2",
+      "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
       "pin_rank": 0,
@@ -3219,6 +4243,51 @@
        ],
        "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "kaalia",
       "speed": null,
@@ -3253,6 +4322,7 @@
       "description": "Opfern und zurückholen.",
       "legal": true,
       "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
       "maybe": [
        {
         "category": "Draw",
@@ -3319,6 +4389,56 @@
         }
        ],
        "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
       },
       "shelved": false,
       "slug": "meren",
@@ -3390,6 +4510,7 @@
       "description": "",
       "legal": true,
       "level": "Bracket 2",
+      "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
       "pin_rank": 0,
@@ -3447,6 +4568,51 @@
        ],
        "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "kaalia",
       "speed": null,
@@ -3476,6 +4642,7 @@
       "description": "Opfern und zurückholen.",
       "legal": true,
       "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
       "maybe": [
        {
         "category": "Draw",
@@ -3546,6 +4713,56 @@
         }
        ],
        "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
       },
       "shelved": false,
       "slug": "meren",
@@ -3639,6 +4856,7 @@
       "description": "Opfern und zurückholen.",
       "legal": true,
       "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
       "maybe": [
        {
         "category": "Draw",
@@ -3706,6 +4924,56 @@
        ],
        "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "meren",
       "speed": null,
@@ -3730,6 +4998,7 @@
       "description": "",
       "legal": true,
       "level": "Bracket 2",
+      "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
       "pin_rank": 0,
@@ -3787,6 +5056,51 @@
        ],
        "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "kaalia",
       "speed": null,
@@ -3839,6 +5153,7 @@
       "description": "Opfern und zurückholen.",
       "legal": true,
       "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
       "maybe": [
        {
         "category": "Draw",
@@ -3906,6 +5221,56 @@
        ],
        "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "meren",
       "speed": null,
@@ -3930,6 +5295,7 @@
       "description": "",
       "legal": true,
       "level": "Bracket 2",
+      "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
       "pin_rank": null,
@@ -3987,6 +5353,51 @@
        ],
        "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": true,
       "slug": "kaalia",
       "speed": null,
@@ -4030,6 +5441,7 @@
       "description": "",
       "legal": true,
       "level": "Bracket 2",
+      "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
       "pin_rank": 1,
@@ -4087,6 +5499,51 @@
        ],
        "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
       },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
       "shelved": false,
       "slug": "kaalia",
       "speed": null,
@@ -4121,6 +5578,7 @@
       "description": "Opfern und zurückholen.",
       "legal": true,
       "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
       "maybe": [
        {
         "category": "Draw",
@@ -4187,6 +5645,56 @@
         }
        ],
        "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
       },
       "shelved": false,
       "slug": "meren",

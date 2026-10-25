@@ -31,6 +31,14 @@ TIERS: list[tuple[float, str, str, str]] = [
     (240, "steady", "Gemächlich", "Typisches Casual-Tempo, etwa wie ein Precon."),
     (float("inf"), "slow", "Langsam", "Viele teure Karten: das Deck braucht lange, bis es läuft."),
 ]  # fmt: skip
+# the same tiers in English, for the native phone apps (``rate(lang="en")``)
+TIERS_EN: dict[str, tuple[str, str]] = {
+    "very-fast": ("Very fast", "cEDH pace: as cheap as Bracket 5 and strong Bracket 4 decks."),
+    "fast": ("Fast", "Strong Bracket 4 pace: almost everything hits the table early."),
+    "brisk": ("Brisk", "Well tuned, like a strong Bracket 3 or a relaxed Bracket 4."),
+    "steady": ("Steady", "Typical casual pace, about like a precon."),
+    "slow": ("Slow", "Lots of expensive cards: the deck takes a while to get going."),
+}  # fmt: skip
 SCALE = (100, 300)  # where the GUI's bar starts and ends
 FULL_DECK = 100
 REDUCER_CAP = 10
@@ -214,10 +222,11 @@ def total(stats: dict[str, Any]) -> tuple[float, bool]:
     return float(stats.get("avg_cmc_nonland") or 0) * max(nonland, 0), False
 
 
-def rate(deck: dict[str, Any], tempo: dict[str, Any] | None = None) -> dict[str, Any] | None:
+def rate(deck: dict[str, Any], tempo: dict[str, Any] | None = None, lang: str = "de") -> dict[str, Any] | None:
     """``{total, effective, key, label, text, summary, average, cards, complete, exact, discounts,
     reducers, combo, scale, tiers}`` or None when the deck has not been checked yet. ``tempo``
-    (an ``analyse()`` result) overrides the stored one, for checks made before it existed."""
+    (an ``analyse()`` result) overrides the stored one, for checks made before it existed.
+    ``lang="en"`` gives ``label``, ``text`` and ``summary`` in English (the discount lists stay German)."""
     validation = deck.get("validation") or {}
     stats = validation.get("stats") or {}
     if not stats.get("card_count"):
@@ -232,32 +241,45 @@ def rate(deck: dict[str, Any], tempo: dict[str, Any] | None = None) -> dict[str,
     lifted = bool(combo) and keys.index(key) > keys.index(COMBO_TIER)
     if lifted:
         key, label, text = next((k, lab, t) for _, k, lab, t in TIERS if k == COMBO_TIER)
-        text = f"Eine günstige 2-Karten-Combo ({' + '.join(combo['cards'])}) kann früh gewinnen. {text}"
+    en = lang == "en"
+    if en:
+        label, text = TIERS_EN[key]
+    if lifted:
+        cheap = "A cheap two-card combo ({}) can win early." if en else "Eine günstige 2-Karten-Combo ({}) kann früh gewinnen."
+        text = f"{cheap.format(' + '.join(combo['cards']))} {text}"
     cards = int(stats["card_count"]) + len(validation.get("commanders") or deck.get("commanders") or [])
     complete = cards >= FULL_DECK
-    summary = f"{label} – Gesamt-Manawert {value}" + (f", effektiv {effective}" if effective != value else "")
-    if not complete:
-        summary += f" bei erst {cards} von {FULL_DECK} Karten"
+    if en:
+        summary = f"{label} – total mana value {value}" + (f", effective {effective}" if effective != value else "")
+        summary += "" if complete else f" with only {cards} of {FULL_DECK} cards"
+    else:
+        summary = f"{label} – Gesamt-Manawert {value}" + (f", effektiv {effective}" if effective != value else "")
+        summary += "" if complete else f" bei erst {cards} von {FULL_DECK} Karten"
     return {
         "total": value, "effective": effective, "key": key, "label": label, "text": text, "summary": summary,
         "average": stats.get("avg_cmc_nonland"), "cards": cards, "complete": complete, "exact": exact,
         "discounts": tempo.get("discounts") or [], "reducers": tempo.get("reducers") or [], "combo": combo,
         "combo_lifted": lifted,
         "analysed": bool(tempo), "scale": list(SCALE),
-        "tiers": [{"key": k, "label": lab, "max": None if top == float("inf") else top} for top, k, lab, _ in TIERS],
+        "tiers": [{"key": k, "label": TIERS_EN[k][0] if en else lab, "max": None if top == float("inf") else top}
+                  for top, k, lab, _ in TIERS],
     }  # fmt: skip
 
 
-def line(deck: dict[str, Any]) -> str:
-    """One line for Rule 0 and the phone: „Schnell (Gesamt-Manawert 182, effektiv 158)“."""
-    r = rate(deck)
+def line(deck: dict[str, Any], lang: str = "de") -> str:
+    """One line for Rule 0 and the phone: „Schnell (Gesamt-Manawert 182, effektiv 158)“;
+    ``lang="en"``: „Fast (total mana value 182, effective 158)“."""
+    r = rate(deck, lang=lang)
     if not r:
         return ""
-    out = f"{r['label']} (Gesamt-Manawert {r['total']}"
+    en = lang == "en"
+    out = f"{r['label']} ({'total mana value' if en else 'Gesamt-Manawert'} {r['total']}"
     if r["effective"] != r["total"]:
-        out += f", effektiv {r['effective']}"
+        out += f", {'effective' if en else 'effektiv'} {r['effective']}"
     elif r["average"]:
-        out += f", Ø {fmt.num(float(r['average']))}"
+        out += f", avg {float(r['average']):.2f}" if en else f", Ø {fmt.num(float(r['average']))}"
     if r["combo"]:
         out += f", Combo {' + '.join(r['combo']['cards'])}"
-    return out + ("" if r["complete"] else f", erst {r['cards']} Karten") + ")"
+    if not r["complete"]:
+        out += f", only {r['cards']} cards" if en else f", erst {r['cards']} Karten"
+    return out + ")"

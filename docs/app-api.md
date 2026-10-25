@@ -45,9 +45,10 @@ every minute while visible) and fetch `/api/app/data` only when `etag` changed.
 Top-level keys of the read model (version 1):
 
 - `decks`: in the order to show them (pinned first in their dragged order, shelved last, then the most recently
-  played). Each `{slug, name, commanders, colors, bracket, tier, level, proxy, legal, description, version, updated,
-  checking, rule0: {rows, text}, speed, cards: [{name, qty, category}], maybe: [{name, category}], record: {games,
+  played). Each `{slug, name, commanders, colors, bracket, tier, level, level_en, proxy, legal, description, version,
+  updated, checking, rule0: {rows, text}, rule0_en: {rows, text}, speed, cards: [{name, qty, category}], maybe: [{name, category}], record: {games,
   wins, losses, draws, last}, pinned, shelved, pin_rank}`. `checking` = the PC has not checked the latest version yet.
+  `speed` = `{total, effective, key, label, text, complete, cards, label_en, text_en}` or null before the first check.
   Card data (images, text, prices) is never in here: the apps get it from Scryfall by name.
 - `opponents`: `{id, title, label, player, commanders, colors, bracket, tags, notes: [{id, text, at, game_id,
   deck_slug}], record: {games, wins, losses, draws, last, per_deck}, updated, created}`, newest notes first.
@@ -56,7 +57,11 @@ Top-level keys of the read model (version 1):
 - `collection`: one row per printing and place, by name: `{id, name, qty, proxy, foil, lang, set, set_name,
   collector_number, scryfall_id, price_eur, place, place_deck, image?}` (`image` only without a Scryfall id).
 - `players`: player names used on opponent decks. `options`: the quick-pick lists `{results, issues, tags, how}` as
-  `[key, German label]` pairs. `version`: 1.
+  `[key, German label]` pairs (`results` is `{key: label}`). `version`: 1.
+- English for the native apps (whose UI is English; the web app stays German): `options_en` has the same keys in the
+  same order with English labels, and each deck has `level_en`, `rule0_en` (same rows and flags, English labels and
+  texts) and `speed.label_en` / `speed.text_en`. What the user typed (deck description, notes) stays as written.
+  Older servers send none of these, so fall back to the German fields.
 
 ## Writing: operations
 

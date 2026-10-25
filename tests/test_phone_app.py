@@ -41,6 +41,18 @@ def test_snapshot_has_what_the_phone_shows():
     assert ["combo", "Combo"] in snap["options"]["tags"] and ["commander", "Commander-Schaden"] in snap["options"]["how"]
 
 
+def test_snapshot_in_english_for_the_native_apps():
+    snap = appdata.snapshot(_docs())
+    d = snap["decks"][0]
+    assert d["level"] == "oberes Bracket 3" and d["level_en"] == "upper Bracket 3"
+    gc = next(r for r in d["rule0_en"]["rows"] if r["label"] == "Game Changers")
+    assert gc["flag"] and "Demonic Tutor" in gc["value"] and d["rule0_en"]["text"].endswith("Does this fit your table?")
+    en, de = snap["options_en"], snap["options"]
+    for key in ("issues", "tags", "how"):  # the same keys in the same order, every one translated
+        assert [k for k, _ in en[key]] == [k for k, _ in de[key]] and all(label for _, label in en[key])
+    assert en["results"] == {"win": "Win", "loss": "Loss", "draw": "Draw"}
+
+
 def test_snapshot_of_nothing():
     snap = appdata.snapshot({})
     assert snap["decks"] == snap["games"] == snap["opponents"] == [] and snap["options"]["issues"]

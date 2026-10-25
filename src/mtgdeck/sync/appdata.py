@@ -14,8 +14,8 @@ from collections import Counter
 from typing import Any
 
 from .. import rule0, speed
-from ..games import HOW, ISSUES, RESULTS
-from ..opponents import TAGS, record as opponent_record, title as opponent_title
+from ..games import HOW, HOW_EN, ISSUES, ISSUES_EN, RESULTS, RESULTS_EN
+from ..opponents import TAGS, TAGS_EN, record as opponent_record, title as opponent_title
 from ..storage import level_text, list_rank
 from .files import DECK_RE
 
@@ -36,19 +36,25 @@ def _record(items: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _speed(d: dict[str, Any]) -> dict[str, Any] | None:
     r = speed.rate(d)
-    return {k: r[k] for k in ("total", "effective", "key", "label", "text", "complete", "cards")} if r else None
+    if not r:
+        return None
+    en = speed.rate(d, lang="en") or {}
+    return {**{k: r[k] for k in ("total", "effective", "key", "label", "text", "complete", "cards")},
+            "label_en": en.get("label"), "text_en": en.get("text")}  # fmt: skip
 
 
 def _deck(slug: str, d: dict[str, Any], games: list[dict[str, Any]]) -> dict[str, Any]:
     v = d.get("validation") or {}
     r0 = rule0.build({**d, "slug": slug})
+    r0_en = rule0.build({**d, "slug": slug}, lang="en")
     return {
         "slug": slug, "name": d.get("name") or slug, "commanders": d.get("commanders") or [],
         "colors": v.get("color_identity") or "", "bracket": d.get("bracket"),
-        "tier": (d.get("power_profile") or {}).get("tier"), "level": level_text(d), "proxy": bool(d.get("proxy")),
+        "tier": (d.get("power_profile") or {}).get("tier"), "level": level_text(d),
+        "level_en": level_text(d, "en"), "proxy": bool(d.get("proxy")),
         "legal": v.get("legal"), "description": rule0._first_sentence(d.get("description") or d.get("strategy") or "", 220),
         "version": d.get("version"), "updated": d.get("updated"), "checking": bool(d.get("needs_revalidation")),
-        "rule0": {"rows": r0["rows"], "text": r0["text"]},
+        "rule0": {"rows": r0["rows"], "text": r0["text"]}, "rule0_en": {"rows": r0_en["rows"], "text": r0_en["text"]},
         "speed": _speed(d),
         "cards": [{"name": c["name"], "qty": int(c.get("qty") or 1), "category": c.get("category") or ""}
                   for c in d.get("cards") or [] if isinstance(c, dict) and c.get("name")],
@@ -111,5 +117,10 @@ def snapshot(docs: dict[str, Any]) -> dict[str, Any]:
         "options": {
             "results": RESULTS, "issues": [[k, v[0]] for k, v in ISSUES.items()],
             "tags": [[k, v[0]] for k, v in TAGS.items()], "how": [[k, v] for k, v in HOW.items()],
+        },
+        # the same lists in English for the native phone apps (the web app stays German)
+        "options_en": {
+            "results": RESULTS_EN, "issues": [[k, ISSUES_EN[k]] for k in ISSUES],
+            "tags": [[k, TAGS_EN[k]] for k in TAGS], "how": [[k, HOW_EN[k]] for k in HOW],
         },
     }  # fmt: skip

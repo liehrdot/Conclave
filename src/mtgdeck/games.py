@@ -37,6 +37,19 @@ HOW: dict[str, str] = {
     "combat": "Kampfschaden", "commander": "Commander-Schaden", "combo": "Combo",
     "alt": "alternative Siegbedingung", "concede": "Aufgabe", "other": "anders",
 }  # fmt: skip
+# the quick-pick labels in English, for the native phone apps (read model ``options_en``)
+RESULTS_EN = {"win": "Win", "loss": "Loss", "draw": "Draw"}
+ISSUES_EN: dict[str, str] = {
+    "few_lands": "too few lands", "flood": "drew too many lands", "colors": "wrong colours / colour problems",
+    "slow": "too slow", "no_draw": "empty hand, too little card draw", "no_removal": "no answer to threats",
+    "wiped": "a board wipe set me back", "commander_removed": "commander removed again and again",
+    "no_win": "no way to win", "combo": "lost to a combo", "fliers": "lost to fliers / evasion",
+    "too_strong": "deck was too strong for the table",
+}  # fmt: skip
+HOW_EN: dict[str, str] = {
+    "combat": "combat damage", "commander": "commander damage", "combo": "combo",
+    "alt": "alternative win condition", "concede": "concession", "other": "other",
+}  # fmt: skip
 
 
 def _file(deck_slug: str) -> Path:

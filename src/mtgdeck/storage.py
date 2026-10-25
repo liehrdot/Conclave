@@ -65,9 +65,10 @@ def diff(old: dict[str, Any], new: dict[str, Any]) -> dict[str, list[str]]:
     return {"added": added, "removed": removed}
 
 
-def level_text(deck: dict[str, Any]) -> str:
+def level_text(deck: dict[str, Any], lang: str = "de") -> str:
+    """„oberes Bracket 3“; ``lang="en"`` for the native phone apps: „upper Bracket 3“."""
     tier = (deck.get("power_profile") or {}).get("tier")
-    labels = {"low": "unteres", "mid": "mittleres", "high": "oberes"}
+    labels = {"low": "unteres", "mid": "mittleres", "high": "oberes"} if lang == "de" else {"low": "lower", "mid": "mid", "high": "upper"}
     return f"{labels[tier]} Bracket {deck.get('bracket')}" if tier else f"Bracket {deck.get('bracket')}"
 
 
