@@ -13,6 +13,11 @@ on:
 permissions:
   contents: read
 
+# a newer push to the same branch stops the older build: only the newest one is worth waiting for
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   desktop-windows:
     runs-on: windows-latest
