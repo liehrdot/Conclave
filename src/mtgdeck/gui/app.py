@@ -1365,7 +1365,14 @@ async def api_collection() -> dict[str, Any]:
     entries = collection.load()
     usage = collection.decks_by_card() if entries else {}
     return {"entries": entries, "summary": collection.summary(entries), "places": collection.places(entries),
-            "decks": {name: [d["name"] for d in decks] for name, decks in usage.items()}, "sales": selling.tags(entries)}  # fmt: skip
+            "decks": {name: [d["name"] for d in decks] for name, decks in usage.items()},
+            "deck_slugs": {name: [d["slug"] for d in decks] for name, decks in usage.items()}, "sales": selling.tags(entries)}  # fmt: skip
+
+
+@app.get("/api/collection/cards")
+async def api_collection_cards() -> dict[str, Any]:
+    """Card facts for the collection's filters (colours, types, commander, mana value, roles, text)."""
+    return await collection.card_facts()
 
 
 @app.post("/api/collection/bulk")

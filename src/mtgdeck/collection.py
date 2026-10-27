@@ -29,6 +29,7 @@ from typing import Any
 from . import scryfall, storage
 from .cards import resolve
 from .deck import split_qty
+from .http import HttpError
 from .jsonstore import locked, read_json, write_json
 from . import paths
 
@@ -659,6 +660,57 @@ def missing_counts(deck: dict[str, Any]) -> dict[str, int]:
         miss = 0 if name in BASIC_LANDS else max(0, n - o["real"] - o["proxy"])
         out[name] = miss
     return out
+
+
+FACT_TYPES = ("Creature", "Artifact", "Enchantment", "Instant", "Sorcery", "Planeswalker", "Land", "Battle")
+
+
+def can_lead(card: dict[str, Any]) -> bool:
+    """Whether a card can be a commander, like Scryfall's ``is:commander``: a legendary creature, a legendary
+    Vehicle or Spacecraft with power/toughness, a Background, or a card that says it can be your commander."""
+    if card.get("commander_legal") is False:
+        return False
+    front = (card.get("type_line") or "").split("//")[0]
+    text = card.get("oracle_text") or ""
+    if "can be your commander" in text:
+        return True
+    if "Legendary" not in front:
+        return False
+    return "Creature" in front or "Background" in front or (bool(card.get("pt")) and ("Vehicle" in front or "Spacecraft" in front))
+
+
+def _facts(card: dict[str, Any]) -> dict[str, Any]:
+    front = (card.get("type_line") or "").split("//")[0]
+    return {
+        "ci": "".join(c for c in "WUBRG" if c in (card.get("color_identity") or [])),
+        "types": [t for t in FACT_TYPES if t in front],
+        "legendary": "Legendary" in front,
+        "commander": can_lead(card),
+        "cmc": card.get("cmc") or 0,
+        "roles": card.get("roles") or [],
+        "type_line": card.get("type_line") or "",
+        "text": card.get("oracle_text") or "",
+        "edhrec_rank": card.get("edhrec_rank"),
+    }
+
+
+async def card_facts(entries: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """What the collection's filters need per card name (colour identity, types, commander, mana value, roles,
+    Oracle text): ``{"cards": {name: facts}, "missing": [names]}``. Local card DB first, then Scryfall; offline
+    without a DB the cards stay unknown (``missing``) and only the entry filters work."""
+    names = sorted({e["name"] for e in (load() if entries is None else entries)})
+    if not names:
+        return {"cards": {}, "missing": []}
+    try:
+        data, renames, _ = await resolve(names)
+    except HttpError:
+        data, renames = {}, {}
+    out: dict[str, Any] = {}
+    for name in names:
+        card = data.get(renames.get(name, name))
+        if card:
+            out[name] = _facts(card)
+    return {"cards": out, "missing": [n for n in names if n not in out]}
 
 
 async def search_owned(color_identity: str | None = None, *, text: str = "", type_contains: str = "",

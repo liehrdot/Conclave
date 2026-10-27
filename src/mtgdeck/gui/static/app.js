@@ -3473,11 +3473,6 @@ function parsePlace(text) {
 function fillPlaces() {
   const names = [...new Set([...(coll.places || []).map((p) => placeLabel(p)), ...deckIndex.map((d) => d.name)].filter(Boolean))];
   $("#place-options").innerHTML = names.map((n) => `<option value="${esc(n)}"></option>`).join("");
-  const sel = $("#coll-place"), now = sel.value;
-  sel.innerHTML = `<option value="">Alle Orte</option><option value="none">Ohne Ort</option>`
-    + (coll.places || []).map((p) => `<option value="${esc(placeKey(p))}">${esc(placeLabel(p))} (${p.cards})</option>`).join("");
-  sel.value = [...sel.options].some((o) => o.value === now) ? now : "";
-  sel.hidden = !(coll.places || []).length;
 }
 function renderBulk() {
   for (const id of [...collSel]) if (!coll.entries.some((e) => e.id === id)) collSel.delete(id);
@@ -3525,7 +3520,6 @@ $("#place-chips").addEventListener("click", (e) => {
   if (b) { $("#place-input").value = b.dataset.place; $("#place-input").focus(); }
 });
 $("#place-cancel").addEventListener("click", () => $("#place-dialog").close());
-$("#coll-place").addEventListener("change", () => { collShown = COLL_PAGE; renderCollection(); });
 $("#coll-bulk-place").addEventListener("click", () => openPlaceDialog([...collSel]));
 const BULK_SET = {  // „Ändern …“ in the marking bar: what each choice sends, and the toast
   real: [{ proxy: false }, "als Original"], proxy: [{ proxy: true }, "als Proxy"],
@@ -3565,14 +3559,178 @@ $("#coll-bulk-delete").addEventListener("click", async () => {
 $("#coll-bulk-none").addEventListener("click", () => { collSel.clear(); renderCollection(); });
 $("#coll-bulk-all").addEventListener("click", () => { for (const e of collFiltered()) collSel.add(e.id); renderCollection(); });
 
+// „Filter“ in Meine Sammlung: card facts (colour identity, types, commander, mana value, roles, Oracle text) come
+// from /api/collection/cards, the rest from the entries. Within one group any pick matches, the groups all have to.
+const CF_FLAGS = [["commander", "Kann Commander sein"], ["legendary", "Legendär"]];
+const CF_COLORS = [["W", "Weiß"], ["U", "Blau"], ["B", "Schwarz"], ["R", "Rot"], ["G", "Grün"], ["C", "Farblos"]];
+const CF_TYPES = [["Creature", "Kreatur"], ["Artifact", "Artefakt"], ["Enchantment", "Verzauberung"], ["Instant", "Spontanzauber"],
+  ["Sorcery", "Hexerei"], ["Planeswalker", "Planeswalker"], ["Land", "Land"], ["Battle", "Schlacht"]];
+const CF_CMC = [["1", "0–1"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"], ["6", "6+"]];
+const CF_MIN = [1, 5, 20];
+const CF_EMPTY = { flags: [], colors: [], mode: "in", types: [], cmc: [], roles: [], text: "", deck: "", places: [], sets: [], langs: [], min: 0 };
+let cf = (() => {
+  try { return { ...CF_EMPTY, ...JSON.parse(store.get("collfilters") || "{}") }; } catch { return { ...CF_EMPTY }; }
+})();
+let collFacts = null, collFactsKey = "", collFactsLoading = null, collFactsError = "";
+const cfNeedsFacts = () => !!(cf.flags.length || cf.colors.length || cf.types.length || cf.cmc.length || cf.roles.length || cf.text.trim() || cf.deck);
+const cfActive = () => [cf.flags.length, cf.colors.length, cf.types.length, cf.cmc.length, cf.roles.length, cf.text.trim(), cf.deck,
+  cf.places.length, cf.sets.length, cf.langs.length, cf.min].filter(Boolean).length;
+function saveCf() {
+  store.set("collfilters", JSON.stringify(cf));
+  collShown = COLL_PAGE;
+  if (cfNeedsFacts()) void ensureCollFacts();
+  renderCollection();
+}
+async function ensureCollFacts() {
+  const key = [...new Set(coll.entries.map((e) => e.name))].sort().join("\n");
+  if (!key || key === collFactsKey) return;
+  if (collFactsLoading?.key === key) return collFactsLoading.promise;
+  const promise = (async () => {
+    try {
+      collFacts = await api("/api/collection/cards");
+      collFactsError = "";
+    } catch (err) {
+      collFacts = null;
+      collFactsError = err.message;
+    }
+    collFactsKey = key;  // a failure is not retried on every redraw; the next new card or reload tries again
+    collFactsLoading = null;
+    if (!$("#view-collection").hidden) renderCollection();
+  })();
+  collFactsLoading = { key, promise };
+  return promise;
+}
+const cfBucket = (cmc) => String(Math.min(6, Math.max(1, Math.floor(Number(cmc) || 0))));
+function cfColorsMatch(ci, picked, mode) {
+  const id = [...ci], wanted = picked.filter((c) => c !== "C");
+  if (mode === "exact") return id.length ? !picked.includes("C") && id.length === wanted.length && id.every((c) => wanted.includes(c)) : picked.includes("C") && !wanted.length;
+  if (mode === "has") return wanted.every((c) => id.includes(c)) && (!picked.includes("C") || !id.length);
+  return id.length ? id.every((c) => wanted.includes(c)) : picked.includes("C");
+}
+/** Whether an entry passes the filter panel (card facts only once they are loaded; an unknown card fails them). */
+function cfMatch(e) {
+  if (cf.places.length) {
+    const key = placeKey(e);
+    if (!cf.places.includes(key) && !(cf.places.includes("free") && !key.startsWith("deck:"))) return false;
+  }
+  if (cf.sets.length && !cf.sets.includes((e.set || "").toLowerCase())) return false;
+  if (cf.langs.length && !cf.langs.includes(e.lang || "en")) return false;
+  if (cf.min && (e.proxy || !(Number(e.price_eur) >= cf.min))) return false;
+  if (!cfNeedsFacts() || !collFacts || collFactsLoading) return true;
+  const f = collFacts.cards?.[e.name];
+  if (!f) return false;
+  if (cf.flags.includes("commander") && !f.commander) return false;
+  if (cf.flags.includes("legendary") && !f.legendary) return false;
+  if (cf.colors.length && !cfColorsMatch(f.ci, cf.colors, cf.mode)) return false;
+  if (cf.deck) {
+    const d = deckIndex.find((x) => x.slug === cf.deck);
+    if (d && typeof d.color_identity === "string" && ![...f.ci].every((c) => d.color_identity.includes(c))) return false;
+    if ((coll.deck_slugs?.[e.name] || []).includes(cf.deck)) return false;
+  }
+  if (cf.types.length && !cf.types.some((t) => f.types.includes(t))) return false;
+  const landOnly = f.types.length === 1 && f.types[0] === "Land";  // lands have no mana value worth filtering
+  if (cf.cmc.length && (landOnly || !cf.cmc.includes(cfBucket(f.cmc)))) return false;
+  if (cf.roles.length && !cf.roles.some((r) => f.roles.includes(r))) return false;
+  const text = cf.text.trim().toLowerCase();
+  if (text && !`${f.type_line}\n${f.text}`.toLowerCase().includes(text)) return false;
+  return true;
+}
+const orList = (items) => items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} oder ${items.at(-1)}`;
+/** The active filters in a few words, for the line above the list: „Kann Commander sein · Grün oder Schwarz · Kreatur“. */
+function cfSummary() {
+  const label = (pairs, keys) => keys.map((k) => pairs.find(([v]) => v === k)?.[1] || k);
+  const parts = label(CF_FLAGS, cf.flags);
+  if (cf.colors.length) parts.push((cf.mode === "exact" ? "genau " : cf.mode === "has" ? "mit " : "passt in ") + orList(label(CF_COLORS, cf.colors)).replace(" oder ", cf.mode === "in" ? " oder " : " und "));
+  if (cf.deck) parts.push(`passt zu „${deckIndex.find((d) => d.slug === cf.deck)?.name || cf.deck}“, noch nicht drin`);
+  if (cf.types.length) parts.push(orList(label(CF_TYPES, cf.types)));
+  if (cf.cmc.length) parts.push(`Manawert ${orList(label(CF_CMC, cf.cmc))}`);
+  if (cf.roles.length) parts.push(orList(cf.roles.map((r) => ROLE_LABELS[r] || r)));
+  if (cf.text.trim()) parts.push(`Text „${cf.text.trim()}“`);
+  if (cf.places.length) parts.push(orList(cf.places.map((k) => k === "none" ? "ohne Ort" : k === "free" ? "in keinem Deck" : `in ${cfPlaceName(k)}`)));
+  if (cf.sets.length) parts.push(orList(cf.sets.map((x) => x.toUpperCase())));
+  if (cf.langs.length) parts.push(orList(cf.langs.map((l) => LANG_NAMES[l] || l.toUpperCase())));
+  if (cf.min) parts.push(`ab ${fmtPrice(cf.min, "€")} pro Karte`);
+  return parts.join(" · ");
+}
+function cfPlaceName(key) {
+  const p = (coll.places || []).find((x) => placeKey(x) === key);
+  if (p) return placeLabel(p);
+  return key.startsWith("deck:") ? deckIndex.find((d) => d.slug === key.slice(5))?.name || key.slice(5) : key.replace(/^text:/, "");
+}
+const cfChip = (group, value, text, html = esc(text)) =>
+  `<button type="button" class="chip" data-cf="${group}" data-v="${esc(value)}" aria-pressed="${cf[group].includes(value)}" title="${esc(text)}">${html}</button>`;
+function renderCollFilters() {
+  const n = cfActive();
+  $("#coll-filter-count").textContent = n || "";
+  $("#coll-filter-btn").classList.toggle("on", !!n);
+  if ($("#coll-filters").hidden) return;
+  const box = (g) => $(`[data-cf-group="${g}"]`);
+  box("flags").innerHTML = CF_FLAGS.map(([v, t]) => cfChip("flags", v, t)).join("");
+  box("colors").innerHTML = CF_COLORS.map(([v, t]) => cfChip("colors", v, t, `${manaHtml(`{${v}}`)}<span class="sr-only">${esc(t)}</span>`)).join("");
+  document.querySelector(`[name="cfmode"][value="${cf.mode}"]`).checked = true;
+  box("types").innerHTML = CF_TYPES.map(([v, t]) => cfChip("types", v, t)).join("");
+  box("cmc").innerHTML = CF_CMC.map(([v, t]) => cfChip("cmc", v, t)).join("");
+  box("roles").innerHTML = Object.entries(ROLE_LABELS).map(([v, t]) => cfChip("roles", v, t)).join("");
+  const places = [["free", "In keinem Deck"], ["none", "Ohne Ort"], ...(coll.places || []).map((p) => [placeKey(p), `${placeLabel(p)} (${p.cards})`])];
+  box("places").innerHTML = places.map(([v, t]) => cfChip("places", v, t)).join("");
+  const sets = new Map(), langs = new Map();
+  for (const e of coll.entries) {
+    if (e.set) sets.set(e.set.toLowerCase(), e.set_name || e.set.toUpperCase());
+    langs.set(e.lang || "en", (langs.get(e.lang || "en") || 0) + e.qty);
+  }
+  for (const v of cf.sets) if (!sets.has(v)) sets.set(v, v.toUpperCase());
+  box("sets").innerHTML = [...sets].sort((a, b) => a[1].localeCompare(b[1])).map(([v, t]) => cfChip("sets", v, t, `${esc(t)} <span class="muted">${esc(v.toUpperCase())}</span>`)).join("");
+  $('[data-cf-row="sets"]').hidden = sets.size < 2 && !cf.sets.length;
+  box("langs").innerHTML = [...langs.keys()].sort((a, b) => (a !== "en") - (b !== "en") || a.localeCompare(b)).map((v) => cfChip("langs", v, LANG_NAMES[v] || v.toUpperCase())).join("");
+  $('[data-cf-row="langs"]').hidden = langs.size < 2 && !cf.langs.length;
+  box("min").innerHTML = CF_MIN.map((v) => `<button type="button" class="chip" data-cf="min" data-v="${v}" aria-pressed="${cf.min === v}">ab ${esc(fmtPrice(v, "€"))}</button>`).join("");
+  const sel = $("#cf-deck");
+  sel.innerHTML = `<option value="">–</option>` + deckIndex.filter((d) => !d.damaged).map((d) => `<option value="${esc(d.slug)}">${esc(d.name)}</option>`).join("");
+  sel.value = cf.deck;
+  if (document.activeElement !== $("#cf-text")) $("#cf-text").value = cf.text;
+  const status = $("#cf-status");
+  const missing = collFacts?.missing?.length || 0;
+  status.hidden = !(collFactsLoading || missing || collFactsError);
+  status.textContent = collFactsLoading ? "Kartendaten werden geladen …"
+    : collFactsError ? `Kartendaten fehlen (${collFactsError}) – Commander, Farbe, Typ, Manawert, Aufgabe und Text filtern gerade nicht.`
+    : `${missing} ${missing === 1 ? "Karte ist" : "Karten sind"} gerade nicht nachzuschlagen (keine Verbindung, keine Kartendatenbank) und ${missing === 1 ? "fällt" : "fallen"} bei Farbe, Typ und Text heraus.`;
+}
+$("#coll-filter-btn").addEventListener("click", () => {
+  const open = $("#coll-filters").hidden;
+  $("#coll-filters").hidden = !open;
+  $("#coll-filter-btn").setAttribute("aria-expanded", String(open));
+  store.set("collfilteropen", open ? "1" : "");
+  if (open) void ensureCollFacts();
+  renderCollFilters();
+});
+$("#coll-filters").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-cf]");
+  if (!b) return;
+  const group = b.dataset.cf, v = b.dataset.v;
+  if (group === "min") cf.min = cf.min === Number(v) ? 0 : Number(v);
+  else cf[group] = cf[group].includes(v) ? cf[group].filter((x) => x !== v) : [...cf[group], v];
+  saveCf();
+});
+$$('[name="cfmode"]').forEach((r) => r.addEventListener("change", () => { cf.mode = r.value; saveCf(); }));
+$("#cf-deck").addEventListener("change", (e) => { cf.deck = e.target.value; saveCf(); });
+$("#cf-text").addEventListener("input", debounce((e) => { cf.text = e.target.value; saveCf(); }, 200));
+$("#coll-result").addEventListener("click", (e) => {
+  if (!e.target.closest("[data-act=cf-reset]")) return;
+  cf = { ...CF_EMPTY };
+  saveCf();
+});
+if (store.get("collfilteropen")) {
+  $("#coll-filters").hidden = false;
+  $("#coll-filter-btn").setAttribute("aria-expanded", "true");
+}
+
 function collFiltered() {
   const q = $("#coll-q").value.trim().toLowerCase();
   const filter = document.querySelector('[name="collfilter"]:checked').value;
   const sort = $("#coll-sort").value;
-  const place = $("#coll-place").value;
   const list = coll.entries.filter((e) => (filter === "all" || (filter === "proxy") === !!e.proxy)
-    && (!place || placeKey(e) === place)
-    && (!q || `${e.name} ${e.set_name || ""} ${e.set || ""} ${e.note || ""} ${placeLabel(e)}`.toLowerCase().includes(q)));
+    && (!q || `${e.name} ${e.set_name || ""} ${e.set || ""} ${e.note || ""} ${placeLabel(e)}`.toLowerCase().includes(q))
+    && cfMatch(e));
   const price = (e) => Number(e.price_eur) || 0;
   const cmp = { name: (a, b) => a.name.localeCompare(b.name), qty: (a, b) => b.qty - a.qty || a.name.localeCompare(b.name),
     price: (a, b) => price(b) - price(a), added: (a, b) => (b.added || "").localeCompare(a.added || ""),
@@ -3590,8 +3748,12 @@ function renderCollection() {
     `<span class="pill ok">${s.real} echt</span>`, `<span class="pill accent">${s.proxy} Proxies</span>`,
     s.value_eur ? `<span class="pill">Wert ≈ ${fmtPrice(s.value_eur, "EUR")}</span>` : "",
   ].join("");
+  if (cfNeedsFacts() || !$("#coll-filters").hidden) void ensureCollFacts();
+  renderCollFilters();
   const list = collFiltered();
-  $("#coll-result").textContent = empty ? "" : `${list.length} Einträge${list.length !== coll.entries.length ? ` (von ${coll.entries.length})` : ""}`;
+  const words = cfSummary();
+  $("#coll-result").innerHTML = empty ? "" : `${list.length} ${list.length === 1 ? "Eintrag" : "Einträge"}${list.length !== coll.entries.length ? ` (von ${coll.entries.length})` : ""}`
+    + (words ? ` · <span class="cf-summary">${esc(words)}</span> <button type="button" class="link-btn" data-act="cf-reset">Filter zurücksetzen</button>` : "");
   const shown = list.slice(0, collShown);
   const grid = collView === "grid";
   $("#coll-list").classList.toggle("grid", grid);

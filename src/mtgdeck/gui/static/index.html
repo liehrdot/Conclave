@@ -40,6 +40,7 @@
   <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M10 9v6M14 9v6"/></symbol>
   <symbol id="i-maybe" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9.8 9.6a2.3 2.3 0 1 1 3.3 2.1c-.7.4-1.1.9-1.1 1.7"/><path d="M12 16.6h.01"/></symbol>
   <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="9" rx="1.5"/><rect x="13" y="4" width="7" height="9" rx="1.5"/><rect x="4" y="15" width="7" height="5" rx="1.5"/><rect x="13" y="15" width="7" height="5" rx="1.5"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
   <!-- brand marks (Simple Icons, CC0), filled: <svg class="brand-icon"><use href="#b-…"/></svg> -->
   <symbol id="b-twitter" viewBox="0 0 24 24"><path d="M21.543 7.104c.015.211.015.423.015.636 0 6.507-4.954 14.01-14.01 14.01v-.003A13.94 13.94 0 0 1 0 19.539a9.88 9.88 0 0 0 7.287-2.041 4.93 4.93 0 0 1-4.6-3.42 4.916 4.916 0 0 0 2.223-.084A4.926 4.926 0 0 1 .96 9.167v-.062a4.887 4.887 0 0 0 2.235.616A4.928 4.928 0 0 1 1.67 3.148 13.98 13.98 0 0 0 11.82 8.292a4.929 4.929 0 0 1 8.39-4.49 9.868 9.868 0 0 0 3.128-1.196 4.941 4.941 0 0 1-2.165 2.724A9.828 9.828 0 0 0 24 4.555a10.019 10.019 0 0 1-2.457 2.549z"/></symbol>
   <symbol id="b-twitch" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z"/></symbol>
@@ -580,7 +581,7 @@
             <label><input type="radio" name="collfilter" value="real"><span>Echt</span></label>
             <label><input type="radio" name="collfilter" value="proxy"><span>Proxy</span></label>
           </div>
-          <select id="coll-place" aria-label="Ort"><option value="">Alle Orte</option></select>
+          <button type="button" id="coll-filter-btn" class="btn" aria-expanded="false" aria-controls="coll-filters"><svg class="icon"><use href="#i-filter"/></svg>Filter <span id="coll-filter-count" class="filter-count"></span></button>
           <select id="coll-sort" aria-label="Sortieren nach">
             <option value="name">Name</option><option value="qty">Anzahl</option><option value="price">Preis</option>
             <option value="added">Zuletzt hinzugefügt</option><option value="set">Set</option>
@@ -589,6 +590,31 @@
             <label title="Liste"><input type="radio" name="collview" value="list" checked><span><svg class="icon"><use href="#i-list"/></svg>Liste</span></label>
             <label title="Bilder"><input type="radio" name="collview" value="grid"><span><svg class="icon"><use href="#i-grid"/></svg>Bilder</span></label>
           </div>
+        </div>
+        <div id="coll-filters" class="coll-filters" hidden>
+          <div class="cf-row"><span class="cf-label">Commander</span>
+            <div class="cf-chips" data-cf-group="flags"></div>
+            <label class="cf-deck">Passt zu Deck <select id="cf-deck" aria-label="Passt zu Deck"><option value="">–</option></select></label>
+          </div>
+          <div class="cf-row"><span class="cf-label">Farben</span>
+            <div class="cf-chips" data-cf-group="colors"></div>
+            <div class="segmented small" role="radiogroup" aria-label="Wie die Farben passen">
+              <label title="Farbidentität passt in die gewählten Farben – wie bei einem Commander dieser Farben"><input type="radio" name="cfmode" value="in" checked><span>Passt in</span></label>
+              <label title="Genau diese Farben"><input type="radio" name="cfmode" value="exact"><span>Genau</span></label>
+              <label title="Mindestens diese Farben"><input type="radio" name="cfmode" value="has"><span>Enthält</span></label>
+            </div>
+          </div>
+          <div class="cf-row"><span class="cf-label">Typ</span><div class="cf-chips" data-cf-group="types"></div></div>
+          <div class="cf-row"><span class="cf-label">Manawert</span><div class="cf-chips" data-cf-group="cmc"></div></div>
+          <div class="cf-row"><span class="cf-label">Aufgabe</span><div class="cf-chips" data-cf-group="roles"></div></div>
+          <div class="cf-row"><span class="cf-label">Kartentext</span>
+            <input type="search" id="cf-text" placeholder="Englischer Regeltext, z. B. Treasure, draw a card, flying" aria-label="Im Kartentext suchen">
+          </div>
+          <div class="cf-row" data-cf-row="places"><span class="cf-label">Ort</span><div class="cf-chips" data-cf-group="places"></div></div>
+          <div class="cf-row" data-cf-row="sets"><span class="cf-label">Set</span><div class="cf-chips" data-cf-group="sets"></div></div>
+          <div class="cf-row" data-cf-row="langs"><span class="cf-label">Sprache</span><div class="cf-chips" data-cf-group="langs"></div></div>
+          <div class="cf-row"><span class="cf-label">Wert</span><div class="cf-chips" data-cf-group="min"></div></div>
+          <p id="cf-status" class="muted small" hidden></p>
         </div>
         <p id="coll-result" class="muted small"></p>
         <div id="coll-bulk" class="coll-bulk" hidden>
