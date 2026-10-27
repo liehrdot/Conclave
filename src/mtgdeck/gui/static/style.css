@@ -1472,6 +1472,30 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .about-card > .icon { flex: none; margin-left: auto; color: #c9d1cb; }
 .about-back { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--muted); text-decoration: none; margin-bottom: var(--space-2); }
 .about-back:hover { color: var(--text); }
-@media (max-width: 860px) { @media (prefers-reduced-motion: reduce) { .about-banner, .about-avatar, .about-arrow, .about-artist { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .about-banner, .about-avatar, .about-arrow, .about-artist { animation: none !important; } }
 @media (max-width: 1100px) { .about-banner { inset: 0 calc(-1 * var(--space-5)); } }
 @media (max-width: 860px) { .about-hero { height: 190px; } .about-banner { inset: 0 calc(-1 * var(--space-4)); } .about-avatar { width: 104px; height: 104px; } .about-arrow { left: 112px; } .about-artist { left: 176px; font-size: var(--fs-sm); } }
+
+/* Meine Sammlung: „Filter“ panel */
+#coll-filter-btn.on { border-color: var(--accent-text); color: var(--accent-text); }
+.filter-count:empty { display: none; }
+.filter-count { min-width: 18px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-size: var(--fs-xs); font-weight: 700; line-height: 18px; text-align: center; }
+.coll-filters { display: grid; gap: var(--space-2); padding: var(--space-3); margin-bottom: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); }
+.cf-row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-2) var(--space-3); align-items: center; }
+.cf-row[hidden] { display: none; }
+.cf-label { font-size: var(--fs-sm); font-weight: 600; color: var(--muted); }
+.cf-row > :nth-child(n + 3) { grid-column: 2; justify-self: start; }
+.cf-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cf-chips .chip { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; }
+.cf-chips .chip .mana { margin: 0; }
+.cf-chips .chip[data-cf="colors"] { padding: 3px 6px; }
+.cf-chips .chip[aria-pressed="true"] .muted { color: inherit; opacity: .75; }
+.cf-deck { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); color: var(--muted); }
+.cf-deck select { width: auto; max-width: 260px; }
+#cf-text { width: 100%; max-width: 520px; }
+.cf-summary { color: var(--text); }
+#coll-result .link-btn { margin-left: var(--space-2); }
+@media (max-width: 640px) {
+  .cf-row { grid-template-columns: 1fr; }
+  .cf-row > :nth-child(n + 3) { grid-column: 1; }
+}

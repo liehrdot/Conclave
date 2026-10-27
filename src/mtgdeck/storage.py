@@ -407,6 +407,7 @@ def list_decks() -> list[dict[str, Any]]:
                 "updated": d.get("updated"),
                 "version": d.get("version"),
                 "valid": (d.get("validation") or {}).get("legal"),
+                "color_identity": (d.get("validation") or {}).get("color_identity"),
                 "fits": _deck_fits(d),
                 "table_rule": d.get("table_rule"),
                 "needs_revalidation": bool(d.get("needs_revalidation")),  # merged by the sync, check pending

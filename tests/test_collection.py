@@ -295,3 +295,42 @@ async def test_move_copies_into_a_deck():
     assert client.post("/api/decks/own-a/copies/move", json={"id": "nope"}).status_code == 404
     assert client.post("/api/decks/missing/copies/move", json={"id": binder}).status_code == 404
     assert client.get("/api/decks/own-a/copies", params={"name": "Cultivate"}).json()["elsewhere"][0]["place"] == ""
+
+
+async def test_card_facts_for_the_filters():
+    """„Filter“ in Meine Sammlung: colour identity, front-face types, commander, mana value, roles and text per card."""
+    await collection.add([{"name": n} for n in ("Meren of Clan Nel Toth", "Sol Ring", "Cultivate", "Bayou")])
+    facts = await collection.card_facts()
+    cards = facts["cards"]
+    assert facts["missing"] == []
+    assert cards["Meren of Clan Nel Toth"] | {"text": ""} == {
+        "ci": "BG", "types": ["Creature"], "legendary": True, "commander": True, "cmc": 4, "roles": [],
+        "type_line": "Legendary Creature — Human Shaman", "text": "", "edhrec_rank": cards["Meren of Clan Nel Toth"]["edhrec_rank"]}  # fmt: skip
+    assert cards["Sol Ring"]["ci"] == "" and cards["Sol Ring"]["types"] == ["Artifact"] and not cards["Sol Ring"]["commander"]
+    assert "ramp" in cards["Cultivate"]["roles"] and cards["Cultivate"]["ci"] == "G"
+    assert cards["Bayou"]["types"] == ["Land"]
+
+
+def test_can_lead():
+    lead = collection.can_lead
+    assert lead({"type_line": "Legendary Creature — Elf", "commander_legal": True})
+    assert lead({"type_line": "Legendary Enchantment — Background"})
+    assert lead({"type_line": "Legendary Planeswalker — Teferi", "oracle_text": "Teferi can be your commander."})
+    assert lead({"type_line": "Legendary Artifact — Vehicle", "pt": "6/6"})
+    assert not lead({"type_line": "Legendary Artifact — Vehicle"})  # no power/toughness
+    assert not lead({"type_line": "Creature — Elf"})
+    assert not lead({"type_line": "Legendary Creature — Elf", "commander_legal": False})
+    assert not lead({"type_line": "Sorcery // Legendary Creature — Elf"})  # only the front face counts
+
+
+def test_collection_cards_route():
+    from fastapi.testclient import TestClient
+
+    from mtgdeck.gui.app import app
+
+    client = TestClient(app)
+    assert client.get("/api/collection/cards").json() == {"cards": {}, "missing": []}
+    client.post("/api/collection", json={"items": [{"name": "Krenko, Mob Boss"}]})
+    body = client.get("/api/collection/cards").json()
+    assert body["cards"]["Krenko, Mob Boss"]["commander"] is True
+    assert body["cards"]["Krenko, Mob Boss"]["ci"] == "R"
