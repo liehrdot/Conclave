@@ -3582,7 +3582,7 @@ function saveCf() {
   renderCollection();
 }
 async function ensureCollFacts() {
-  const key = [...new Set(coll.entries.map((e) => e.name))].sort().join("\n");
+  const key = [...new Set(coll.entries.map((e) => e.name))].sort((a, b) => a.localeCompare(b)).join("\n");
   if (!key || key === collFactsKey) return;
   if (collFactsLoading?.key === key) return collFactsLoading.promise;
   const promise = (async () => {
