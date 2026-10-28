@@ -5527,6 +5527,7 @@ function renderBuyCompare() {
   saved = saved.map((s) => (s.includes(":") ? s : `deck:${s}`));  // picks from before places were added were deck slugs
   const count = (o) => r.items.filter((i) => buyWhere(i, new Set([o.key])).length).length;
   $("#buy-compare").hidden = !opts.length;
+  $("#buy-compare-owned").hidden = !r.use_collection;  // owned cards are off the list, so the places count only what is left
   const group = (kind, title) => {
     const list = opts.filter((o) => o.kind === kind);
     return list.length ? `<p class="buy-compare-group muted small">${title}</p>` + list.map((o) => `<label class="check"><input type="checkbox" value="${esc(o.key)}"
