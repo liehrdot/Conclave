@@ -1504,7 +1504,7 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 /* ---------- Spieltisch (table.js): goldfishing on a full-window table ---------- */
 .playtable { width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; border: none; background: var(--bg); color: var(--text);
   --pt-w: clamp(64px, 7.2vw, 132px); --pt-hw: clamp(76px, 8.6vw, 150px); }
-.playtable[open] { display: grid; grid-template-rows: auto auto 1fr auto; }
+.playtable[open] { display: flex; flex-direction: column; }  /* the hint may be hidden: a grid row template would shift */
 .playtable::backdrop { background: var(--bg); }
 .pt-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--border); }
 .pt-turn { font-size: var(--fs-md); margin: 0; white-space: nowrap; }
@@ -1520,7 +1520,7 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .pt-life .btn.small { width: 30px; padding: 0; }
 .pt-spacer { flex: 1; }
 .pt-hint { margin: 0; padding: var(--space-2) var(--space-4); background: var(--accent-soft); color: var(--on-accent-soft); font-size: var(--fs-sm); }
-.pt-main { display: grid; grid-template-columns: auto 1fr; min-height: 0; }
+.pt-main { display: grid; grid-template-columns: auto 1fr; flex: 1 1 auto; min-height: 0; }
 .pt-side { display: grid; grid-template-columns: repeat(2, auto); grid-auto-rows: min-content; gap: var(--space-3) var(--space-4); padding: var(--space-3); border-right: 1px solid var(--border); background: var(--surface-2); overflow-y: auto; }
 .pt-label { display: block; font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
 .pt-zone { border-radius: var(--radius-lg); outline: 2px dashed transparent; outline-offset: 2px; }
@@ -1557,3 +1557,16 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .pt-zv-moves { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
 @media (max-width: 760px) { .pt-zv-row { grid-template-columns: 44px 1fr; } .pt-zv-moves { grid-column: 1 / -1; justify-content: flex-start; } }
 @media (prefers-reduced-motion: reduce) { .pt-card { transition: none; } }
+.pt-ctrs { position: absolute; left: 4px; right: 4px; top: 38%; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; pointer-events: none; }
+.pt-ctr { background: var(--text); color: var(--bg); font-size: var(--fs-xs); font-weight: 700; border-radius: var(--radius); padding: 0 5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pt-token-tag { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); background: var(--accent); color: var(--on-accent); font-size: 10px; font-weight: 700; border-radius: 99px; padding: 0 6px; pointer-events: none; }
+.pt-tokens { width: min(760px, 94vw); }
+.pt-tokens h3.pt-label { margin: var(--space-4) 0 var(--space-2); }
+.pt-tokens input[type="search"] { width: 100%; margin-bottom: var(--space-3); }
+.pt-tok-qty { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--fs-sm); }
+.pt-tok-qty input { width: 72px; }
+.pt-tok-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--space-2); max-height: 38vh; overflow-y: auto; }
+.pt-tok { display: grid; gap: 4px; padding: 0; border: none; background: none; color: var(--text); font: inherit; font-size: var(--fs-xs); text-align: center; cursor: pointer; }
+.pt-tok img, .pt-tok .noimg { width: 100%; aspect-ratio: 488 / 680; object-fit: cover; border-radius: 6%/4.4%; display: block; }
+.pt-tok .noimg { display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--border-strong); }
+.pt-tok:hover img, .pt-tok:focus-visible img { outline: 2px solid var(--accent); outline-offset: 2px; }

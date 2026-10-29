@@ -1324,6 +1324,9 @@
     <tr><th scope="row"><kbd>Esc</kbd></th><td>Dialog, Menü oder Schnellsuche schließen</td></tr>
     <tr><th scope="row"><kbd>?</kbd></th><td>Diese Übersicht</td></tr>
     <tr><th scope="row"><kbd>N</kbd> <kbd>D</kbd> <kbd>U</kbd></th><td>Am Spieltisch: nächster Zug, Karte ziehen, alles enttappen (<kbd>Strg</kbd> <kbd>Z</kbd> nimmt den letzten Zug zurück)</td></tr>
+    <tr><th scope="row"><kbd>T</kbd> <kbd>L</kbd></th><td>Am Spieltisch: Token erzeugen, oberste Karten ansehen</td></tr>
+    <tr><th scope="row"><kbd>S</kbd> <kbd>E</kbd> <kbd>H</kbd></th><td>Karte unter der Maus: in den Friedhof, ins Exil, auf die Hand</td></tr>
+    <tr><th scope="row"><kbd>F</kbd> <kbd>K</kbd> <kbd>+</kbd> <kbd>−</kbd></th><td>Karte unter der Maus: umdrehen, als Token kopieren, +1/+1- oder −1/−1-Marke</td></tr>
   </table>
   <p class="muted small">Auf dem Mac steht ⌘ für Strg. Im Browser kann Strg+N vom Browser belegt sein – in der Desktop-App nicht.</p>
   <div class="dialog-actions"><button type="button" class="btn primary" id="shortcuts-close">Schließen</button></div>
@@ -1670,6 +1673,19 @@
   <p class="muted small" id="pt-zv-note"></p>
   <input type="search" id="pt-zv-q" placeholder="Karte suchen …" aria-label="Karte suchen">
   <div class="pt-zv-list" id="pt-zv-list"></div>
+</dialog>
+
+<dialog id="pt-tokens" class="dialog pt-tokens" aria-labelledby="pt-tok-title">
+  <div class="dialog-head">
+    <h2 id="pt-tok-title">Token erzeugen</h2>
+    <button type="button" class="icon-btn" id="pt-tok-close" aria-label="Schließen"><svg class="icon"><use href="#i-x"/></svg></button>
+  </div>
+  <label class="pt-tok-qty">Anzahl <input type="number" id="pt-tok-qty" min="1" max="30" value="1" inputmode="numeric"></label>
+  <h3 class="pt-label">Aus diesem Deck</h3>
+  <div id="pt-tok-deck"></div>
+  <h3 class="pt-label">Anderes Token suchen</h3>
+  <input type="search" id="pt-tok-q" placeholder="z. B. Zombie, Treasure, Clue …" aria-label="Token suchen">
+  <div id="pt-tok-found"></div>
 </dialog>
 
 <dialog id="rule0-full" class="dialog rule0-full" aria-labelledby="rule0-full-title">
