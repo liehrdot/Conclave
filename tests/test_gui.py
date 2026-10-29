@@ -72,3 +72,18 @@ def test_deck_view_has_back_faces():
     delver = d["card_data"]["Delver of Secrets // Insectile Aberration"]
     assert delver["image_back"].endswith("/back/delver.jpg") and delver["layout"] == "transform"
     assert d["card_data"]["Sol Ring"]["image_back"] is None
+
+
+def test_playtable_script_is_served_and_its_elements_exist():
+    """The Spieltisch (table.js) loads after app.js, and every id it looks up is in index.html."""
+    import re
+
+    client = TestClient(app)
+    page = client.get("/").text
+    assert page.index('src="/static/app.js"') < page.index('src="/static/table.js"')
+    script = client.get("/static/table.js")
+    assert script.status_code == 200
+    ids = set(re.findall(r'\$\("#([\w-]+)', script.text))
+    assert {"playtable", "pt-open", "pt-hand", "pt-zone-view"} <= ids
+    missing = sorted(i for i in ids if f'id="{i}"' not in page)
+    assert not missing, missing
