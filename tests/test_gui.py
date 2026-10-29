@@ -72,6 +72,8 @@ def test_deck_view_has_back_faces():
     delver = d["card_data"]["Delver of Secrets // Insectile Aberration"]
     assert delver["image_back"].endswith("/back/delver.jpg") and delver["layout"] == "transform"
     assert d["card_data"]["Sol Ring"]["image_back"] is None
+    # the Spieltisch counts what rocks and dorks add; other cards carry no such key
+    assert d["card_data"]["Sol Ring"]["taps_for"] == 2 and "taps_for" not in delver
 
 
 def test_playtable_script_is_served_and_its_elements_exist():

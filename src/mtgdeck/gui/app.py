@@ -1114,6 +1114,10 @@ async def api_deck(slug: str) -> dict[str, Any]:
     keep = ("image", "image_back", "layout", "type_line", "mana_cost", "cmc", "price_eur", "price_usd",
             "game_changer", "scryfall_uri", "color_identity", "roles")  # fmt: skip
     deck["card_data"] = {n: {k: c.get(k) for k in keep} for n, c in card_data.items()}
+    colors = {col for n in deck.get("commanders", []) for col in (card_data.get(n) or {}).get("color_identity") or []}
+    for n, c in card_data.items():  # rocks and dorks: the Spieltisch counts their mana
+        if tap := openinghand.taps_for(c, colors):
+            deck["card_data"][n]["taps_for"] = tap
     entries = [DeckEntry(c["name"], c.get("qty", 1)) for c in deck.get("cards", [])]
     deck["export_text"] = to_text(deck.get("commanders", []), entries)
     deck["health"] = health.check(deck)

@@ -118,6 +118,7 @@ async def test_route_rates_a_hand(monkeypatch):
         assert body["verdict"] == "keep" and body["label"] == "Behalten"
         assert 0 <= body["percentile"] <= 100 and body["deck"]["speed"] == "very-fast" and body["deck"]["playable"] > 0.3
         assert body["facts"]["lands"] == 3 and body["facts"]["commander_turn"] is not None
+        assert len(body["facts"]["mana_by_turn"]) == oh.TURNS  # the Spieltisch compares its turns with all of them
         r = client.post("/api/decks/meren/hand", json={"cards": ["Forest"] * 5 + ["Filler 1", "Sol Ring"], "mulligans": 2, "bottom": 1})
         assert r.json()["bottom"] == ["Forest"]
         assert client.post("/api/decks/nope/hand", json={"cards": []}).status_code == 404
@@ -132,3 +133,13 @@ def test_ramp_needs_its_colour():
     roots = c("Insidious Roots", type_line="Enchantment", cmc=2, mana_cost="{B}{G}",
               text='Creature tokens you control have "{T}: Add one mana of any color."', roles=["ramp"])  # fmt: skip
     assert roots.ramp == 0
+
+
+def test_taps_for_counts_rocks_and_dorks_only():
+    """The Spieltisch's mana: what a permanent adds by tapping; lands, sacrifice outlets and land searches add nothing."""
+    data = lambda name, type_line, text: {"name": name, "type_line": type_line, "oracle_text": text, "cmc": 1, "mana_cost": "{1}"}
+    assert oh.taps_for(data("Sol Ring", "Artifact", "{T}: Add {C}{C}."), COLORS) == 2
+    assert oh.taps_for(data("Llanowar Elves", "Creature — Elf", "{T}: Add {G}."), COLORS) == 1
+    assert oh.taps_for(data("Forest", "Basic Land — Forest", "({T}: Add {G}.)"), COLORS) == 0
+    assert oh.taps_for(data("Cultivate", "Sorcery", "Search your library for up to two basic land cards"), COLORS) == 0
+    assert oh.taps_for(data("Bear", "Creature — Bear", ""), COLORS) == 0
