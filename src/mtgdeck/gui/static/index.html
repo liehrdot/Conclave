@@ -324,6 +324,15 @@
 
       <!-- test hand + probabilities -->
       <div role="tabpanel" id="panel-testen" aria-labelledby="tab-testen" class="tabpanel" hidden>
+        <section class="panel pt-intro" id="pt-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Spieltisch</h2>
+              <p class="muted small">Spiel das Deck ein paar Züge allein durch: ziehen, ausspielen, tappen, opfern, ins Exil – du bewegst die Karten, Regeln prüft der Tisch nicht.</p>
+            </div>
+            <button type="button" class="btn" id="pt-open"><svg class="icon"><use href="#i-table"/></svg>Spieltisch öffnen</button>
+          </div>
+        </section>
         <section class="panel" id="hand-panel">
           <div class="panel-head">
             <div>
@@ -1314,6 +1323,7 @@
     <tr><th scope="row"><kbd>Strg</kbd> <kbd>S</kbd></th><td>Kartenänderungen speichern (im Bearbeiten-Modus)</td></tr>
     <tr><th scope="row"><kbd>Esc</kbd></th><td>Dialog, Menü oder Schnellsuche schließen</td></tr>
     <tr><th scope="row"><kbd>?</kbd></th><td>Diese Übersicht</td></tr>
+    <tr><th scope="row"><kbd>N</kbd> <kbd>D</kbd> <kbd>U</kbd></th><td>Am Spieltisch: nächster Zug, Karte ziehen, alles enttappen (<kbd>Strg</kbd> <kbd>Z</kbd> nimmt den letzten Zug zurück)</td></tr>
   </table>
   <p class="muted small">Auf dem Mac steht ⌘ für Strg. Im Browser kann Strg+N vom Browser belegt sein – in der Desktop-App nicht.</p>
   <div class="dialog-actions"><button type="button" class="btn primary" id="shortcuts-close">Schließen</button></div>
@@ -1612,6 +1622,56 @@
   </div>
 </dialog>
 
+<dialog id="playtable" class="playtable" aria-labelledby="pt-title">
+  <div class="pt-bar">
+    <h2 id="pt-title" class="pt-turn">Starthand</h2>
+    <span class="pt-dots" id="pt-dots" aria-hidden="true"></span>
+    <span class="pt-pills" id="pt-pills"></span>
+    <span class="pt-life">Leben
+      <button type="button" class="btn small" data-life="-1" aria-label="Leben minus 1 (Umschalt: 5)">−</button>
+      <b id="pt-life" aria-live="polite">40</b>
+      <button type="button" class="btn small" data-life="1" aria-label="Leben plus 1 (Umschalt: 5)">+</button>
+    </span>
+    <span class="pt-spacer"></span>
+    <label class="check small" title="In Commander zieht jeder auch im ersten Zug (Mehrspieler-Regel)"><input type="checkbox" id="pt-draw1"> Zug 1 ziehen</label>
+    <button type="button" class="btn" id="pt-undo" title="Strg+Z">Rückgängig</button>
+    <button type="button" class="btn" id="pt-restart">Neu starten</button>
+    <button type="button" class="btn" id="pt-mull" hidden>Mulligan</button>
+    <button type="button" class="btn primary" id="pt-next">Behalten</button>
+    <button type="button" class="icon-btn" id="pt-close" aria-label="Spieltisch schließen"><svg class="icon"><use href="#i-x"/></svg></button>
+  </div>
+  <p class="pt-hint" id="pt-hint" hidden></p>
+  <div class="pt-main">
+    <aside class="pt-side">
+      <div class="pt-zone" data-zone="command"><span class="pt-label">Kommandozone</span><div class="pt-pile" id="pt-command"></div></div>
+      <div class="pt-zone" data-zone="library"><span class="pt-label">Bibliothek</span><div class="pt-pile" id="pt-library"></div></div>
+      <div class="pt-zone" data-zone="graveyard"><span class="pt-label">Friedhof</span><div class="pt-pile" id="pt-graveyard"></div></div>
+      <div class="pt-zone" data-zone="exile"><span class="pt-label">Exil</span><div class="pt-pile" id="pt-exile"></div></div>
+    </aside>
+    <div class="pt-field">
+      <span class="pt-label">Bleibende Karten</span>
+      <div class="pt-row pt-zone" data-zone="battlefield" data-row="main" id="pt-main"></div>
+      <span class="pt-label">Länder</span>
+      <div class="pt-row pt-zone" data-zone="battlefield" data-row="lands" id="pt-lands"></div>
+    </div>
+  </div>
+  <div class="pt-hand-wrap pt-zone" data-zone="hand">
+    <span class="pt-label">Hand <span id="pt-hand-count"></span></span>
+    <div class="pt-hand" id="pt-hand"></div>
+  </div>
+  <div class="pt-menu" id="pt-menu" role="menu" hidden></div>
+</dialog>
+
+<dialog id="pt-zone-view" class="dialog pt-zone-view" aria-labelledby="pt-zv-title">
+  <div class="dialog-head">
+    <h2 id="pt-zv-title">Friedhof</h2>
+    <button type="button" class="icon-btn" id="pt-zv-close" aria-label="Schließen"><svg class="icon"><use href="#i-x"/></svg></button>
+  </div>
+  <p class="muted small" id="pt-zv-note"></p>
+  <input type="search" id="pt-zv-q" placeholder="Karte suchen …" aria-label="Karte suchen">
+  <div class="pt-zv-list" id="pt-zv-list"></div>
+</dialog>
+
 <dialog id="rule0-full" class="dialog rule0-full" aria-labelledby="rule0-full-title">
   <div class="dialog-head no-print">
     <h2 id="rule0-full-title">Rule 0</h2>
@@ -1755,5 +1815,6 @@
 
 <script src="/static/vendor/xterm/xterm.js"></script>
 <script src="/static/app.js"></script>
+<script src="/static/table.js"></script>
 </body>
 </html>

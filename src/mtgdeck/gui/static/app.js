@@ -5769,6 +5769,7 @@ function paletteItems() {
     for (const [tab, label] of Object.entries(tabNames)) items.push({ label, hint: d.name, run: () => selectTab(tab) });
     items.push({ label: "Karten bearbeiten", hint: d.name, run: () => { selectTab("karten"); if (!edit) setEditing(true); } });
     items.push({ label: "Einkaufsliste mit Preisen", hint: d.name, run: () => openBuylist() });
+    items.push({ label: "Spieltisch", hint: `${d.name} · Goldfish: ein paar Züge allein spielen`, run: () => { selectTab("testen"); void ptOpen(); } });
     items.push({ label: "Rule 0", hint: d.name, run: () => { selectTab("karten"); void openRule0(); } });
     items.push({ label: "Ziel und Tischregel", hint: d.name, run: () => { selectTab("karten"); $("#deck-target").scrollIntoView({ behavior: "smooth", block: "start" }); } });
     items.push({ label: "Liste kopieren", hint: d.name, run: () => $("#copy-btn").click() });
