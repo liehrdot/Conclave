@@ -52,7 +52,7 @@ function ptNew(deck) {
   let seq = 0;
   const card = (name, cmd = false) => ({ id: ++seq, name, tapped: false, cmd });  // pt.seq goes on from here for tokens
   const library = shuffle(deck.cards.flatMap((c) => Array.from({ length: c.qty || 1 }, () => card(c.name))));
-  pt = { slug: deck.slug, data, seq: 0, tokens: null, turn: 0, life: 40, mull: 0, bottom: 0, lands: 0, casts: {}, undo: [],
+  pt = { slug: deck.slug, data, seq: 0, tokens: pt?.slug === deck.slug ? pt.tokens : null, turn: 0, life: 40, mull: 0, bottom: 0, lands: 0, casts: {}, undo: [],
     log: [], turns: {}, drawn: 0, cmdTurn: null, kept: null, summed: false, estimate: null,
     zones: { library, hand: library.splice(0, 7), main: [], lands: [], graveyard: [], exile: [],
       command: (deck.commanders || []).map((n) => card(n, true)) } };
@@ -211,13 +211,13 @@ async function ptCounterAsk(id) {
   if (n) ptCounter(id, kind.slice(0, 24), count);
 }
 
-// tokens onto the battlefield: {name, type_line, image}, qty copies
-function ptMakeToken(t, qty = 1) {
+// tokens onto the battlefield: {name, type_line, image}, qty copies; row/index = where a drag dropped it
+function ptMakeToken(t, qty = 1, row = null, index = null) {
   ptSave();
   ptLog(`${qty > 1 ? `${qty}× ` : ""}${t.name} (Token)`);
-  for (let i = 0; i < qty; i++) {
-    pt.zones[/\bLand\b/.test(t.type_line || "") ? "lands" : "main"].push({ id: ++pt.seq, name: t.name, token: true, img: t.image || "", type: t.type_line || "Token", tapped: false, cmd: false });
-  }
+  const list = pt.zones[row || (/\bLand\b/.test(t.type_line || "") ? "lands" : "main")];
+  const made = Array.from({ length: qty }, () => ({ id: ++pt.seq, name: t.name, token: true, img: t.image || "", type: t.type_line || "Token", tapped: false, cmd: false }));
+  list.splice(index !== null && index >= 0 && index <= list.length ? index : list.length, 0, ...made);
   ptRender();
 }
 function ptCopy(id) {
@@ -410,6 +410,7 @@ async function ptOpen() {
   if (!d) return;
   if (!pt || pt.slug !== d.slug) ptNew(d);
   else ptRender();
+  void ptTokenBar();
   $("#pt-draw1").checked = store.get("ptdraw1") !== "0";
   $("#playtable").showModal();
 }
@@ -546,8 +547,16 @@ $("#playtable").addEventListener("contextmenu", (e) => {
 });
 
 // ---------- drag and drop between zones ----------
-let ptDragId = null;
+let ptDragId = null, ptDragTok = null;  // ptDragTok = a token from the side list (only the battlefield takes it)
 $("#playtable").addEventListener("dragstart", (e) => {
+  const tok = e.target.closest("[data-tokpick]");
+  if (tok) {
+    ptDragTok = Number(tok.dataset.tokpick);
+    e.dataTransfer.effectAllowed = "copy";
+    e.dataTransfer.setData("text/plain", tok.dataset.name);
+    preview.hidden = true;
+    return ptMenuClose();
+  }
   const el = e.target.closest(".pt-card[data-id]");
   if (!el) return;
   ptDragId = Number(el.dataset.id);
@@ -557,15 +566,15 @@ $("#playtable").addEventListener("dragstart", (e) => {
   ptMenuClose();
 });
 $("#playtable").addEventListener("dragend", () => {
-  ptDragId = null;
+  ptDragId = ptDragTok = null;
   $$("#playtable .drop").forEach((x) => x.classList.remove("drop"));
 });
 $("#playtable").addEventListener("dragover", (e) => {
-  if (ptDragId === null) return;
+  if (ptDragId === null && ptDragTok === null) return;
   const zone = e.target.closest(".pt-zone");
-  if (!zone) return;
+  if (!zone || (ptDragTok !== null && zone.dataset.zone !== "battlefield")) return;
   e.preventDefault();
-  e.dataTransfer.dropEffect = "move";
+  e.dataTransfer.dropEffect = ptDragTok !== null ? "copy" : "move";
   $$("#playtable .drop").forEach((x) => x !== zone && x.classList.remove("drop"));
   zone.classList.add("drop");
 });
@@ -575,12 +584,12 @@ $("#playtable").addEventListener("dragleave", (e) => {
 });
 $("#playtable").addEventListener("drop", (e) => {
   const zoneEl = e.target.closest(".pt-zone");
-  if (ptDragId === null || !zoneEl) return;
+  if ((ptDragId === null && ptDragTok === null) || !zoneEl) return;
   e.preventDefault();
   e.stopPropagation();  // not a card drop from scryfall.com
   zoneEl.classList.remove("drop");
-  const id = ptDragId;
-  ptDragId = null;
+  const id = ptDragId, tok = ptDragTok;
+  ptDragId = ptDragTok = null;
   const zone = zoneEl.dataset.zone;
   if (zone === "battlefield" || zone === "hand") {
     // the position among the cards of the row: before the first card whose middle is right of the pointer
@@ -588,6 +597,7 @@ $("#playtable").addEventListener("drop", (e) => {
     const others = [...row.querySelectorAll(".pt-card[data-id]")].filter((x) => Number(x.dataset.id) !== id);
     let index = others.findIndex((x) => { const r = x.getBoundingClientRect(); return e.clientY < r.bottom && e.clientX < r.left + r.width / 2; });
     if (index < 0) index = others.length;
+    if (tok !== null) return zone === "battlefield" && pt.tokens?.[tok] && ptMakeToken(pt.tokens[tok], 1, zoneEl.dataset.row, index);
     const target = zone === "hand" ? "hand" : zoneEl.dataset.row;
     const f = ptFind(id);
     if (f.zone === target) {  // reorder inside the row
@@ -697,6 +707,32 @@ $("#pt-zone-view").addEventListener("close", () => {
 });
 
 // ---------- tokens: the deck's own ones first, any other by name ----------
+// the deck's tokens (from the cards' all_parts), loaded once per game
+async function ptLoadTokens() {
+  if (!pt.tokens) pt.tokens = await api(`/api/decks/${enc(pt.slug)}/tokens`);
+  return pt.tokens;
+}
+// the side list: drag a token onto the battlefield or click it for one
+async function ptTokenBar() {
+  const bar = $("#pt-tokbar");
+  try {
+    const list = await ptLoadTokens();
+    bar.innerHTML = list.map((t, i) => `<button type="button" class="pt-tokpick card" draggable="true" data-tokpick="${i}" data-img="${esc(t.image || "")}" data-name="${esc(t.name)}"
+      title="${esc(t.name)}${t.from?.length ? ` – von ${esc(t.from.join(", "))}` : ""} · Klick: eins aufs Spielfeld, oder aufs Spielfeld ziehen" aria-label="${esc(t.name)}-Token aufs Spielfeld">${t.image ? `<img src="${esc(t.image)}" alt="" draggable="false" loading="lazy">` : `<span class="noimg">${esc(t.name)}</span>`}</button>`).join("")
+      + `<button type="button" class="btn small pt-tok-more" id="pt-tok-more">${list.length ? "Andere …" : "Token suchen …"}</button>`;
+    $("#pt-tokens-zone").classList.toggle("empty", !list.length);
+  } catch {
+    bar.innerHTML = `<button type="button" class="btn small pt-tok-more" id="pt-tok-more">Token suchen …</button>`;
+  }
+}
+$("#pt-tokbar").addEventListener("click", (e) => {
+  if (e.target.closest("#pt-tok-more")) return void ptTokenView();
+  const b = e.target.closest("[data-tokpick]");
+  const t = b && pt.tokens?.[Number(b.dataset.tokpick)];
+  if (!t) return;
+  if (!pt.turn) return toast("Behalte zuerst deine Starthand.", "info", 2500);
+  ptMakeToken(t);
+});
 async function ptTokenView() {
   $("#pt-tok-q").value = "";
   $("#pt-tok-found").innerHTML = "";
@@ -704,7 +740,7 @@ async function ptTokenView() {
   const box = $("#pt-tok-deck");
   if (!pt.tokens) {
     box.innerHTML = `<p class="muted small">Lade die Tokens des Decks …</p>`;
-    try { pt.tokens = await api(`/api/decks/${enc(pt.slug)}/tokens`); } catch (err) { box.innerHTML = `<p class="muted small">${esc(err.message)}</p>`; return; }
+    try { await ptLoadTokens(); } catch (err) { box.innerHTML = `<p class="muted small">${esc(err.message)}</p>`; return; }
   }
   box.innerHTML = ptTokenList(pt.tokens, "Dieses Deck erzeugt keine bekannten Tokens – such unten nach einem.");
 }
