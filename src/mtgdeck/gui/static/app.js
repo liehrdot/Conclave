@@ -5508,24 +5508,27 @@ const buyCompareKey = () => `mtgdeck.buycompare.${currentDeck?.slug}`;
 function buyPicked() {
   return new Set($$("#buy-compare-decks input:checked").map((b) => b.value));
 }
-// where a row's card already is, for the picked places: [{label, text}]
+// where a row's card already is, for the picked places: [{label, text, planned}]; planned = a deck only lists it, you have no copy
 function buyWhere(i, picked) {
   return (buyData.places || []).filter((o) => picked.has(o.key)).flatMap((o) => {
     const at = i.places?.[o.key];
     if (o.kind === "deck") {
       const d = i.decks.find((x) => x.slug === o.slug);
+      if (d?.planned && !at) return [{ label: o.label, text: "nur geplant", planned: true }];
       return d || at ? [{ label: o.label, text: d && d.qty > 1 ? `×${d.qty}` : "" }] : [];
     }
     if (!at || !(at.real || at.proxy)) return [];
     return [{ label: o.label, text: [at.real ? `×${at.real}` : "", at.proxy ? `${at.proxy} Proxy` : ""].filter(Boolean).join(" + ") }];
   });
 }
+// the picked places that really hold the card (a deck that only plans it does not)
+const buyHeld = (i, picked) => buyWhere(i, picked).filter((w) => !w.planned);
 function renderBuyCompare() {
   const r = buyData, opts = r.places || [];
   let saved = [];
   try { saved = JSON.parse(localStorage.getItem(buyCompareKey()) || "[]"); } catch { saved = []; }
   saved = saved.map((s) => (s.includes(":") ? s : `deck:${s}`));  // picks from before places were added were deck slugs
-  const count = (o) => r.items.filter((i) => buyWhere(i, new Set([o.key])).length).length;
+  const count = (o) => r.items.filter((i) => buyHeld(i, new Set([o.key])).length).length;
   $("#buy-compare").hidden = !opts.length;
   $("#buy-compare-owned").hidden = !r.use_collection;  // owned cards are off the list, so the places count only what is left
   const group = (kind, title) => {
@@ -5559,11 +5562,11 @@ function renderBuylist() {
     <span class="muted small">aus ${s.decks.map((n) => `„${esc(n)}“`).join(", ")}</span></li>`).join("");
   const picked = buyPicked(), mode = buyMode();
   $("#buy-list").innerHTML = r.items.map((i, k) => {
-    const inPicked = buyWhere(i, picked);
-    if ((mode === "in" && !inPicked.length) || (mode === "none" && inPicked.length)) return "";
+    const inPicked = buyWhere(i, picked), held = inPicked.filter((w) => !w.planned).length;
+    if ((mode === "in" && !held) || (mode === "none" && held)) return "";
     const over = max != null && (i.trend || 0) > max;
     const pills = inPicked.length ? `<span class="buy-in">${inPicked.map((w) =>
-      `<span class="pill">${esc(w.label)}${w.text ? ` ${esc(w.text)}` : ""}</span>`).join("")}</span>` : "";
+      `<span class="pill${w.planned ? " planned" : ""}"${w.planned ? ' title="Steht in der Deckliste, aber du hast keine Karte davon"' : ""}>${esc(w.label)}${w.text ? ` ${esc(w.text)}` : ""}</span>`).join("")}</span>` : "";
     const owned = [i.real ? `${i.real} echt` : "", i.proxy ? `${i.proxy} Proxy` : ""].filter(Boolean).join(", ");
     const where = i.set_name ? `${esc(i.set_name)}${i.collector_number ? ` #${esc(i.collector_number)}` : ""}`
       : i.source === "scryfall" ? "Preis von Scryfall" : i.source ? "" : "kein Preis gefunden";
@@ -5598,7 +5601,7 @@ function updateBuylistSelection() {
   const shown = $$("#buy-list input[type=checkbox]").length;
   const skipped = shown - sel.length;
   const picked = buyPicked();
-  const shared = picked.size ? r.items.filter((i) => buyWhere(i, picked).length).length : 0;
+  const shared = picked.size ? r.items.filter((i) => buyHeld(i, picked).length).length : 0;
   $("#buy-summary").innerHTML = `<b>${copies} ${copies === 1 ? "Karte" : "Karten"}</b> kaufen · ≈ <b>${esc(fmtPrice(sum("total_trend"), "eur"))}</b> (Trend)`
     + ` · ab ${esc(fmtPrice(sum("total_low"), "eur"))}`
     + (skipped ? ` · ${skipped} ${skipped === 1 ? "Karte bleibt" : "Karten bleiben"} Proxy` : "")

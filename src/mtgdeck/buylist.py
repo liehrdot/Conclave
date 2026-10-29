@@ -8,7 +8,8 @@ its cheapest listing as ``low``. Set names and the playable check (no oversized,
 memorabilia printings) come from the local card DB, else Scryfall.
 Without the price guide (offline, Cardmarket down) Scryfall's cheapest EUR price is the fallback.
 Each row also says where copies already are (``places``: per collection place or deck), so the dialog
-can compare the list with „Bulk“, a binder or other decks.
+can compare the list with „Bulk“, a binder or other decks. A deck that only lists a card you have no copy of
+(``decks[].planned``) does not hold it: the dialog shows it as „nur geplant“ and keeps it under „An keinem davon“.
 
 The list text is plain "N Name" so it can go into a Cardmarket Wants list, whose Shopping Wizard
 then finds the cheapest sellers including shipping – the figures here are only the estimate.
@@ -107,7 +108,8 @@ async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_pr
     ``from_shelved`` to take out instead). Off = the whole deck goes on the list."""
     need = _need(deck)
     entries = collection.load()
-    owned = collection.owned_counts(entries) if use_collection else {}
+    every = collection.owned_counts(entries)
+    owned = every if use_collection else {}
     usage = collection.decks_by_card()  # also for comparing with other decks and places in the dialog
     by_place = _copies_by_place(entries)
     rows = []
@@ -126,7 +128,8 @@ async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_pr
         if buy:
             rows.append({"name": name, "qty": buy, "need": n, "real": o["real"], "proxy": o["proxy"],
                          "in_decks": [d["name"] for d in played] if have else [],
-                         "decks": [{"slug": d["slug"], "qty": d["qty"]} for d in others],
+                         # planned = the deck only lists the card, you have no copy of it anywhere
+                         "decks": [{"slug": d["slug"], "qty": d["qty"], "planned": not any(every.get(name, {}).values())} for d in others],
                          "places": {k: v for k, v in by_place.get(name, {}).items() if k != f"deck:{deck.get('slug')}"}})  # fmt: skip
 
     error = None
