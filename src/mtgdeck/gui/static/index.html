@@ -1650,6 +1650,7 @@
       <div class="pt-zone" data-zone="library"><span class="pt-label">Bibliothek</span><div class="pt-pile" id="pt-library"></div></div>
       <div class="pt-zone" data-zone="graveyard"><span class="pt-label">Friedhof</span><div class="pt-pile" id="pt-graveyard"></div></div>
       <div class="pt-zone" data-zone="exile"><span class="pt-label">Exil</span><div class="pt-pile" id="pt-exile"></div></div>
+      <div class="pt-tokens-zone" id="pt-tokens-zone"><span class="pt-label">Tokens</span><div class="pt-tokbar" id="pt-tokbar"></div></div>
     </aside>
     <div class="pt-field">
       <span class="pt-label">Bleibende Karten</span>
@@ -1657,12 +1658,36 @@
       <span class="pt-label">Länder</span>
       <div class="pt-row pt-zone" data-zone="battlefield" data-row="lands" id="pt-lands"></div>
     </div>
+    <aside class="pt-log-wrap" aria-label="Verlauf">
+      <span class="pt-label">Verlauf</span>
+      <ol class="pt-log" id="pt-log"></ol>
+      <button type="button" class="btn small" id="pt-sum-open" disabled>Auswertung</button>
+    </aside>
   </div>
   <div class="pt-hand-wrap pt-zone" data-zone="hand">
     <span class="pt-label">Hand <span id="pt-hand-count"></span></span>
     <div class="pt-hand" id="pt-hand"></div>
   </div>
   <div class="pt-menu" id="pt-menu" role="menu" hidden></div>
+</dialog>
+
+<dialog id="pt-summary" class="dialog pt-summary" aria-labelledby="pt-sum-title">
+  <div class="dialog-head">
+    <h2 id="pt-sum-title">7 Züge</h2>
+    <button type="button" class="icon-btn" id="pt-sum-close" aria-label="Schließen"><svg class="icon"><use href="#i-x"/></svg></button>
+  </div>
+  <dl class="pt-sum-facts" id="pt-sum-facts"></dl>
+  <p class="muted small" id="pt-sum-note"></p>
+  <div class="table-wrap">
+    <table class="pt-sum-table">
+      <thead><tr><th scope="col">Zug</th><th scope="col">Länder</th><th scope="col">Mana</th><th scope="col" title="Mana, das die Bewertung der Starthand erwartet hat">Schätzung</th><th scope="col">Hand</th><th scope="col">Ausgespielt</th></tr></thead>
+      <tbody id="pt-sum-rows"></tbody>
+    </table>
+  </div>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="pt-sum-restart">Neu starten</button>
+    <button type="button" class="btn primary" id="pt-sum-go">Weiterspielen</button>
+  </div>
 </dialog>
 
 <dialog id="pt-zone-view" class="dialog pt-zone-view" aria-labelledby="pt-zv-title">

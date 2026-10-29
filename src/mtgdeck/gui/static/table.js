@@ -9,6 +9,9 @@ const PT_FIELD = ["main", "lands"];  // the battlefield's two rows
 const PT_NAMES = { library: "Bibliothek", hand: "Hand", main: "Spielfeld", lands: "Spielfeld", graveyard: "Friedhof", exile: "Exil", command: "Kommandozone" };
 // pt = { slug, data: card_data, seq, turn (0 = starting hand), life, mull, bottom, lands (played this turn),
 //        casts: {commander: n}, zones: {zone: [{id, name, tapped, cmd, flipped, counters: {label: n}, token}]},
+//        log: [[text]] per turn (0 = start), turns: {turn: {lands, mana, hand, drops}} at each turn's end,
+//        drawn (cards drawn after keeping), cmdTurn (the commander's first turn on the field), kept: the hand rating's input,
+//        summed (the summary after turn 7 was shown), estimate (the hand rating's answer, loaded once),
 //        tokens: the deck's own tokens (loaded once), undo: [json] }
 // a token carries its own picture and type line (`img`, `type`), since card_data only knows the deck's cards
 let pt = null;
@@ -32,8 +35,9 @@ function ptFind(id) {
 }
 
 // ---------- state changes (each one is a single undo step) ----------
+const PT_KEPT_STATE = ["turn", "life", "mull", "bottom", "lands", "casts", "seq", "zones", "log", "turns", "drawn", "cmdTurn", "kept", "summed"];
 function ptSave() {
-  pt.undo.push(JSON.stringify({ turn: pt.turn, life: pt.life, mull: pt.mull, bottom: pt.bottom, lands: pt.lands, casts: pt.casts, seq: pt.seq, zones: pt.zones }));
+  pt.undo.push(JSON.stringify(Object.fromEntries(PT_KEPT_STATE.map((k) => [k, pt[k]]))));
   if (pt.undo.length > PT_UNDO) pt.undo.shift();
 }
 function ptUndo() {
@@ -48,7 +52,8 @@ function ptNew(deck) {
   let seq = 0;
   const card = (name, cmd = false) => ({ id: ++seq, name, tapped: false, cmd });  // pt.seq goes on from here for tokens
   const library = shuffle(deck.cards.flatMap((c) => Array.from({ length: c.qty || 1 }, () => card(c.name))));
-  pt = { slug: deck.slug, data, seq: 0, tokens: null, turn: 0, life: 40, mull: 0, bottom: 0, lands: 0, casts: {}, undo: [],
+  pt = { slug: deck.slug, data, seq: 0, tokens: pt?.slug === deck.slug ? pt.tokens : null, turn: 0, life: 40, mull: 0, bottom: 0, lands: 0, casts: {}, undo: [],
+    log: [], turns: {}, drawn: 0, cmdTurn: null, kept: null, summed: false, estimate: null,
     zones: { library, hand: library.splice(0, 7), main: [], lands: [], graveyard: [], exile: [],
       command: (deck.commanders || []).map((n) => card(n, true)) } };
   pt.seq = seq;
@@ -70,7 +75,12 @@ function ptDraw(n = 1) {
   const z = pt.zones;
   if (!z.library.length) return toast("Die Bibliothek ist leer.", "error");
   ptSave();
+  n = Math.min(n, z.library.length);
   z.hand.push(...z.library.splice(0, n));
+  if (pt.turn) {
+    pt.drawn += n;
+    ptLog(n === 1 ? "1 Karte gezogen" : `${n} Karten gezogen`);
+  }
   ptRender();
 }
 
@@ -78,16 +88,31 @@ function ptNext() {
   if (!pt.turn) {  // keep the starting hand
     if (pt.bottom) return;
     ptSave();
+    const onDraw = $("#pt-draw1").checked;
+    pt.kept = { cards: pt.zones.hand.map((c) => c.name), mulligans: pt.mull, on_draw: onDraw };
+    ptLog(pt.mull ? `Behalten nach ${pt.mull} Mulligan${pt.mull > 1 ? "s" : ""}: ${pt.zones.hand.length} Karten` : "Starthand behalten");
     pt.turn = 1;
-    if ($("#pt-draw1").checked && pt.zones.library.length) pt.zones.hand.push(pt.zones.library.shift());
+    if (onDraw && pt.zones.library.length) {
+      pt.zones.hand.push(pt.zones.library.shift());
+      pt.drawn += 1;
+    }
     return ptRender();
   }
   ptSave();
+  pt.turns[pt.turn] = ptTurnStats();
+  if (pt.turn === PT_TURNS && !pt.summed) {  // the end of turn 7: the summary first, „Weiterspielen“ goes on
+    pt.summed = true;
+    ptRender();
+    void ptSummary();
+    return;
+  }
   pt.turn += 1;
   pt.lands = 0;
   for (const c of ptField()) c.tapped = false;
-  if (pt.zones.library.length) pt.zones.hand.push(pt.zones.library.shift());
-  else toast("Die Bibliothek ist leer – kein Zug.", "error");
+  if (pt.zones.library.length) {
+    pt.zones.hand.push(pt.zones.library.shift());
+    pt.drawn += 1;
+  } else toast("Die Bibliothek ist leer – kein Zug.", "error");
   ptRender();
 }
 
@@ -117,13 +142,17 @@ function ptMove(id, to, index = null) {
   if (zone === f.zone && !PT_FIELD.includes(zone) && zone !== "library") return;  // inside the library: to its top or bottom
   ptSave();
   pt.zones[f.zone].splice(f.i, 1);
+  ptLogMove(c, f.zone, zone);
   if (!PT_FIELD.includes(zone)) {  // leaving the battlefield: a fresh card again
     c.tapped = false;
     c.flipped = false;
     delete c.counters;
     if (c.token) return ptRender();  // a token ceases to exist
   }
-  if (f.zone === "command" && PT_FIELD.includes(zone)) pt.casts[c.name] = (pt.casts[c.name] || 0) + 1;
+  if (f.zone === "command" && PT_FIELD.includes(zone)) {
+    pt.casts[c.name] = (pt.casts[c.name] || 0) + 1;
+    if (pt.turn && pt.cmdTurn === null) pt.cmdTurn = pt.turn;
+  }
   if (f.zone === "hand" && zone === "lands" && pt.turn) pt.lands += 1;
   const list = pt.zones[zone];
   if (to === "top") list.unshift(c);
@@ -182,12 +211,13 @@ async function ptCounterAsk(id) {
   if (n) ptCounter(id, kind.slice(0, 24), count);
 }
 
-// tokens onto the battlefield: {name, type_line, image}, qty copies
-function ptMakeToken(t, qty = 1) {
+// tokens onto the battlefield: {name, type_line, image}, qty copies; row/index = where a drag dropped it
+function ptMakeToken(t, qty = 1, row = null, index = null) {
   ptSave();
-  for (let i = 0; i < qty; i++) {
-    pt.zones[/\bLand\b/.test(t.type_line || "") ? "lands" : "main"].push({ id: ++pt.seq, name: t.name, token: true, img: t.image || "", type: t.type_line || "Token", tapped: false, cmd: false });
-  }
+  ptLog(`${qty > 1 ? `${qty}× ` : ""}${t.name} (Token)`);
+  const list = pt.zones[row || (/\bLand\b/.test(t.type_line || "") ? "lands" : "main")];
+  const made = Array.from({ length: qty }, () => ({ id: ++pt.seq, name: t.name, token: true, img: t.image || "", type: t.type_line || "Token", tapped: false, cmd: false }));
+  list.splice(index !== null && index >= 0 && index <= list.length ? index : list.length, 0, ...made);
   ptRender();
 }
 function ptCopy(id) {
@@ -206,6 +236,7 @@ async function ptMill() {
   if (!n) return;
   ptSave();
   pt.zones.graveyard.push(...pt.zones.library.splice(0, n));
+  ptLog(n === 1 ? "1 Karte gefräst" : `${n} Karten gefräst`);
   ptRender();
 }
 async function ptDrawMany() {
@@ -222,6 +253,85 @@ function ptShuffle() {
   shuffle(pt.zones.library);
   ptRender();
   toast("Bibliothek gemischt.", "ok", 2000);
+}
+
+// ---------- turn log and summary ----------
+const PT_FROM = { graveyard: "aus dem Friedhof", exile: "aus dem Exil", library: "aus der Bibliothek" };
+function ptLog(text) {
+  (pt.log[pt.turn] ||= []).push(text);
+}
+// a play is the bare name (as in the mockup), every other move says where the card went
+function ptLogMove(c, from, to) {
+  const field = (z) => PT_FIELD.includes(z);
+  if (field(from) && field(to)) return;  // from one row to the other
+  if (from === "library" && to === "library") return;
+  if (field(to)) ptLog(from === "hand" ? c.name : from === "command" ? `${c.name} (Commander)` : `${c.name} ${PT_FROM[from] || ""}`.trim());
+  else if (from === "hand" && to === "graveyard" && ptIsSpell(c)) ptLog(c.name);
+  else if (pt.turn) ptLog(`${c.name} → ${PT_NAMES[to]}`);
+}
+// the board at the end of a turn; mana = lands plus what rocks and dorks add (card_data.taps_for)
+function ptTurnStats() {
+  const z = pt.zones;
+  const rocks = z.main.reduce((n, c) => n + (pt.data[c.name]?.taps_for || 0), 0);
+  return { lands: z.lands.length, mana: z.lands.length + rocks, hand: z.hand.length, drops: pt.lands };
+}
+// the turn so far for the summary, ended turns as recorded
+const ptStatsOf = (t) => pt.turns[t] || (t === pt.turn ? ptTurnStats() : null);
+
+function ptLogHtml() {
+  const rows = [];
+  for (let t = 0; t <= pt.turn; t++) {
+    const items = pt.log[t] || [];
+    if (!t && !items.length) continue;
+    rows.push(`<li${t === pt.turn ? ' class="now"' : ""}><b>${t ? `Zug ${t}` : "Start"}</b>
+      <span>${items.length ? items.map(esc).join(", ") : t === pt.turn ? "…" : "nichts gespielt"}</span></li>`);
+  }
+  return rows.join("") || `<li class="muted">Noch nichts passiert.</li>`;
+}
+
+// what the hand rating expected of the kept hand (its goldfish: a land each turn, then ramp and the cheapest spells)
+async function ptEstimate() {
+  if (!pt.kept) return null;
+  const key = JSON.stringify(pt.kept);
+  if (pt.estimate?.key !== key) {
+    try {
+      const r = await api(`/api/decks/${enc(pt.slug)}/hand`, { method: "POST", body: pt.kept });
+      pt.estimate = { key, facts: r.facts || {} };
+    } catch {
+      return null;  // the summary works without it
+    }
+  }
+  return pt.estimate.facts;
+}
+
+async function ptSummary() {
+  if (!pt.turn) return;
+  const turns = Array.from({ length: pt.turn }, (_, i) => i + 1);
+  const stats = turns.map(ptStatsOf);
+  const est = await ptEstimate();
+  const guess = est?.mana_by_turn || [];
+  const ended = turns.filter((t) => pt.turns[t]);
+  const missed = ended.filter((t) => !pt.turns[t].drops);
+  const at4 = ptStatsOf(4);
+  const cmd = pt.cmdTurn ? `Zug ${pt.cmdTurn}` : "noch nicht";
+  const facts = [
+    ["Commander", cmd, est?.commander ? (est.commander_turn ? `Zug ${est.commander_turn}` : "nach Zug 6") : null],
+    ["Mana in Zug 4", at4 ? fmtNum(at4.mana) : "–", guess[3] !== undefined ? fmtNum(guess[3]) : null],
+    ["Landdrops", ended.length ? `${ended.length - missed.length} von ${ended.length}` : "–", null],
+    ["Karten gezogen", fmtNum(pt.drawn), null],
+    ["Leben", fmtNum(pt.life), null],
+  ];
+  $("#pt-sum-title").textContent = pt.turn <= PT_TURNS && pt.summed ? `${PT_TURNS} Züge mit ${currentDeck?.name || "dem Deck"}` : `Bis Zug ${pt.turn}`;
+  $("#pt-sum-facts").innerHTML = facts.map(([k, v, g]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd>${g ? `<dd class="pt-guess">Schätzung: ${esc(g)}</dd>` : ""}</div>`).join("");
+  $("#pt-sum-note").textContent = missed.length ? `Kein Land gespielt in Zug ${missed.join(", ")}.`
+    : est ? "„Schätzung“ = was die Bewertung der Starthand deiner behaltenen Hand zugetraut hat (ein Land pro Zug, dann Ramp und die billigsten Karten)." : "";
+  $("#pt-sum-rows").innerHTML = turns.map((t, i) => {
+    const s = stats[i];
+    return `<tr><th scope="row">${t}</th><td>${s ? s.lands : "–"}</td><td>${s ? s.mana : "–"}</td><td class="muted">${guess[i] ?? "–"}</td>
+      <td>${s ? s.hand : "–"}</td><td class="pt-sum-plays">${esc((pt.log[t] || []).join(", ")) || '<span class="muted">nichts gespielt</span>'}</td></tr>`;
+  }).join("");
+  $("#pt-sum-go").textContent = pt.turn === PT_TURNS && pt.summed ? "Weiterspielen" : "Zurück zum Tisch";
+  $("#pt-summary").showModal();
 }
 
 // ---------- drawing the table ----------
@@ -271,9 +381,10 @@ function ptRender() {
   $("#pt-life").textContent = pt.life;
   $("#pt-mull").hidden = !start;
   const next = $("#pt-next");
-  next.textContent = start ? "Behalten" : "Nächster Zug ›";
+  const last = pt.turn === PT_TURNS && !pt.summed;
+  next.textContent = start ? "Behalten" : last ? "Auswertung ›" : "Nächster Zug ›";
   next.disabled = start && pt.bottom > 0;
-  next.title = start ? "" : "Enttappt alles und zieht eine Karte (N)";
+  next.title = start ? "" : last ? `Beendet Zug ${PT_TURNS} und zeigt, wie die Züge gelaufen sind (N)` : "Enttappt alles und zieht eine Karte (N)";
   $("#pt-undo").disabled = !pt.undo.length;
   const hint = $("#pt-hint");
   hint.textContent = start
@@ -287,6 +398,10 @@ function ptRender() {
   $("#pt-hand").innerHTML = z.hand.map((c) => ptCardHtml(c)).join("");
   $("#pt-hand").classList.toggle("bottoming", start && pt.bottom > 0);
   $("#pt-hand-count").textContent = `· ${z.hand.length}`;
+  const log = $("#pt-log");
+  log.innerHTML = ptLogHtml();
+  log.scrollTop = log.scrollHeight;  // the newest turn stays in view
+  $("#pt-sum-open").disabled = !pt.turn;
 }
 
 // ---------- open and close ----------
@@ -295,6 +410,7 @@ async function ptOpen() {
   if (!d) return;
   if (!pt || pt.slug !== d.slug) ptNew(d);
   else ptRender();
+  void ptTokenBar();
   $("#pt-draw1").checked = store.get("ptdraw1") !== "0";
   $("#playtable").showModal();
 }
@@ -315,6 +431,16 @@ $("#pt-mull").addEventListener("click", () => ptMulligan());
 $("#pt-undo").addEventListener("click", () => ptUndo());
 $("#pt-restart").addEventListener("click", async () => {
   if (pt.turn && !(await ask({ title: "Neu starten?", text: "Das Spiel wird abgeräumt, du ziehst eine neue Starthand.", ok: "Neu starten" }))) return;
+  ptNew(currentDeck);
+});
+$("#pt-sum-open").addEventListener("click", () => ptSummary());
+$("#pt-sum-close").addEventListener("click", () => $("#pt-summary").close());
+$("#pt-sum-go").addEventListener("click", () => {
+  $("#pt-summary").close();
+  if (pt.turn === PT_TURNS && pt.summed) ptNext();  // on to turn 8
+});
+$("#pt-sum-restart").addEventListener("click", () => {
+  $("#pt-summary").close();
   ptNew(currentDeck);
 });
 $("#pt-draw1").addEventListener("change", (e) => store.set("ptdraw1", e.target.checked ? "1" : "0"));
@@ -421,8 +547,16 @@ $("#playtable").addEventListener("contextmenu", (e) => {
 });
 
 // ---------- drag and drop between zones ----------
-let ptDragId = null;
+let ptDragId = null, ptDragTok = null;  // ptDragTok = a token from the side list (only the battlefield takes it)
 $("#playtable").addEventListener("dragstart", (e) => {
+  const tok = e.target.closest("[data-tokpick]");
+  if (tok) {
+    ptDragTok = Number(tok.dataset.tokpick);
+    e.dataTransfer.effectAllowed = "copy";
+    e.dataTransfer.setData("text/plain", tok.dataset.name);
+    preview.hidden = true;
+    return ptMenuClose();
+  }
   const el = e.target.closest(".pt-card[data-id]");
   if (!el) return;
   ptDragId = Number(el.dataset.id);
@@ -432,15 +566,15 @@ $("#playtable").addEventListener("dragstart", (e) => {
   ptMenuClose();
 });
 $("#playtable").addEventListener("dragend", () => {
-  ptDragId = null;
+  ptDragId = ptDragTok = null;
   $$("#playtable .drop").forEach((x) => x.classList.remove("drop"));
 });
 $("#playtable").addEventListener("dragover", (e) => {
-  if (ptDragId === null) return;
+  if (ptDragId === null && ptDragTok === null) return;
   const zone = e.target.closest(".pt-zone");
-  if (!zone) return;
+  if (!zone || (ptDragTok !== null && zone.dataset.zone !== "battlefield")) return;
   e.preventDefault();
-  e.dataTransfer.dropEffect = "move";
+  e.dataTransfer.dropEffect = ptDragTok !== null ? "copy" : "move";
   $$("#playtable .drop").forEach((x) => x !== zone && x.classList.remove("drop"));
   zone.classList.add("drop");
 });
@@ -450,12 +584,12 @@ $("#playtable").addEventListener("dragleave", (e) => {
 });
 $("#playtable").addEventListener("drop", (e) => {
   const zoneEl = e.target.closest(".pt-zone");
-  if (ptDragId === null || !zoneEl) return;
+  if ((ptDragId === null && ptDragTok === null) || !zoneEl) return;
   e.preventDefault();
   e.stopPropagation();  // not a card drop from scryfall.com
   zoneEl.classList.remove("drop");
-  const id = ptDragId;
-  ptDragId = null;
+  const id = ptDragId, tok = ptDragTok;
+  ptDragId = ptDragTok = null;
   const zone = zoneEl.dataset.zone;
   if (zone === "battlefield" || zone === "hand") {
     // the position among the cards of the row: before the first card whose middle is right of the pointer
@@ -463,6 +597,7 @@ $("#playtable").addEventListener("drop", (e) => {
     const others = [...row.querySelectorAll(".pt-card[data-id]")].filter((x) => Number(x.dataset.id) !== id);
     let index = others.findIndex((x) => { const r = x.getBoundingClientRect(); return e.clientY < r.bottom && e.clientX < r.left + r.width / 2; });
     if (index < 0) index = others.length;
+    if (tok !== null) return zone === "battlefield" && pt.tokens?.[tok] && ptMakeToken(pt.tokens[tok], 1, zoneEl.dataset.row, index);
     const target = zone === "hand" ? "hand" : zoneEl.dataset.row;
     const f = ptFind(id);
     if (f.zone === target) {  // reorder inside the row
@@ -572,6 +707,32 @@ $("#pt-zone-view").addEventListener("close", () => {
 });
 
 // ---------- tokens: the deck's own ones first, any other by name ----------
+// the deck's tokens (from the cards' all_parts), loaded once per game
+async function ptLoadTokens() {
+  if (!pt.tokens) pt.tokens = await api(`/api/decks/${enc(pt.slug)}/tokens`);
+  return pt.tokens;
+}
+// the side list: drag a token onto the battlefield or click it for one
+async function ptTokenBar() {
+  const bar = $("#pt-tokbar");
+  try {
+    const list = await ptLoadTokens();
+    bar.innerHTML = list.map((t, i) => `<button type="button" class="pt-tokpick card" draggable="true" data-tokpick="${i}" data-img="${esc(t.image || "")}" data-name="${esc(t.name)}"
+      title="${esc(t.name)}${t.from?.length ? ` – von ${esc(t.from.join(", "))}` : ""} · Klick: eins aufs Spielfeld, oder aufs Spielfeld ziehen" aria-label="${esc(t.name)}-Token aufs Spielfeld">${t.image ? `<img src="${esc(t.image)}" alt="" draggable="false" loading="lazy">` : `<span class="noimg">${esc(t.name)}</span>`}</button>`).join("")
+      + `<button type="button" class="btn small pt-tok-more" id="pt-tok-more">${list.length ? "Andere …" : "Token suchen …"}</button>`;
+    $("#pt-tokens-zone").classList.toggle("empty", !list.length);
+  } catch {
+    bar.innerHTML = `<button type="button" class="btn small pt-tok-more" id="pt-tok-more">Token suchen …</button>`;
+  }
+}
+$("#pt-tokbar").addEventListener("click", (e) => {
+  if (e.target.closest("#pt-tok-more")) return void ptTokenView();
+  const b = e.target.closest("[data-tokpick]");
+  const t = b && pt.tokens?.[Number(b.dataset.tokpick)];
+  if (!t) return;
+  if (!pt.turn) return toast("Behalte zuerst deine Starthand.", "info", 2500);
+  ptMakeToken(t);
+});
 async function ptTokenView() {
   $("#pt-tok-q").value = "";
   $("#pt-tok-found").innerHTML = "";
@@ -579,7 +740,7 @@ async function ptTokenView() {
   const box = $("#pt-tok-deck");
   if (!pt.tokens) {
     box.innerHTML = `<p class="muted small">Lade die Tokens des Decks …</p>`;
-    try { pt.tokens = await api(`/api/decks/${enc(pt.slug)}/tokens`); } catch (err) { box.innerHTML = `<p class="muted small">${esc(err.message)}</p>`; return; }
+    try { await ptLoadTokens(); } catch (err) { box.innerHTML = `<p class="muted small">${esc(err.message)}</p>`; return; }
   }
   box.innerHTML = ptTokenList(pt.tokens, "Dieses Deck erzeugt keine bekannten Tokens – such unten nach einem.");
 }

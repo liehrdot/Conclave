@@ -79,6 +79,12 @@ def _symbols(text: str) -> list[str]:
     return [s.upper() for s in _PIP.findall(text or "")]
 
 
+def taps_for(data: dict[str, Any], deck_colors: set[str]) -> int:
+    """The mana a permanent adds each turn by tapping (rocks, dorks; 0 for lands and everything else) – the Spieltisch counts it."""
+    c = card_from(data, deck_colors=deck_colors)
+    return c.ramp if c.ramp_kind in ("rock", "dork") else 0
+
+
 def card_from(data: dict[str, Any], *, deck_colors: set[str], combo: bool = False, plan: bool = False) -> Card:
     """Turn compact card data (``scryfall.compact`` + ``roles``) into what the goldfish needs."""
     type_line = data.get("type_line") or ""
@@ -428,7 +434,7 @@ def score_hand(hand: list[Card], deck: Deck, *, on_draw: bool = False) -> Rating
         "commander": commander.name if commander else None,
         "colors_missing": [COLOR_NAMES[c] for c in missing], "commander_colors_missing": [COLOR_NAMES[c] for c in cmd_missing],
         "odds": {"lands_by_3": round(odds[3], 3), "lands_by_4": round(odds[4], 3)},
-        "mana_by_turn": [gf.mana.get(t, 0) for t in range(1, 5)],
+        "mana_by_turn": [gf.mana.get(t, 0) for t in range(1, TURNS + 1)],
     }  # fmt: skip
     return r
 

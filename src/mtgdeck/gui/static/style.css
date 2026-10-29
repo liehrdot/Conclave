@@ -1521,7 +1521,24 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .pt-life .btn.small { width: 30px; padding: 0; }
 .pt-spacer { flex: 1; }
 .pt-hint { margin: 0; padding: var(--space-2) var(--space-4); background: var(--accent-soft); color: var(--on-accent-soft); font-size: var(--fs-sm); }
-.pt-main { display: grid; grid-template-columns: auto 1fr; flex: 1 1 auto; min-height: 0; }
+.pt-main { display: grid; grid-template-columns: auto 1fr clamp(170px, 15vw, 260px); flex: 1 1 auto; min-height: 0; }
+.pt-log-wrap { display: flex; flex-direction: column; gap: var(--space-2); min-height: 0; padding: var(--space-3); border-left: 1px solid var(--border); background: var(--surface-2); }
+.pt-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0; padding: 0; list-style: none; display: grid; align-content: start; gap: var(--space-2); font-size: var(--fs-sm); }
+.pt-log li b { display: block; font-size: var(--fs-xs); }
+.pt-log li span { color: var(--muted); overflow-wrap: anywhere; }
+.pt-log li.now b { color: var(--accent-text); }
+.pt-log-wrap .btn { align-self: flex-start; }
+@media (max-width: 900px) { .pt-main { grid-template-columns: auto 1fr; } .pt-log-wrap { display: none; } }
+.pt-summary { width: min(820px, 94vw); }
+.pt-sum-facts { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); margin: var(--space-2) 0 var(--space-3); }
+.pt-sum-facts dt { font-size: var(--fs-xs); color: var(--muted); }
+.pt-sum-facts dd { margin: 0; font-size: var(--fs-lg); font-weight: 650; font-variant-numeric: tabular-nums; }
+.pt-sum-facts dd.pt-guess { font-size: var(--fs-xs); font-weight: 400; color: var(--muted); }
+.pt-sum-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.pt-sum-table th, .pt-sum-table td { padding: 6px var(--space-2); border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; font-variant-numeric: tabular-nums; }
+.pt-sum-table thead th { font-size: var(--fs-xs); color: var(--muted); font-weight: 600; }
+.pt-sum-plays { color: var(--muted); }
+.pt-summary .table-wrap { overflow-x: auto; }
 .pt-side { display: grid; grid-template-columns: repeat(2, auto); grid-auto-rows: min-content; gap: var(--space-3) var(--space-4); padding: var(--space-3); border-right: 1px solid var(--border); background: var(--surface-2); overflow-y: auto; }
 .pt-label { display: block; font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
 .pt-zone { border-radius: var(--radius-lg); outline: 2px dashed transparent; outline-offset: 2px; }
@@ -1561,6 +1578,13 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .pt-ctrs { position: absolute; left: 4px; right: 4px; top: 38%; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; pointer-events: none; }
 .pt-ctr { background: var(--text); color: var(--bg); font-size: var(--fs-xs); font-weight: 700; border-radius: var(--radius); padding: 0 5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pt-token-tag { position: absolute; left: 50%; bottom: 6%; transform: translateX(-50%); background: var(--accent); color: var(--on-accent); font-size: 10px; font-weight: 700; border-radius: 99px; padding: 0 6px; pointer-events: none; }
+.pt-tokens-zone { grid-column: 1 / -1; max-width: calc(var(--pt-w) * 2 + var(--space-4)); }
+.pt-tokbar { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: flex-start; }
+.pt-tokpick { width: calc(var(--pt-w) * .62); padding: 0; border: none; background: none; cursor: grab; border-radius: 6%/4.4%; color: var(--text); font: inherit; }
+.pt-tokpick img, .pt-tokpick .noimg { width: 100%; aspect-ratio: 488 / 680; object-fit: cover; border-radius: 6%/4.4%; display: block; }
+.pt-tokpick .noimg { display: grid; place-items: center; text-align: center; font-size: 10px; padding: 2px; overflow: hidden; background: var(--surface); border: 1px solid var(--border-strong); }
+.pt-tokpick:hover img, .pt-tokpick:focus-visible img { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pt-tokpick:active { cursor: grabbing; }
 .pt-tokens { width: min(760px, 94vw); }
 .pt-tokens h3.pt-label { margin: var(--space-4) 0 var(--space-2); }
 .pt-tokens input[type="search"] { width: 100%; margin-bottom: var(--space-3); }
