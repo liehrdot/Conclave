@@ -103,7 +103,8 @@ function ptNext() {
   if (pt.turn === PT_TURNS && !pt.summed) {  // the end of turn 7: the summary first, „Weiterspielen“ goes on
     pt.summed = true;
     ptRender();
-    return ptSummary();
+    void ptSummary();
+    return;
   }
   pt.turn += 1;
   pt.lands = 0;
