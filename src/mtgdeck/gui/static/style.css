@@ -1294,6 +1294,7 @@ details.fold[open] > summary::before { transform: rotate(45deg); margin-top: 2px
 .buy-compare-decks .buy-compare-group { flex-basis: 100%; margin: var(--space-1) 0 0; }
 .buy-in { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
 .buy-in .pill { font-size: var(--fs-xs); }
+.buy-in .pill.planned { background: transparent; border: 1px dashed var(--input-border); color: var(--muted); font-weight: normal; }
 .buy-checks { display: flex; flex-direction: column; gap: 4px; }
 .buy-max { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
 .buy-max-input { display: inline-flex; align-items: center; gap: 4px; }

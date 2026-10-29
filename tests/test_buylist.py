@@ -75,12 +75,25 @@ async def test_buylist_counts_only_collection_cards_no_other_deck_uses():
     deck = {**DECK, "cards": DECK["cards"] + [{"name": "Filler 0", "qty": 1}]}
     items = {i["name"]: i for i in (await buylist.build(deck))["items"]}
     assert items["Sol Ring"]["in_decks"] == ["Anderes"]  # the one copy is sleeved up in "Anderes"
-    assert items["Sol Ring"]["decks"] == [{"slug": "anderes", "qty": 1}] and items["Meren of Clan Nel Toth"]["decks"][0]["slug"] == "anderes"
+    assert items["Sol Ring"]["decks"] == [{"slug": "anderes", "qty": 1, "planned": False}]
+    assert items["Meren of Clan Nel Toth"]["decks"] == [{"slug": "anderes", "qty": 1, "planned": True}]  # listed there, no copy anywhere
     assert "Filler 0" not in items  # 2 copies: one for "Anderes", one free for this deck
     whole = await buylist.build(deck, use_collection=False)
     assert {i["name"] for i in whole["items"]} == {"Meren of Clan Nel Toth", "Sol Ring", "Cultivate", "Filler 0"}
     assert whole["use_collection"] is False and whole["other_decks"] == [{"slug": "anderes", "name": "Anderes", "shelved": False}]
-    assert {i["name"]: i["decks"] for i in whole["items"]}["Sol Ring"] == [{"slug": "anderes", "qty": 1}]  # also without the collection check
+    assert {i["name"]: i["decks"] for i in whole["items"]}["Sol Ring"] == [{"slug": "anderes", "qty": 1, "planned": False}]  # also without the collection check
+
+
+async def test_buylist_card_only_planned_in_another_deck_is_not_there():
+    """Flo's Marsh Flats: another deck lists it, but no copy is in the collection, so it lies nowhere and must be bought."""
+    await collection.add([{"name": "Sol Ring"}])
+    await save_deck(name="Anderes", commanders=["Atraxa, Praetors' Voice"], bracket=2,
+                    cards=[{"name": "Filler 7", "qty": 1}, {"name": "Sol Ring", "qty": 1}])  # fmt: skip
+    deck = {**DECK, "cards": DECK["cards"] + [{"name": "Filler 7", "qty": 1}]}
+    for use in (True, False):
+        items = {i["name"]: i for i in (await buylist.build(deck, use_collection=use))["items"]}
+        assert items["Filler 7"]["decks"] == [{"slug": "anderes", "qty": 1, "planned": True}] and items["Filler 7"]["places"] == {}
+        assert items["Sol Ring"]["decks"] == [{"slug": "anderes", "qty": 1, "planned": False}]  # the own copy may be sleeved up there
 
 
 async def test_buylist_lists_copies_by_place():
