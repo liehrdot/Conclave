@@ -256,6 +256,7 @@ function ptPile(zone) {
 
 function ptRender() {
   if (!pt) return;
+  preview.hidden = true;  // the card under the pointer is replaced; moving the mouse shows it again
   const z = pt.zones, start = !pt.turn;
   $("#pt-title").textContent = start ? (pt.mull ? `Starthand · ${pt.mull}. Mulligan` : "Starthand")
     : pt.turn <= PT_TURNS ? `Zug ${pt.turn} von ${PT_TURNS}` : `Zug ${pt.turn}`;

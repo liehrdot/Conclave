@@ -457,6 +457,7 @@ details.more[open] > summary { margin-bottom: var(--space-3); }
 .cards.grid .qty-badge { position: absolute; top: 6px; right: 6px; background: rgb(0 0 0 / .75); color: #fff; font-size: var(--fs-xs); font-weight: 700; padding: 1px 7px; border-radius: 99px; }
 .card-preview { position: fixed; pointer-events: none; z-index: 50; display: flex; gap: 8px; }
 .card-preview img { display: block; width: 240px; border-radius: 12px; box-shadow: var(--shadow-lg); }
+.card-preview.big img { width: min(400px, 30vw, 62vh); border-radius: 4.75%/3.5%; }  /* Spieltisch: readable rules text */
 
 /* card tools + edit mode */
 .card-tools { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }

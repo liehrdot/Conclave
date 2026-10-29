@@ -2062,6 +2062,10 @@ document.addEventListener("mouseover", (e) => {
   if (!hoverPreview) return;
   const el = e.target.closest(".card[data-img]");
   if (!el || !el.dataset.img || el.closest(".cards.grid")) return;
+  // a modal dialog sits in the top layer: the preview has to live inside it to show above it
+  const host = el.closest("dialog[open]") || document.body;
+  if (preview.parentElement !== host) host.appendChild(preview);
+  preview.classList.toggle("big", !!el.closest("#playtable"));  // the play table shows cards large enough to read
   const [front, back] = preview.querySelectorAll("img");
   front.src = el.dataset.img;
   back.hidden = back.parentElement.hidden = !el.dataset.imgBack;  // double-faced: both sides side by side
@@ -2072,9 +2076,9 @@ document.addEventListener("mouseover", (e) => {
 document.addEventListener("mouseout", (e) => { if (e.target.closest(".card[data-img]")) preview.hidden = true; });
 document.addEventListener("mousemove", (e) => {
   if (preview.hidden) return;
-  const w = preview.querySelector("img.back:not([hidden])") ? 500 : 260;
-  const x = e.clientX + w > window.innerWidth ? e.clientX - w : e.clientX + 20;
-  const y = Math.min(e.clientY - 40, window.innerHeight - 350);
+  const w = preview.offsetWidth + 20, h = preview.offsetHeight || 350;
+  const x = e.clientX + w > window.innerWidth ? Math.max(8, e.clientX - w) : e.clientX + 20;
+  const y = Math.min(e.clientY - 40, window.innerHeight - h - 8);
   preview.style.left = x + "px"; preview.style.top = Math.max(8, y) + "px";
 });
 
