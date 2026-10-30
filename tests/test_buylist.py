@@ -38,6 +38,15 @@ async def test_buylist_falls_back_to_scryfall_without_cardmarket(monkeypatch):
     assert "Cardmarket" in r["error"] and {i["source"] for i in r["items"]} == {"scryfall"}
 
 
+def test_candidates_skip_printings_with_a_stale_trend():
+    """Summer Magic Birds of Paradise: a trend of 3 € but no copy under 8.000 € must not be the pick."""
+    idx = cardmarket.build_index(
+        {"priceGuides": [{"idProduct": 1, "trend": 3.0, "low": 8000.0}, {"idProduct": 2, "trend": 3.4, "low": 2.5}, {"idProduct": 3, "trend": 9.7, "low": 17.0}]},
+        {"products": [{"idProduct": i, "name": "Birds of Paradise"} for i in (1, 2, 3)]},
+    )
+    assert [p["id"] for p in cardmarket.candidates(idx, "Birds of Paradise")] == [2, 3, 1]  # 17 € low vs 9,70 € trend is normal
+
+
 def test_candidates_find_double_faced_names():
     idx = cardmarket.build_index(
         {"priceGuides": [{"idProduct": 1, "trend": 0.3, "low": 0.1}, {"idProduct": 2, "trend": None, "low": None, "trend-foil": 2.0}]},
@@ -94,6 +103,21 @@ async def test_buylist_card_only_planned_in_another_deck_is_not_there():
         items = {i["name"]: i for i in (await buylist.build(deck, use_collection=use))["items"]}
         assert items["Filler 7"]["decks"] == [{"slug": "anderes", "qty": 1, "planned": True}] and items["Filler 7"]["places"] == {}
         assert items["Sol Ring"]["decks"] == [{"slug": "anderes", "qty": 1, "planned": False}]  # the own copy may be sleeved up there
+
+
+async def test_buylist_counts_copies_placed_in_this_deck():
+    """Flo's Finale of Devastation: the one copy lies in this deck, two other decks also play the card."""
+    for name in ("Anderes", "Drittes"):
+        await save_deck(name=name, commanders=["Atraxa, Praetors' Voice"], bracket=2, cards=[{"name": "Cultivate", "qty": 1}, {"name": "Sol Ring", "qty": 1}])
+    await collection.add([{"name": "Cultivate"}], place="X", place_deck="x")  # x = DECK's slug
+    await collection.add([{"name": "Sol Ring"}], place="Anderes", place_deck="anderes")  # Anderes' own copy
+    await collection.add([{"name": "Sol Ring"}])  # unplaced: Drittes takes it
+    items = {i["name"]: i for i in (await buylist.build(DECK))["items"]}
+    assert "Cultivate" not in items  # placed here, even though two played decks list it
+    assert items["Sol Ring"]["qty"] == 1  # Anderes holds its copy, the loose one goes to Drittes
+    await collection.add([{"name": "Sol Ring", "foil": True}], place="X", place_deck="x")
+    assert "Sol Ring" not in {i["name"] for i in (await buylist.build(DECK))["items"]}
+    assert {i["name"] for i in (await buylist.build(DECK, use_collection=False))["items"]} >= {"Cultivate", "Sol Ring"}
 
 
 async def test_buylist_lists_copies_by_place():

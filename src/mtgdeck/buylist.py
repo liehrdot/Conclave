@@ -1,7 +1,7 @@
 """Einkaufsliste: what it costs to own a deck for real, at the cheapest printing of every card.
 
 ``build(deck)`` takes the deck's cards minus the real copies in the collection that no other deck
-uses (proxies count as missing unless ``replace_proxies=False``; ``use_collection=False`` lists the
+uses (copies placed in a deck belong to that deck: the ones placed in this one always count) (proxies count as missing unless ``replace_proxies=False``; ``use_collection=False`` lists the
 whole deck; basic lands are left out) and prices each card with
 Cardmarket's daily price guide (``cardmarket.py``): the playable printing with the lowest trend and
 its cheapest listing as ``low``. Set names and the playable check (no oversized, gold-bordered or
@@ -121,9 +121,21 @@ async def build(deck: dict[str, Any], *, use_collection: bool = True, replace_pr
         others = [d for d in usage.get(name, []) if d["slug"] != deck.get("slug")]
         played = [d for d in others if not d.get("shelved")]  # a shelved deck's copies may be taken out
         have = o["real"] + (0 if replace_proxies else o["proxy"])
-        free = max(have - sum(d["qty"] for d in others), 0)
-        buy = max(n - max(have - sum(d["qty"] for d in played), 0), 0)
-        if (taken := n - buy - min(free, n)) > 0:
+        # copies placed in a deck („Ort“ = that deck) belong to it: first this deck's, then each other deck's
+        at = by_place.get(name, {}) if use_collection else {}
+
+        def placed(slug: str | None) -> int:
+            c = at.get(f"deck:{slug}", {"real": 0, "proxy": 0})
+            return c["real"] + (0 if replace_proxies else c["proxy"])
+
+        here = min(placed(deck.get("slug")), n, have)
+        own = {d["slug"]: min(placed(d["slug"]), d["qty"]) for d in others}
+        pool = max(have - here - sum(own.values()), 0)  # unplaced copies (and extra ones) any deck may use
+        wants = sum(d["qty"] - own[d["slug"]] for d in played)  # what the played decks still take from the pool
+        shelved = sum(d["qty"] - own[d["slug"]] for d in others if d.get("shelved"))
+        free = max(pool - wants - shelved, 0)
+        buy = max(n - here - max(pool - wants, 0) - sum(own[d["slug"]] for d in others if d.get("shelved")), 0)
+        if (taken := n - here - buy - min(free, n - here)) > 0:
             from_shelved.append({"name": name, "qty": taken, "decks": [d["name"] for d in others if d.get("shelved")]})
         if buy:
             rows.append({"name": name, "qty": buy, "need": n, "real": o["real"], "proxy": o["proxy"],
