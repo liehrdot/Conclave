@@ -113,5 +113,12 @@ def candidates(idx: dict[str, Any], name: str) -> list[dict[str, Any]]:
         if trend is None and low is None:
             continue
         out.append({"id": p["id"], "expansion": p.get("expansion"), "trend": trend if trend is not None else low, "low": low})
-    out.sort(key=lambda p: (p["trend"], p["low"] or 0))
+    out.sort(key=lambda p: (_realistic(p), p["low"] or 0))
     return out
+
+
+def _realistic(p: dict[str, Any]) -> float:
+    """The trend, unless the cheapest listing is far above it: then the trend is stale (Summer Magic Birds of
+    Paradise: trend 3 €, cheapest copy 8.000 €), and the low is the honest figure."""
+    low = p["low"]
+    return low if low is not None and low > 3 * p["trend"] and low - p["trend"] > 10 else p["trend"]
