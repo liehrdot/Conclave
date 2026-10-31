@@ -220,8 +220,8 @@ function renderDeckList() {
   const q = $("#deck-filter").value.trim().toLowerCase();
   const list = deckIndex.filter((d) => !q || `${d.name} ${d.commanders.join(" ")}`.toLowerCase().includes(q));
   const firstShelved = list.findIndex((d) => d.shelved);  // the backend lists pinned decks first, shelved ones last
-  const sortable = !q && deckIndex.filter((d) => d.pinned && !d.shelved).length > 1;  // pinned decks: drag into your own order
-  $("#deck-list").innerHTML = list.length ? list.map((d, i) => `${i === firstShelved ? `<li class="deck-list-group" title="Karten daraus kannst du für andere Decks nehmen">Pausiert</li>` : ""}<li${d.shelved ? ' class="shelved"' : ""}${sortable && d.pinned && !d.shelved ? ` draggable="true" data-pin="${esc(d.slug)}" title="Ziehen, um die Reihenfolge zu ändern"` : ""}>
+  const sortable = !q;  // drag a deck into the pinned ones on top (or a pinned one out of them)
+  $("#deck-list").innerHTML = list.length ? list.map((d, i) => `${i === firstShelved ? `<li class="deck-list-group" title="Karten daraus kannst du für andere Decks nehmen">Pausiert</li>` : ""}<li${d.shelved ? ' class="shelved"' : ""}${sortable && !d.shelved ? ` draggable="true" data-pin="${esc(d.slug)}" title="${d.pinned ? "Ziehen, um die Reihenfolge zu ändern" : "Nach oben ziehen, um es anzuheften"}"` : ""}>
       <a href="#/deck/${enc(d.slug)}" data-slug="${esc(d.slug)}">
         <span class="name">${d.valid === false ? '<span class="dot bad" title="nicht legal"></span><span class="sr-only">nicht legal:</span>' : ""}<span class="label">${esc(d.name)}</span>${d.pinned ? `<svg class="icon pin" aria-label="angeheftet"><title>Angeheftet</title><use href="#i-pin"/></svg>` : ""}</span>
         ${d.updated ? `<span class="meta">${esc(fmtDate(d.updated))}</span>` : ""}
@@ -255,9 +255,27 @@ $("#shelve-btn").addEventListener("click", () => { $("#deck-menu").open = false;
 $("#unshelve-btn").addEventListener("click", () => currentDeck && setDeckFlag(currentDeck, "shelved", false));
 $("#deck-filter").addEventListener("input", renderDeckList);
 
-// drag a pinned deck above or below another pinned one
+// drag a deck among the pinned ones on top (it gets pinned there) or a pinned one below them (it gets unpinned)
 let pinDrag = null;
 const pinTarget = (e) => e.target.closest?.("#deck-list li[data-pin]");
+const pinnedSlugs = () => deckIndex.filter((d) => d.pinned && !d.shelved).map((d) => d.slug);
+
+// What dropping the dragged deck above or below `li` does: {order} = the pinned decks in their new order (the
+// dragged one included), {unpin: true}, or null (no change, e.g. one unpinned deck onto another).
+function pinDrop(li, below) {
+  const pinned = pinnedSlugs();
+  const target = li.dataset.pin;
+  if (target === pinDrag) return null;
+  const others = pinned.filter((s) => s !== pinDrag);
+  let at = others.indexOf(target);
+  if (at >= 0) at += below ? 1 : 0;
+  else if (!below && target === deckIndex.find((d) => !d.pinned && !d.shelved)?.slug) at = others.length;  // just under the pinned ones
+  else return pinned.includes(pinDrag) ? { unpin: true } : null;
+  const order = [...others];
+  order.splice(at, 0, pinDrag);
+  return order.join() === pinned.join() ? null : { order };
+}
+
 $("#deck-list").addEventListener("dragstart", (e) => {
   const li = pinTarget(e);
   if (!li) return;
@@ -269,27 +287,35 @@ $("#deck-list").addEventListener("dragstart", (e) => {
 $("#deck-list").addEventListener("dragover", (e) => {
   const li = pinTarget(e);
   if (!pinDrag || !li) return;
-  e.preventDefault();
   const below = e.clientY > li.getBoundingClientRect().top + li.offsetHeight / 2;
-  for (const x of $$("#deck-list li[data-pin]")) x.classList.toggle("drop-above", x === li && !below), x.classList.toggle("drop-below", x === li && below);
+  const plan = pinDrop(li, below);
+  if (plan) e.preventDefault();
+  for (const x of $$("#deck-list li[data-pin]")) x.classList.toggle("drop-above", !!plan && x === li && !below), x.classList.toggle("drop-below", !!plan && x === li && below);
 });
 $("#deck-list").addEventListener("drop", async (e) => {
   const li = pinTarget(e);
   if (!pinDrag || !li) return;
   e.preventDefault();
-  const before = deckIndex.filter((d) => d.pinned && !d.shelved).map((d) => d.slug);
-  const slugs = before.filter((s) => s !== pinDrag);
-  const at = slugs.indexOf(li.dataset.pin);
-  if (at < 0) return;
-  slugs.splice(li.classList.contains("drop-below") ? at + 1 : at, 0, pinDrag);
-  if (slugs.join() !== before.join()) await setPinOrder(slugs, before);
+  const dragged = deckIndex.find((d) => d.slug === pinDrag);
+  const plan = pinDrop(li, li.classList.contains("drop-below"));
+  if (!plan || !dragged) return;
+  if (plan.unpin) return setDeckFlag(dragged, "pinned", false);
+  const before = pinnedSlugs();
+  if (!dragged.pinned) {
+    try { await api(`/api/decks/${enc(dragged.slug)}/flags`, { method: "PUT", body: { pinned: true } }); }
+    catch (err) { return fail(err); }
+    dragged.pinned = true;
+    if (currentDeck?.slug === dragged.slug) { currentDeck.pinned = true; renderDeckFlags(currentDeck); }
+  }
+  await setPinOrder(plan.order, before, before.includes(dragged.slug) ? null : dragged);
 });
 $("#deck-list").addEventListener("dragend", () => {
   pinDrag = null;
   for (const x of $$("#deck-list li")) x.classList.remove("dragging", "drop-above", "drop-below");
 });
 
-async function setPinOrder(slugs, before) {
+// `pinnedNow` = a deck the drag just pinned: "Rückgängig" unpins it again instead of reordering
+async function setPinOrder(slugs, before, pinnedNow = null) {
   const pos = new Map(slugs.map((s, i) => [s, i]));
   deckIndex.forEach((d) => { if (pos.has(d.slug)) d.pin_rank = pos.get(d.slug); });
   const pinned = deckIndex.filter((d) => pos.has(d.slug)).sort((a, b) => pos.get(a.slug) - pos.get(b.slug));
@@ -297,7 +323,8 @@ async function setPinOrder(slugs, before) {
   renderDeckList();
   try {
     await api("/api/decks/pin-order", { method: "PUT", body: { slugs } });
-    toast("Reihenfolge gespeichert.", "ok", 4000, { label: "Rückgängig", run: () => setPinOrder(before, slugs) });
+    if (pinnedNow) toast(`„${pinnedNow.name}“ oben angeheftet.`, "ok", 5000, { label: "Rückgängig", run: () => setDeckFlag(pinnedNow, "pinned", false) });
+    else toast("Reihenfolge gespeichert.", "ok", 4000, { label: "Rückgängig", run: () => setPinOrder(before, slugs) });
   } catch (err) { fail(err); }
   await refreshDeckList();
 }
