@@ -363,8 +363,39 @@ $("#manual-btn").addEventListener("click", async () => {
   } catch (err) { fail(err); }
   finally { b.disabled = false; b.textContent = "Leeres Deck anlegen"; }
 });
-$("#import-text-btn").addEventListener("click", () => loadImport({ text: $("#import-text").value }));
+$("#import-text-btn").addEventListener("click", () => loadImport({ text: $("#import-text").value, name: importFileName || undefined }));
 $("#import-clip-btn").addEventListener("click", importFromClipboard);
+$("#import-file-btn").addEventListener("click", () => $("#import-file").click());
+$("#import-file").addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  e.target.value = "";  // the same file again fires change again
+  if (file) void importFromFile(file);
+});
+$("#import-text").addEventListener("input", () => { importFileName = ""; });  // an edited list is no longer that file
+
+// A decklist saved as a .txt file (Moxfield „Download“, MTG Arena, Archidekt, by hand): picked with the button or
+// dropped anywhere on „Neues Deck“ (handled with the other drops below). The file name becomes the deck name.
+const IMPORT_FILE_MAX = 1024 * 1024;
+let importFileName = "";
+async function importFromFile(file) {
+  if (!/\.txt$/i.test(file.name) && file.type && file.type !== "text/plain") {
+    return toast(`„${file.name}“ ist keine Textdatei. Wähle eine .txt-Datei mit der Deckliste.`, "error");
+  }
+  if (file.size > IMPORT_FILE_MAX) return toast(`„${file.name}“ ist zu groß für eine Deckliste.`, "error");
+  let text;
+  try { text = decodeDeckFile(await file.arrayBuffer()).trim(); }
+  catch { return toast(`„${file.name}“ ließ sich nicht lesen.`, "error"); }
+  if (!text) return toast(`„${file.name}“ ist leer.`, "error");
+  setImportMode("text");
+  $("#import-text").value = text;
+  importFileName = file.name.replace(/\.[^.]*$/, "").replace(/[_]+/g, " ").trim().slice(0, 120);
+  void loadImport({ text, name: importFileName || undefined });
+}
+// UTF-8 (with or without BOM) is the usual case; Windows editors still save „Kultivieren“-lists as Windows-1252
+function decodeDeckFile(buffer) {
+  try { return new TextDecoder("utf-8", { fatal: true }).decode(buffer); }
+  catch { return new TextDecoder("windows-1252").decode(buffer); }
+}
 
 // Reads a copied decklist (e.g. Moxfield „Export“ → „Copy for MTGA“) and checks it right away.
 async function importFromClipboard() {
@@ -377,6 +408,7 @@ async function importFromClipboard() {
   }
   if (!text) { toast("Die Zwischenablage ist leer. Kopiere zuerst die Liste, z. B. in Moxfield mit „Copy for MTGA“.", "error"); return; }
   $("#import-text").value = text;
+  importFileName = "";
   void loadImport({ text });
 }
 
@@ -1392,9 +1424,29 @@ const DROP_TYPES = ["text/uri-list", "text/html", "text/plain"];
 // only the artwork picker keeps its own image-file drops
 const isCardDrag = (e) => {
   const types = [...(e.dataTransfer?.types || [])];
-  return !dragFromApp && types.some((t) => DROP_TYPES.includes(t)) && !($("#picker").open && types.includes("Files"));
+  return !dragFromApp && types.some((t) => DROP_TYPES.includes(t)) && !($("#picker").open && types.includes("Files")) && !isListFileDrag(e);
 };
 const dropIntoDeck = () => parseHash().view === "deck" && !!currentDeck;
+// a decklist file dragged in from the file manager while „Neues Deck“ is open goes into „Liste einfügen“
+const isListFileDrag = (e) => !dragFromApp && [...(e.dataTransfer?.types || [])].includes("Files")
+  && !document.querySelector("dialog[open]") && !$("#import-box").closest(".view").hidden;
+document.addEventListener("dragover", (e) => {
+  if (!isListFileDrag(e)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  $("#import-text").classList.add("file-over");
+  clearTimeout(fileOverTimer);
+  fileOverTimer = setTimeout(() => $("#import-text").classList.remove("file-over"), 250);
+});
+let fileOverTimer = 0;
+document.addEventListener("drop", (e) => {
+  if (!isListFileDrag(e)) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  $("#import-text").classList.remove("file-over");
+  const file = e.dataTransfer.files?.[0];
+  if (file) void importFromFile(file);
+});
 // in an open deck the overlay has two targets: the deck (left half of the window) and the maybe list (right half)
 const dropOnMaybe = (e) => dropIntoDeck() && !!e && e.clientX > window.innerWidth / 2;
 

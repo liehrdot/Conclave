@@ -242,6 +242,7 @@ input:disabled, select:disabled, textarea:disabled { opacity: .5; }
 .checks { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin-bottom: var(--space-4); }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: end; }
 .inline-form { display: flex; gap: var(--space-2); }
+#import-text.file-over { outline: 2px dashed var(--accent); outline-offset: 2px; }
 .inline-form input { flex: 1; }
 
 /* segmented control (radio group) */
