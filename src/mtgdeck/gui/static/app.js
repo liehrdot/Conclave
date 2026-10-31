@@ -1454,9 +1454,13 @@ const isCardDrag = (e) => {
   return !dragFromApp && types.some((t) => DROP_TYPES.includes(t)) && !($("#picker").open && types.includes("Files")) && !isListFileDrag(e);
 };
 const dropIntoDeck = () => parseHash().view === "deck" && !!currentDeck;
-// a decklist file dragged in from the file manager while „Neues Deck“ is open goes into „Liste einfügen“
-const isListFileDrag = (e) => !dragFromApp && [...(e.dataTransfer?.types || [])].includes("Files")
-  && !document.querySelector("dialog[open]") && !$("#import-box").closest(".view").hidden;
+// a decklist file dragged in from the file manager while „Neues Deck“ is open goes into „Liste einfügen“;
+// a card picture dragged from scryfall.com also carries „Files“, but always with its link, so it stays a card drop
+const isListFileDrag = (e) => {
+  const types = [...(e.dataTransfer?.types || [])];
+  return !dragFromApp && types.includes("Files") && !types.includes("text/uri-list") && !types.includes("text/html")
+    && !document.querySelector("dialog[open]") && !$("#import-box").closest(".view").hidden;
+};
 document.addEventListener("dragover", (e) => {
   if (!isListFileDrag(e)) return;
   e.preventDefault();
