@@ -1216,14 +1216,14 @@ function renderCards(d) {
       const own = ownershipBadge(c.name, c.qty, c.commander, c.status !== "new");
       const copy = c.status === "new" ? null : shownCopy(c.name);  // the copy whose Ort is this deck
       const img = copy?.image || cd.image, back = copy?.image ? copy.image_back || "" : cd.image_back || "";
-      const data = `data-img="${esc(img || "")}" data-img-back="${esc(back)}" data-name="${esc(c.name)}"${copy?.foil ? ' data-foil="1"' : ""}`;
-      const label = `${c.qty > 1 ? c.qty + "× " : ""}${c.name}${copy?.foil ? " (Foil)" : ""}`;
+      const data = `data-img="${esc(img || "")}" data-img-back="${esc(back)}" data-name="${esc(c.name)}"${copy?.foil ? ` data-foil="${esc(copy.foil_kind || "foil")}"` : ""}`;
+      const label = `${c.qty > 1 ? c.qty + "× " : ""}${c.name}${copy?.foil ? ` (${foilName(copy)})` : ""}`;
       if (grid) {
         return `<div class="card${copy?.foil ? " foil" : ""}" role="button" tabindex="0" ${data} aria-label="${esc(label)} – große Ansicht">
           ${img ? `<img src="${esc(img)}" alt="" loading="lazy">${copy?.foil ? '<span class="foil-sheen" aria-hidden="true"></span>' : ""}` : `<div class="noimg">${esc(c.name)}</div>`}
           ${c.qty > 1 ? `<span class="qty-badge">${c.qty}×</span>` : ""}${own ? `<span class="own-badge">${own}</span>` : ""}</div>`;
       }
-      const name = `${esc(c.name)}${cd.image_back ? '<span class="dfc" title="doppelseitig">⇄</span>' : ""}${cd.game_changer ? '<span class="gc" title="Game Changer">GC</span>' : ""}${copy?.foil ? '<span class="foil-tag" title="Foil – liegt so im Deck">Foil</span>' : ""}`;
+      const name = `${esc(c.name)}${cd.image_back ? '<span class="dfc" title="doppelseitig">⇄</span>' : ""}${cd.game_changer ? '<span class="gc" title="Game Changer">GC</span>' : ""}${copy?.foil ? `<span class="foil-tag" title="${esc(foilName(copy))} – liegt so im Deck">${esc(foilName(copy))}</span>` : ""}`;
       const unit = copy && !copy.proxy && copy.price ? copy.price : priceOf(cd, d);
       const price = `<span class="price"${unit !== priceOf(cd, d) ? ' title="Preis deiner Ausgabe"' : ""}>${unit ? esc(fmtNum(unit, "", 2)) : ""}</span>`;
       if (!editing || c.commander) {
@@ -1679,9 +1679,17 @@ async function afterOwnMove(slug, name) {
   if (currentDeck?.slug === slug) await loadOwnership(currentDeck);
 }
 
+// the foil look of an own copy (`foil_kind` from the printing's Scryfall promo types), named like on the card
+const FOIL_NAMES = {
+  foil: "Foil", etched: "Etched Foil", surge: "Surge Foil", ripple: "Ripple Foil", galaxy: "Galaxy Foil", confetti: "Confetti Foil",
+  halo: "Halo Foil", textured: "Textured Foil", oilslick: "Oil Slick Foil", rainbow: "Rainbow Foil", gilded: "Gilded Foil",
+  fracture: "Fracture Foil", mana: "Mana Foil",
+};
+const foilName = (c) => FOIL_NAMES[c?.foil_kind] || "Foil";
+
 function copyLabel(c) {
   const lang = c.lang && c.lang !== "en" ? (LANG_NAMES[c.lang] || c.lang.toUpperCase()) : "";
-  return [c.set_name || (c.set || "").toUpperCase(), c.collector_number ? `#${c.collector_number}` : "", c.foil ? "Foil" : "", lang, c.proxy ? "Proxy" : ""]
+  return [c.set_name || (c.set || "").toUpperCase(), c.collector_number ? `#${c.collector_number}` : "", c.foil ? foilName(c) : "", lang, c.proxy ? "Proxy" : ""]
     .filter(Boolean).join(" · ");
 }
 
@@ -2166,6 +2174,7 @@ document.addEventListener("mouseover", (e) => {
   front.src = el.dataset.img;
   back.hidden = back.parentElement.hidden = !el.dataset.imgBack;  // double-faced: both sides side by side
   preview.classList.toggle("foil", !!el.dataset.foil);
+  preview.dataset.foil = el.dataset.foil || "";
   if (el.dataset.imgBack) back.src = el.dataset.imgBack;
   preview.hidden = false;
 });
@@ -2262,7 +2271,7 @@ function renderCardViewFaces(pick) {
   const big = (u) => u.replace("/normal/", "/large/").replace("/small/", "/large/");
   // each face is a 3D card: front (with the foil sheen and a glare) and the Magic card back behind it
   $("#card-view-faces").innerHTML = imgs.map(([u, label]) =>
-    `<figure class="card3d-wrap${copy?.foil ? " foil" : ""}"><div class="card3d" title="Ziehen zum Drehen, Doppelklick dreht um">
+    `<figure class="card3d-wrap${copy?.foil ? " foil" : ""}"${copy?.foil ? ` data-foil="${esc(copy.foil_kind || "foil")}"` : ""}><div class="card3d" title="Ziehen zum Drehen, Doppelklick dreht um">
       <span class="holo front"><img src="${esc(big(u))}" alt="${esc(label)}" draggable="false">${copy?.foil ? '<span class="foil-sheen" aria-hidden="true"></span>' : ""}<span class="glare" aria-hidden="true"></span></span>
       <span class="holo backside" aria-hidden="true"><img src="${CARD_BACK}" alt="" draggable="false" loading="lazy"></span></div>
       ${imgs.length > 1 ? `<figcaption>${esc(label)}</figcaption>` : ""}</figure>`).join("")
