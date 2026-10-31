@@ -47,7 +47,7 @@ STATIC = Path(__file__).parent / "static"
 PROJECT_ROOT = storage.PROJECT_ROOT
 GUI_TOKEN = os.environ.get("MTG_GUI_TOKEN", "")  # set by the desktop shell: every request must carry it (cookie or Bearer)
 TOKEN_COOKIE = "mtg_token"
-VERSION = "0.2.1"
+VERSION = "0.3.0"
 
 
 @asynccontextmanager
