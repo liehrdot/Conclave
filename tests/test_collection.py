@@ -113,7 +113,7 @@ async def test_deck_copies_and_value():
     sol = o["cards"]["Sol Ring"]["copies"]
     assert sol == [{"id": sol[0]["id"], "qty": 1, "proxy": False, "foil": True, "lang": "en", "set": "ltc", "set_name": "Set LTC",
                     "collector_number": "284", "image": f"https://cards.scryfall.io/normal/front/{sid}.jpg", "image_back": None,
-                    "price": 4.0}]  # the foil price of that printing  # fmt: skip
+                    "price": 4.0, "foil_kind": "foil"}]  # the foil price of that printing  # fmt: skip
     assert o["cards"]["Cultivate"]["copies"][0]["proxy"] and o["cards"]["Swamp"]["copies"] == []
     assert o["cards"]["Forest"]["copies"][0]["qty"] == 3 and o["cards"]["Forest"]["copies"][0]["price"] is None
     v = o["value"]
@@ -334,3 +334,13 @@ def test_collection_cards_route():
     body = client.get("/api/collection/cards").json()
     assert body["cards"]["Krenko, Mob Boss"]["commander"] is True
     assert body["cards"]["Krenko, Mob Boss"]["ci"] == "R"
+
+
+def test_foil_kind_from_the_printing():
+    assert collection.foil_kind({"finishes": ["nonfoil", "foil"]}) == "foil"
+    assert collection.foil_kind({}) == "foil"  # offline: the plain sheen
+    assert collection.foil_kind({"finishes": ["etched"]}) == "etched"
+    assert collection.foil_kind({"finishes": ["foil", "etched"]}) == "foil"  # both exist: no way to tell, plain foil
+    assert collection.foil_kind({"finishes": ["foil"], "promo_types": ["universesbeyond", "surgefoil"]}) == "surge"
+    assert collection.foil_kind({"finishes": ["foil"], "promo_types": ["oilslick", "raisedfoil"]}) == "oilslick"
+    assert collection.foil_kind({"finishes": ["foil"], "promo_types": ["boosterfun"]}) == "foil"

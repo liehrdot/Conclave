@@ -470,6 +470,23 @@ def _same_card(entry_name: str, name: str) -> bool:
     return a == b or a.split(" // ")[0] == b.split(" // ")[0]
 
 
+# Scryfall ``promo_types`` -> the foil look the deck view draws for a foil copy of that printing (issue #61)
+FOIL_KINDS = {
+    "surgefoil": "surge", "ripplefoil": "ripple", "galaxyfoil": "galaxy", "confettifoil": "confetti",
+    "halofoil": "halo", "textured": "textured", "oilslick": "oilslick", "doublerainbow": "rainbow",
+    "rainbowfoil": "rainbow", "gilded": "gilded", "fracturefoil": "fracture", "manafoil": "mana",
+}  # fmt: skip
+
+
+def foil_kind(printing: dict[str, Any]) -> str:
+    """The foil look of a foil copy of ``printing`` (a raw Scryfall card): ``etched`` when the printing comes only as
+    etched foil, a special foil from ``promo_types`` (``FOIL_KINDS``), else ``foil`` (traditional; also offline)."""
+    finishes = printing.get("finishes") or []
+    if "etched" in finishes and "foil" not in finishes:
+        return "etched"
+    return next((FOIL_KINDS[t] for t in printing.get("promo_types") or [] if t in FOIL_KINDS), "foil")
+
+
 def card_copies(name: str, slug: str) -> dict[str, Any]:
     """Every collection entry of one card, for moving copies into the deck ``slug``: ``here`` = copies whose Ort is
     this deck, ``elsewhere`` = the rest, each with ``used_by`` = the deck it lies in when that deck plays the card."""
@@ -607,11 +624,13 @@ async def _deck_value(deck: dict[str, Any], need: Counter, cards: dict[str, dict
             placed.setdefault(name, []).append(e)
     ids = sorted({e["scryfall_id"] for es in placed.values() for e in es if _SCRYFALL_ID.match(e.get("scryfall_id") or "")})
     prices: dict[str, dict[str, Any]] = {}
+    printings: dict[str, dict[str, Any]] = {}
     if ids:
         try:
             found, _ = await scryfall.by_identifiers([{"id": i} for i in ids])
-            prices = {c["id"]: c.get("prices") or {} for c in found if c}
-        except Exception:  # offline: the prices stored at import
+            printings = {c["id"]: c for c in found if c}
+            prices = {i: c.get("prices") or {} for i, c in printings.items()}
+        except Exception:  # offline: the prices stored at import, the plain foil look
             prices = {}
     total = default = 0.0
     counts = Counter()
@@ -634,6 +653,7 @@ async def _deck_value(deck: dict[str, Any], need: Counter, cards: dict[str, dict
                 "id": e["id"], "qty": q, "proxy": bool(e.get("proxy")), "foil": foil, "lang": e.get("lang") or "en",
                 "set": e.get("set"), "set_name": e.get("set_name"), "collector_number": e.get("collector_number"),
                 "image": e.get("image") or (_scan(sid) if sid else None), "image_back": back, "price": price,
+                "foil_kind": foil_kind(printings.get(sid) or {}) if foil else None,
             })  # fmt: skip
             if e.get("proxy"):
                 counts["proxy"] += q
