@@ -1,0 +1,59 @@
+# Clears GitHub Actions caches nobody will use again, so the repo stays far below the 10 GB cache limit
+# (the Rust caches of the desktop builds are ~1 GB each). GitHub itself only drops a cache after 7 unused days.
+# - A closed or merged pull request: its caches (ref refs/pull/<n>/merge) can never be restored again.
+# - Daily: every cache unused for MAX_IDLE_DAYS, and caches of pull requests that are closed by now.
+name: Cache cleanup
+
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write  # list and delete caches
+  pull-requests: read
+
+concurrency:
+  group: cache-cleanup
+  cancel-in-progress: false
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+  MAX_IDLE_DAYS: 5
+
+jobs:
+  closed-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete the pull request's caches
+        env:
+          REF: refs/pull/${{ github.event.pull_request.number }}/merge
+        run: |
+          ids=$(gh cache list --ref "$REF" --limit 1000 --json id --jq '.[].id')
+          for id in $ids; do gh cache delete "$id"; done
+          echo "Deleted $(echo "$ids" | grep -c . || true) cache(s) of $REF"
+
+  daily:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Delete idle caches and caches of closed pull requests
+        run: |
+          cutoff=$(date -u -d "$MAX_IDLE_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
+          open=$(gh pr list --state open --limit 1000 --json number --jq '[.[].number | "refs/pull/\(.)/merge"]')
+          gh cache list --limit 1000 --json id,key,ref,lastAccessedAt,sizeInBytes > caches.json
+          jq -r --arg cutoff "$cutoff" --argjson open "$open" '
+            .[] | select(.lastAccessedAt < $cutoff
+                         or ((.ref | startswith("refs/pull/")) and ((.ref | IN($open[])) | not)))
+                | "\(.id)\t\(.sizeInBytes / 1048576 | floor) MB\t\(.ref)\t\(.key)"' caches.json > stale.tsv
+          while IFS=$'\t' read -r id size ref key; do
+            echo "Deleting $key ($size, $ref)"
+            gh cache delete "$id"
+          done < stale.tsv
+          echo "Deleted $(wc -l < stale.tsv) of $(jq length caches.json) cache(s)"
