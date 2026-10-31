@@ -2402,8 +2402,9 @@ function manaHtml(sym) {
   return `<span class="mana ${color}" title="${esc(sym)}">${esc(label)}</span>`;
 }
 
-// escape a rules text, turning {G}-symbols into pills and glossary terms into buttons
-function rulesHtml(text, terms) {
+// escape a rules text, turning {G}-symbols into pills and glossary terms into buttons (explained in English on
+// the card's English side)
+function rulesHtml(text, terms, english = false) {
   const names = [];
   for (const t of terms) for (const n of [t.term, t.de]) if (n) names.push([n, t.term]);
   names.sort((a, b) => b[0].length - a[0].length);
@@ -2418,7 +2419,7 @@ function rulesHtml(text, terms) {
     else {
       const term = byName.get(hit.toLowerCase());
       const entry = terms.find((t) => t.term === term);
-      out += `<button type="button" class="term" data-term="${esc(term)}" title="${esc(entry?.text || "")}">${esc(hit)}</button>`;
+      out += `<button type="button" class="term" data-term="${esc(term)}" title="${esc((english ? entry?.text_en : entry?.text) || "")}">${esc(hit)}</button>`;
     }
     last = m.index + hit.length;
   }
@@ -2427,11 +2428,12 @@ function rulesHtml(text, terms) {
 
 function renderCardText(data) {
   const german = cardLang === "de" && data.printed;
+  const english = cardLang === "en";
   const faces = german ? data.printed.faces : data.faces;
   $("#card-view-rules").innerHTML = faces.map((f, i) => `<div class="face">
       <div class="head"><span>${esc(f.name)}</span><span>${(data.faces[i]?.mana_cost || "").match(/\{[^{}]{1,12}\}/g)?.map(manaHtml).join("") || ""}</span></div>
       <div class="type">${esc(f.type_line)}</div>
-      ${f.text.split("\n").filter(Boolean).map((line) => `<p>${rulesHtml(line, data.terms)}</p>`).join("") || '<p class="muted small">Kein Regeltext.</p>'}
+      ${f.text.split("\n").filter(Boolean).map((line) => `<p>${rulesHtml(line, data.terms, english)}</p>`).join("") || '<p class="muted small">Kein Regeltext.</p>'}
     </div>`).join("")
     + (data.pt && faces.length === 1 ? `<p class="pt">${esc(data.pt)}</p>` : "");
   const note = $("#card-view-note");
@@ -2439,8 +2441,11 @@ function renderCardText(data) {
   else if (!data.printed) { note.hidden = false; note.textContent = "Keine deutsche Ausgabe – englischer Oracle-Text."; }
   else { note.hidden = false; note.textContent = `Drucktext${data.printed.set_name ? " aus " + data.printed.set_name : ""}. Maßgeblich ist der englische Oracle-Text.`; }
   $("#card-view-terms").hidden = !data.terms.length;
-  $("#card-view-terms-list").innerHTML = data.terms.map((t) =>
-    `<dt data-term="${esc(t.term)}">${esc(t.de || t.term)}${t.de ? ` <span class="de">(${esc(t.term)})</span>` : ""}</dt><dd data-term="${esc(t.term)}">${esc(t.text)}</dd>`).join("");
+  $("#card-view-terms").lang = english ? "en" : "de";
+  $("#card-view-terms-title").textContent = english ? "Terms on this card" : "Begriffe auf dieser Karte";
+  $("#card-view-terms-list").innerHTML = data.terms.map((t) => english
+    ? `<dt data-term="${esc(t.term)}">${esc(t.term)}</dt><dd data-term="${esc(t.term)}">${esc(t.text_en || t.text)}</dd>`
+    : `<dt data-term="${esc(t.term)}">${esc(t.de || t.term)}${t.de ? ` <span class="de">(${esc(t.term)})</span>` : ""}</dt><dd data-term="${esc(t.term)}">${esc(t.text)}</dd>`).join("");
 }
 
 $("#card-view-text").addEventListener("change", (e) => {

@@ -1,4 +1,5 @@
-"""Beginner glossary: keywords, keyword actions and Commander terms with a one-line German explanation.
+"""Beginner glossary: keywords, keyword actions and Commander terms with a one-line German explanation
+(and an English one in ``TEXT_EN`` for a card's English side).
 
 ``TERMS`` maps the English term (as printed on English cards and in Scryfall's ``keywords``) to its
 German card-text name (only where it is the established translation) and an explanation.
@@ -134,8 +135,131 @@ TERMS: dict[str, tuple[str, str, str]] = {
 }
 
 
+# English explanations, shown when the card view shows a card's English side (issue #68).
+TEXT_EN: dict[str, str] = {
+    "Deathtouch": "Any amount of damage this deals to a creature is enough to destroy it.",
+    "Defender": "Can't attack, but can block.",
+    "Double strike": "Deals combat damage twice: first like first strike, then again as normal.",
+    "Enchant": "An Aura is attached to the named object (a creature, for example) as it enters.",
+    "Equip": "Pay the cost to attach the Equipment to one of your creatures – only when you could cast a sorcery.",
+    "First strike": "Deals combat damage before creatures without first strike – often the opponent dies before it strikes back.",
+    "Flash": "Can be cast any time you could cast an instant – even on an opponent's turn.",
+    "Flying": "Can only be blocked by creatures with flying or reach.",
+    "Haste": "Can attack and use {T} abilities right away, without waiting a turn.",
+    "Hexproof": "Can't be the target of your opponents' spells or abilities (yours may target it).",
+    "Indestructible": "Isn't destroyed by damage or by “destroy”. Exile, sacrifice or -X/-X still work.",
+    "Lifelink": "Damage dealt by this card also gives you that much life.",
+    "Menace": "Can only be blocked by two or more creatures together.",
+    "Protection": "Can't be blocked, enchanted, equipped or targeted by things with the named quality; their damage is prevented.",
+    "Reach": "Can block creatures with flying.",
+    "Shroud": "Can't be the target of anything – not even your own spells.",
+    "Trample": "Damage beyond what is lethal to the blockers goes to the player it attacks.",
+    "Vigilance": "Doesn't tap to attack, so it can still block afterwards.",
+    "Ward": "When an opponent targets it, they must pay the ward cost – or their spell or ability is countered.",
+    "Scry": "Look at the top cards of your library; put any number of them on the bottom, the rest back in any order.",
+    "Surveil": "Like scry, but the cards you sort out go to your graveyard instead of the bottom of your library.",
+    "Mill": "Put the top cards of your library into your graveyard.",
+    "Fight": "Two creatures deal damage equal to their power to each other – outside of combat.",
+    "Investigate": "Create a Clue token (artifact: {2}, sacrifice: draw a card).",
+    "Explore": "Reveal the top card. A land goes to your hand; otherwise the creature gets a +1/+1 counter and you may put the card into your graveyard.",
+    "Proliferate": "Choose any number of players and permanents with counters; each gets another counter of a kind it already has.",
+    "Connive": "Draw a card, then discard a card. If it's a nonland card, the creature gets a +1/+1 counter.",
+    "Amass": "Put +1/+1 counters on your Army – if you have none, first create a 0/0 Army token.",
+    "Adapt": "If the creature has no +1/+1 counters, it gets the given number of them.",
+    "Venture into the dungeon": "Enter a dungeon or move on to the next room; each room has an effect.",
+    "Goad": "The creature must attack each combat – and attack a player other than you if it can.",
+    "Populate": "Create a copy of a creature token you control.",
+    "Manifest": "Put the top card of your library onto the battlefield face down as a 2/2 creature; a creature card can be turned up for its cost.",
+    "Treasure": "Artifact token: {T}, sacrifice: add one mana of any color.",
+    "Food": "Artifact token: {2}, {T}, sacrifice: you gain 3 life.",
+    "Clue": "Artifact token: {2}, sacrifice: draw a card.",
+    "Monarch": "The monarch draws a card at the end of their turn. When a creature deals combat damage to them, its controller becomes the monarch.",
+    "Initiative": "Whoever has the initiative ventures into the Undercity (a dungeon). When a creature deals combat damage to them, its controller takes the initiative.",
+    "Affinity": "Costs {1} less for each object of the named kind you control.",
+    "Annihilator": "When this creature attacks, the defending player sacrifices that many permanents.",
+    "Buyback": "Pay the extra cost and the spell returns to your hand as it resolves instead of going to the graveyard.",
+    "Cascade": "When you cast it, reveal cards until a nonland card with lower mana value shows up – you may cast that one for free.",
+    "Changeling": "Has every creature type (counts as an Elf, a Zombie and a Dragon at once, for example).",
+    "Convoke": "Each creature you tap while casting it pays for {1} or one mana of its color.",
+    "Crew": "Tap creatures with total power of at least the number: the Vehicle becomes a creature until end of turn.",
+    "Cycling": "Pay the cost and discard the card to draw a new one.",
+    "Delve": "While casting it you may exile cards from your graveyard; each one pays for {1}.",
+    "Dredge": "Instead of drawing a card, you may mill that many cards and return this card from your graveyard to your hand.",
+    "Echo": "On your next turn you must pay its cost again, or sacrifice it.",
+    "Embalm": "Exile the card from your graveyard to create a token copy of it (a white Zombie mummy).",
+    "Encore": "Exile it from your graveyard: for each opponent, create a copy with haste that must attack that player; sacrificed at end of turn.",
+    "Escape": "You may cast the card from your graveyard by paying its escape cost and exiling other cards from your graveyard.",
+    "Eternalize": "Exile the card from your graveyard to create a 4/4 token copy of it.",
+    "Evoke": "Can be cast for its alternative cost – then it's sacrificed as it enters, but its effect still happens.",
+    "Exalted": "When one of your creatures attacks alone, it gets +1/+1 until end of turn for each card with exalted.",
+    "Extort": "Whenever you cast a spell, you may pay {W/B}: each opponent loses 1 life and you gain that much.",
+    "Flashback": "You can cast the card a second time from your graveyard; then it's exiled.",
+    "Foretell": "On your turn, exile the card face down for {2} and cast it later for less.",
+    "Hideaway": "As it enters, exile one of your top cards face down; once a condition is met you may play it for free.",
+    "Improvise": "Each artifact you tap while casting it pays for {1}.",
+    "Infect": "Deals damage to creatures as -1/-1 counters and to players as poison counters (10 poison counters = you lose).",
+    "Kicker": "An optional extra cost when you cast it – pay it and the effect gets stronger.",
+    "Madness": "When you discard the card, you may cast it right away for its madness cost.",
+    "Miracle": "If it's the first card you draw this turn, you may cast it right away for its miracle cost.",
+    "Mutate": "Cast it for its mutate cost onto one of your non-Human creatures: they merge and have all their abilities together.",
+    "Myriad": "When it attacks, create an attacking copy for each other opponent; the copies are exiled at end of combat.",
+    "Ninjutsu": "Pay the cost and return an unblocked attacker to your hand: this card enters tapped and attacking.",
+    "Partner": "Two commanders with partner can lead your deck together; the color identity is that of both cards.",
+    "Persist": "When it dies without a -1/-1 counter, it returns to the battlefield with a -1/-1 counter.",
+    "Poisonous": "When it deals combat damage to a player, that player gets the given number of poison counters.",
+    "Prowess": "Whenever you cast a noncreature spell, it gets +1/+1 until end of turn.",
+    "Rebound": "Cast from your hand, the spell is exiled and you may cast it again for free at the start of your next turn.",
+    "Riot": "Choose as it enters: a +1/+1 counter or haste.",
+    "Scavenge": "Exile the creature from your graveyard to put +1/+1 counters equal to its power on a creature.",
+    "Split second": "While this spell is on the stack, nobody can cast spells or activate abilities.",
+    "Storm": "When you cast it, copy the spell for each spell cast before it this turn.",
+    "Suspend": "Exile the card with time counters; one comes off each turn, and when the last one does you cast it for free.",
+    "Toxic": "When it deals combat damage to a player, that player also gets that many poison counters.",
+    "Undying": "When it dies without a +1/+1 counter, it returns to the battlefield with a +1/+1 counter.",
+    "Unearth": "Return the creature from your graveyard with haste (only as a sorcery); it's exiled at end of turn.",
+    "Wither": "Deals damage to creatures in the form of -1/-1 counters.",
+    "Landfall": "Triggers whenever a land enters under your control.",
+    "Eminence": "Works while your commander is in the command zone – not only once it's on the battlefield.",
+    "Lieutenant": "An extra effect as long as you control your commander.",
+    "Melee": "When it attacks, it gets +1/+1 for each opponent you attacked this turn.",
+    "Blitz": "Cast it for its blitz cost: haste, you draw a card when it dies, and it's sacrificed at end of turn.",
+    "Casualty": "As you cast it, you may sacrifice a creature with at least the given power to copy the spell.",
+    "Commander": "The legendary creature (or other allowed card) your deck is built around. It starts in the command zone.",
+    "Command zone": "Where your commander starts. You cast it from there; when it dies or is exiled, you may put it back.",
+    "Commander tax": "Each further time you cast your commander from the command zone, it costs {2} more.",
+    "Commander damage": "A player who has taken 21 or more combat damage from the same commander loses the game.",
+    "Color identity": "All colors in the commander's costs and rules text. Every card in the deck must fit these colors.",
+    "Singleton": "Each card may be in the deck only once – except basic lands and cards that say otherwise.",
+    "Bracket": "Official levels 1–5 for a deck's power, so decks of similar strength play together.",
+    "Game Changer": "Official list of especially strong cards. Brackets 1–2 allow none, bracket 3 up to three.",
+    "Rule 0": "The talk before the game: how strong are the decks, what's welcome and what isn't?",
+    "Ramp": "Cards that give you more mana sooner (extra lands, mana rocks) – so you play expensive cards earlier.",
+    "Card draw": "Cards that let you draw extra cards, so you don't run out of options.",
+    "Removal": "Cards that get rid of a single threat (destroy, exile or bounce it).",
+    "Board wipe": "Clears many or all creatures (or other permanents) at once – the emergency brake against big armies.",
+    "Tutor": "A card that searches your library for a specific other card – makes decks very consistent.",
+    "Win condition": "How your deck actually wins the game – big attackers, life drain or a combo, for example.",
+    "Combo": "Two or more cards that together make a very strong or infinite effect.",
+    "Mulligan": "Draw a new opening hand. In Commander the first mulligan is free; after that you put one card on the bottom per mulligan.",
+    "Proxy": "A self-printed stand-in for a card. Usually fine in casual games – ask first.",
+    "Stax": "Cards that restrict every player (spells cost more, fewer permanents untap). Not every playgroup likes them.",
+    "Voltron": "Play style: make your commander huge with Auras and Equipment and win through commander damage.",
+    "Aristocrats": "Play style: sacrifice your own creatures and gain something each time one dies (drain life, draw cards).",
+    "Go wide": "Play style: lots of small creatures or tokens, and make them all stronger together.",
+    "Reanimator": "Play style: put big creatures into your graveyard and bring them back cheaply.",
+    "Spellslinger": "Play style: lots of instants and sorceries that give you something every time you cast one.",
+    "Blink": "Play style: exile your creatures for a moment and bring them back to trigger their enter effects again.",
+    "Group Hug": "Play style: help every player (cards, mana) and win through politics or a late turnaround.",
+}
+
+
+def _entry(term: str) -> dict[str, Any]:
+    de, text, kind = TERMS[term]
+    return {"term": term, "de": de, "text": text, "text_en": TEXT_EN[term], "kind": kind}
+
+
 def entries() -> list[dict[str, Any]]:
-    return [{"term": t, "de": de, "text": text, "kind": kind} for t, (de, text, kind) in TERMS.items()]
+    return [_entry(t) for t in TERMS]
 
 
 def _pattern(word: str) -> re.Pattern[str]:
@@ -158,4 +282,4 @@ def find_terms(*texts: str, keywords: list[str] | None = None) -> list[dict[str,
             continue  # concepts are explained on the glossary page, not highlighted in card text
         if pat.search(blob):
             hits[term] = None
-    return [{"term": t, "de": TERMS[t][0], "text": TERMS[t][1], "kind": TERMS[t][2]} for t in hits]
+    return [_entry(t) for t in hits]
