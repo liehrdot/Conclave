@@ -16,6 +16,14 @@ def test_entries_have_explanations():
     assert {"Trample", "Ward", "Commander tax", "Game Changer"} <= {i["term"] for i in items}
 
 
+def test_every_term_has_an_english_explanation():
+    assert set(glossary.TEXT_EN) == set(glossary.TERMS)
+    assert all(text.strip() and text[-1] in ".?" for text in glossary.TEXT_EN.values())
+    flying = next(t for t in glossary.find_terms("Flying") if t["term"] == "Flying")
+    assert flying["text_en"] == "Can only be blocked by creatures with flying or reach."
+    assert flying["text"].startswith("Kann nur")
+
+
 def test_find_terms_english_german_and_keywords():
     terms = {t["term"] for t in glossary.find_terms("Flying, trample\nWhenever ~ attacks, scry 2.")}
     assert {"Flying", "Trample", "Scry"} <= terms
