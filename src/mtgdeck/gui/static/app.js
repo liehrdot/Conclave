@@ -1699,6 +1699,7 @@ function renderHandRating(r, d) {
   $("#hand-rating-deck").innerHTML = deckInfo.playable != null
     ? `In diesem Deck sind <b>${pct(deckInfo.keep)}</b> der Starthände gut und <b>${pct(deckInfo.playable)}</b> spielbar${speed}.`
     : "Zieh eine Hand – hier steht dann, ob du sie behalten solltest.";
+  renderHandGuide(r.guide || [], r.score != null);
   handRating.suggest = r.bottom || [];
   markBottomSuggestion();
   if (r.score == null) { $("#hand-rating").innerHTML = ""; return; }
@@ -1738,6 +1739,22 @@ function renderHandRating(r, d) {
       <p class="small muted">Grundlage: Frank Karstens Commander-Analysen (Länder, Farbquellen, Mulligan-Regeln), die Mulligan-Guides von EDHREC und topdeck.gg (cEDH)
       sowie Daten von playgroup.gg. Der erste Mulligan ist in Commander frei.</p>
     </details>`;
+}
+// the short list to glance at during a real game (issue #99): the same marks the rating uses, ticked for the hand
+function renderHandGuide(points, rated) {
+  const box = $("#hand-guide");
+  box.hidden = !points.length;
+  if (!points.length) return;
+  const met = points.filter((p) => p.ok).length;
+  const mark = (p) => !rated ? "" : p.ok
+    ? '<span class="hg-mark ok" aria-label="erfüllt">✓</span>' : '<span class="hg-mark bad" aria-label="fehlt">✗</span>';
+  box.innerHTML = `
+    <div class="hg-head"><h3>Worauf achten?</h3>
+      <span class="muted small">${rated ? `Diese Hand: ${met} von ${points.length}` : "Für eine gute Starthand dieses Decks"}</span></div>
+    <ul class="hg-list${rated ? " rated" : ""}">${points.map((p) => `
+      <li class="${rated ? (p.ok ? "ok" : "bad") : ""}" title="${esc(p.detail)}">${mark(p)}<div><b>${esc(p.title)}</b><span class="muted small">${esc(p.detail)}</span></div></li>`).join("")}
+    </ul>
+    <p class="muted small hg-foot">Sofort Mulligan bei keinem oder einem Land ohne Ramp und bei fast nur Ländern. Der erste Mulligan ist frei.</p>`;
 }
 function markBottomSuggestion() {
   const names = [...handRating.suggest];

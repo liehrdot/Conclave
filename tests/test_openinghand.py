@@ -106,6 +106,27 @@ def test_bottom_and_profile():
     assert oh.percentile(100, profile["scores"]) == 100
 
 
+def test_guide_lists_the_deck_marks_and_ticks_the_hand():
+    deck = deck_of()
+    points = oh.guide(deck)
+    assert [p["key"] for p in points] == ["lands", "early", "colors", "commander"]
+    assert points[0]["title"] == "3–4 Länder" and points[3]["title"] == "Commander bis Zug 5"
+    assert points[2]["detail"].startswith("Das Deck spielt Schwarz und Grün")
+    assert all(p["ok"] is None for p in points)  # no hand yet: only the list
+    assert oh.guide(deck_of(speed="slow"))[0]["title"] == "3–5 Länder"
+    fast = oh.guide(deck_of(speed="very-fast"))
+    assert fast[0]["title"] == "2–4 Länder" and fast[-1]["key"] == "fast"
+
+    deck.cards[-3:] = [ELF, DRAW, BIG]
+    good = {p["key"]: p["ok"] for p in oh.rate(["Forest", "Swamp", "Forest", "Llanowar Elves", "Bear", "Night's Whisper", "Bear"], deck)["guide"]}
+    assert good == {"lands": True, "early": True, "colors": True, "commander": True}
+    flood = {p["key"]: p["ok"] for p in oh.rate(["Forest"] * 4 + ["Swamp"] * 3, deck)["guide"]}
+    assert flood["lands"] is False and flood["early"] is False
+    blue = oh.score_hand([FOREST, SWAMP, FOREST, BLUE, BLUE, BEAR, BEAR], deck).checks
+    assert blue["colors"] is False and blue["lands"] is True
+    assert oh.rate([], deck)["guide"] == points
+
+
 async def test_route_rates_a_hand(monkeypatch):
     monkeypatch.setenv("MTG_SYNC_AUTO", "0")
     from mtgdeck.gui.app import app
@@ -118,6 +139,7 @@ async def test_route_rates_a_hand(monkeypatch):
         assert body["verdict"] == "keep" and body["label"] == "Behalten"
         assert 0 <= body["percentile"] <= 100 and body["deck"]["speed"] == "very-fast" and body["deck"]["playable"] > 0.3
         assert body["facts"]["lands"] == 3 and body["facts"]["commander_turn"] is not None
+        assert [p["key"] for p in body["guide"]][:2] == ["lands", "early"] and body["guide"][0]["ok"] is True
         assert len(body["facts"]["mana_by_turn"]) == oh.TURNS  # the Spieltisch compares its turns with all of them
         r = client.post("/api/decks/meren/hand", json={"cards": ["Forest"] * 5 + ["Filler 1", "Sol Ring"], "mulligans": 2, "bottom": 1})
         assert r.json()["bottom"] == ["Forest"]

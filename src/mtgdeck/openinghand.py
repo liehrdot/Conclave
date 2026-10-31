@@ -269,6 +269,7 @@ class Rating:
     good: list[str] = field(default_factory=list)
     bad: list[str] = field(default_factory=list)
     facts: dict[str, Any] = field(default_factory=dict)
+    checks: dict[str, bool] = field(default_factory=dict)  # guide() key → the hand meets it
 
 
 def _library(hand: list[Card], deck: Deck) -> list[Card]:
@@ -335,6 +336,7 @@ def score_hand(hand: list[Card], deck: Deck, *, on_draw: bool = False) -> Rating
         (good if slow else bad).append(f"{land_text}: {'für ein langsames Deck in Ordnung' if slow else 'eher viel'}.")
     else:
         bad.append(f"Nur {land_text}: knapp.")
+    lo, hi = land_range(deck)
 
     # 2. ramp (rocks and dorks count like lands; Sol Ring saves a short hand)
     fast_mana = [c for c in ramp if c.fast_mana]
@@ -346,6 +348,8 @@ def score_hand(hand: list[Card], deck: Deck, *, on_draw: bool = False) -> Rating
     if usable == 1 and (len(ramp) >= 2 or fast_mana) and sum(1 for c in hand if c.spell and c.mv <= 2) >= 2:
         r.score += 22
         good.append("Mit dem Ramp ist der Ein-Länder spielbar.")
+        r.checks["lands"] = True
+    r.checks.setdefault("lands", lo <= usable <= hi or (usable == 2 and bool(ramp or size <= 6)))
 
     # 3. land drops still to come (hypergeometric on the rest of the library)
     odds = {}
@@ -355,6 +359,7 @@ def score_hand(hand: list[Card], deck: Deck, *, on_draw: bool = False) -> Rating
         bad.append(f"Landdrops unsicher: 3 Länder bis Zug 3 nur zu {round(odds[3] * 100)} %.")
 
     # 4. what the hand actually does in the first turns
+    r.checks["early"] = bool(early) and not r.fatal
     if not r.fatal:
         if not early:
             r.score -= 15
@@ -384,9 +389,12 @@ def score_hand(hand: list[Card], deck: Deck, *, on_draw: bool = False) -> Rating
     elif have and need and usable >= 2:
         good.append("Die Farben passen zu den Zaubern auf der Hand.")
     cmd_missing = sorted(cmd_need - have - set(missing), key=COLORS.index)
+    r.checks["colors"] = bool(usable) and not missing
 
     # 6. the deck's plan: commander on time, card draw, interaction, tutors, combo pieces
     commander = max(deck.commanders, key=lambda c: c.mv, default=None)
+    if commander and 3 <= commander.mv <= TURNS:
+        r.checks["commander"] = not r.fatal and gf.commander_turn is not None and gf.commander_turn <= commander.mv + 1
     if commander and 3 <= commander.mv <= TURNS and not r.fatal:
         t = gf.commander_turn
         if t is not None and t <= commander.mv:
@@ -421,6 +429,7 @@ def score_hand(hand: list[Card], deck: Deck, *, on_draw: bool = False) -> Rating
         good.append(f"Spielt den Plan des Decks: {_names(plan)}.")
 
     # 7. speed of the deck: a fast deck needs a fast start, not just a working hand
+    r.checks["fast"] = not r.fatal and bool(fast_mana or len(by_two) >= 2 or tutors or pieces)
     if fast and not r.fatal and not (fast_mana or len(by_two) >= 2 or tutors or pieces):
         r.score -= 12
         bad.append("Für ein schnelles Deck zu langsam: kein schnelles Mana, kein Tutor, kein Kombo-Teil.")
@@ -437,6 +446,41 @@ def score_hand(hand: list[Card], deck: Deck, *, on_draw: bool = False) -> Rating
         "mana_by_turn": [gf.mana.get(t, 0) for t in range(1, TURNS + 1)],
     }  # fmt: skip
     return r
+
+
+# --- quick guide: what to look for, short enough to glance at during a game ---------------------
+
+
+def land_range(deck: Deck) -> tuple[int, int]:
+    """Lands (incl. spells with a land back) a 7-card hand of this deck wants – the same marks ``score_hand`` uses."""
+    if deck.speed in FAST_SPEEDS:
+        return 2, 4
+    if deck.speed in SLOW_SPEEDS:
+        return 3, 5
+    return 3, 4
+
+
+def _short(name: str) -> str:
+    return name.split(" // ")[0].split(",")[0]
+
+
+def guide(deck: Deck, checks: dict[str, bool] | None = None) -> list[dict[str, Any]]:
+    """The few points a keepable hand of this deck has (issue #99), each with ``ok`` once a hand is rated."""
+    lo, hi = land_range(deck)
+    more = " Mit Ramp wie Sol Ring oder nach einem Mulligan reichen 2." if lo > 2 else " Ramp wie Sol Ring zählt mit."
+    points = [("lands", f"{lo}–{hi} Länder", "Doppelseitige Karten mit Land-Rückseite zählen mit." + more)]
+    points.append(("early", "Etwas für Zug 1–3", "Ramp oder ein günstiger Zauber, den die Länder der Hand auch bezahlen."))
+    if len(deck.colors) >= 2:
+        names = [COLOR_NAMES[col] for col in COLORS if col in deck.colors]
+        said = names[0] if len(names) == 1 else ", ".join(names[:-1]) + " und " + names[-1]
+        points.append(("colors", "Farben für die Zauber", f"Das Deck spielt {said}: die Hand braucht Quellen für die Farben ihrer Zauber."))
+    commander = max(deck.commanders, key=lambda c: c.mv, default=None)
+    if commander and 3 <= commander.mv <= TURNS:
+        points.append(("commander", f"Commander bis Zug {commander.mv + 1}",
+                       f"{_short(commander.name)} kostet {commander.mv}: die Hand sollte bis dahin genug Mana machen."))  # fmt: skip
+    if deck.speed in FAST_SPEEDS:
+        points.append(("fast", "Schneller Start", "Das Deck ist schnell: schnelles Mana, ein Tutor oder ein Kombo-Teil gehört dazu."))
+    return [{"key": k, "title": t, "detail": d, "ok": None if checks is None else bool(checks.get(k))} for k, t, d in points]
 
 
 def thresholds(size: int, mulligans: int) -> tuple[int, int]:
@@ -500,7 +544,7 @@ def rate(hand_names: list[str], deck: Deck, *, mulligans: int = 0, on_draw: bool
     about = {"keep": round(profile["keep"], 3), "playable": round(profile["playable"], 3), "speed": deck.speed,
              "combos": len(deck.combos)}  # fmt: skip
     if not hand_names:
-        return {"deck": about}
+        return {"deck": about, "guide": guide(deck)}
     by_name = {c.name: c for c in deck.cards}
     hand = [by_name.get(n) or Card(name=n) for n in hand_names]
     r = score_hand(hand, deck, on_draw=on_draw)
@@ -515,5 +559,5 @@ def rate(hand_names: list[str], deck: Deck, *, mulligans: int = 0, on_draw: bool
         "score": r.score, "verdict": key, "label": label, "fatal": r.fatal, "good": r.good, "bad": r.bad,
         "facts": r.facts, "percentile": pct, "advice": advice,
         "bottom": bottom(hand, deck, to_bottom, on_draw=on_draw) if to_bottom else [],
-        "deck": about,
+        "deck": about, "guide": guide(deck, r.checks),
     }  # fmt: skip
