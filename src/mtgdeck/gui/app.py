@@ -1276,7 +1276,19 @@ async def api_ownership(slug: str) -> dict[str, Any]:
         deck = storage.load(slug)
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
-    return await collection.deck_ownership(deck)
+    out = await collection.deck_ownership(deck)
+    away = collection.stored_elsewhere(slug) if out["collection_size"] else {"cards": 0, "copies": 0, "played": 0}
+    out["elsewhere"] = {k: away[k] for k in ("cards", "copies", "played")}  # the count on „Woanders gelagert“
+    return out
+
+
+@app.get("/api/decks/{slug}/elsewhere")
+async def api_deck_elsewhere(slug: str) -> dict[str, Any]:
+    """The deck's cards you own whose copies lie at another Ort (Bulk, a binder, another deck), to fetch them."""
+    try:
+        return collection.stored_elsewhere(slug)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 @app.get("/api/decks/{slug}/copies")

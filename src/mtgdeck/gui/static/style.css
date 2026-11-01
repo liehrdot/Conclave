@@ -600,6 +600,9 @@ button.own:focus-visible { outline: 2px solid var(--accent-text); outline-offset
 .oc-row .oc-act { display: flex; gap: var(--space-2); align-items: center; }
 .oc-row .oc-act input { width: 4.2em; margin: 0; }
 .oc-row .pill { height: 22px; }
+.away-bar { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; margin: var(--space-2) 0 var(--space-3); }
+.away-bar .segmented { margin: 0; }
+.own-copies-list h3 .count { font-weight: 400; }
 .cards.grid .own-badge { position: absolute; top: 6px; left: 6px; }
 .cards.grid .own-badge .own { margin: 0; }
 .similar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
@@ -802,6 +805,7 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .own-bar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--surface-2); margin-bottom: var(--space-2); }
 .own-bar .r { background: var(--ok); } .own-bar .p { background: var(--accent); }
 #own-summary p { margin-bottom: var(--space-2); }
+#own-summary .away-line .btn { display: flex; margin-top: var(--space-1); }
 .art-pick { display: flex; gap: var(--space-3); align-items: center; margin-bottom: var(--space-2); }
 .art-pick img { width: 64px; border-radius: 4px; }
 .art-pick p { margin-bottom: 6px; }

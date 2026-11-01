@@ -196,6 +196,7 @@
               <hr>
               <button type="button" id="compare-deck-btn" role="menuitem">Mit anderem Deck vergleichen …</button>
               <button type="button" id="order-from-deck" role="menuitem">Zur Sammelbestellung …</button>
+              <button type="button" id="away-btn" role="menuitem">Woanders gelagerte Karten …</button>
               <button type="button" id="buylist-btn" role="menuitem">Einkaufsliste mit Preisen …</button>
               <hr>
               <button type="button" id="delete-btn" role="menuitem" class="danger">Deck löschen …</button>
@@ -1391,6 +1392,24 @@
   <div id="card-choice-list" class="card-choice-list"></div>
   <div class="dialog-actions">
     <button type="button" class="btn" id="card-choice-cancel">Abbrechen</button>
+  </div>
+</dialog>
+
+<dialog id="away" class="dialog own-copies-dialog" aria-labelledby="away-title">
+  <h2 id="away-title">Woanders gelagert</h2>
+  <p id="away-text" class="muted small"></p>
+  <div class="away-bar">
+    <div class="segmented small" role="radiogroup" aria-label="Welche Exemplare?" id="away-filter">
+      <label><input type="radio" name="awayfilter" value="all" checked><span>Alle</span></label>
+      <label><input type="radio" name="awayfilter" value="real"><span>Echt</span></label>
+      <label><input type="radio" name="awayfilter" value="proxy"><span>Proxy</span></label>
+    </div>
+    <label class="check small"><input type="checkbox" id="away-decks"> <span>Auch aus Decks, die die Karte spielen</span></label>
+  </div>
+  <div id="away-list" class="own-copies-list"></div>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="away-copy">Liste kopieren</button>
+    <button type="button" class="btn" id="away-close">Schließen</button>
   </div>
 </dialog>
 

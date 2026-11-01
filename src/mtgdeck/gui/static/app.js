@@ -1680,8 +1680,111 @@ $("#own-copies-list").addEventListener("click", async (e) => {
 });
 async function afterOwnMove(slug, name) {
   if ($("#own-copies").open && ownCopies?.slug === slug && ownCopies.name === name) await openOwnCopies(name);
+  if ($("#away").open && away?.slug === slug) await openAway();
   if (currentDeck?.slug === slug) await loadOwnership(currentDeck);
 }
+
+// ---------- the deck's cards you own that lie at another Ort (Bulk, a binder, another deck) ----------
+let away = null;  // stored_elsewhere() of the open deck
+let awayMoved = [];  // [{name, from, moved}] put into the deck while the dialog is open: „Zurücklegen“ (the toast sits behind the dialog)
+async function openAway() {
+  const slug = currentDeck?.slug;
+  if (!slug) return;
+  if (!$("#away").open || away?.slug !== slug) awayMoved = [];
+  const filter = OWN_FILTERS[store.get("awayfilter")] ? store.get("awayfilter") : "all";
+  $("#away-filter").querySelector(`input[value="${filter}"]`).checked = true;
+  $("#away-decks").checked = store.get("awaydecks") === "1";
+  try { away = await api(`/api/decks/${enc(slug)}/elsewhere`); } catch (err) { return fail(err); }
+  if (currentDeck?.slug !== slug) return;
+  $("#away-title").textContent = `Woanders gelagert: ${currentDeck.name}`;
+  renderAway();
+  const dlg = $("#away");
+  if (!dlg.open) dlg.showModal();
+}
+// the shown copies, grouped by where they lie: free-text places first, then no Ort, then other decks
+function awayGroups() {
+  const want = OWN_FILTERS[$("#away-filter").querySelector("input:checked").value];
+  const fromDecks = $("#away-decks").checked;
+  const groups = new Map();
+  for (const r of away?.rows || []) {
+    for (const c of r.copies) {
+      if (!want(c) || (c.used_by && !fromDecks)) continue;
+      const key = placeKey(c);
+      if (!groups.has(key)) {
+        const rank = c.place_deck ? 2 : key === "none" ? 1 : 0;
+        groups.set(key, { key, rank, label: placeLabel(c) || "Ohne Ort", items: [] });
+      }
+      groups.get(key).items.push({ row: r, copy: c });
+    }
+  }
+  return [...groups.values()].sort((a, b) => a.rank - b.rank || a.label.localeCompare(b.label, "de"));
+}
+function renderAway() {
+  const groups = awayGroups();
+  const shown = new Set(groups.flatMap((g) => g.items.map((i) => i.row.name)));
+  const hiddenPlayed = (away?.rows || []).filter((r) => !shown.has(r.name) && r.copies.some((c) => c.used_by)).length;
+  $("#away-text").textContent = away?.cards
+    ? `${away.cards} ${away.cards === 1 ? "Karte dieses Decks hast du" : "Karten dieses Decks hast du"}, aber ${away.cards === 1 ? "sie liegt" : "sie liegen"} nicht im Deck. „Ins Deck“ setzt den Ort auf dieses Deck.`
+    : "Alles, was du von diesem Deck besitzt, liegt schon im Deck.";
+  const row = ({ row: r, copy: c }) => {
+    const facts = [`${c.qty}×`, c.proxy ? "Proxy" : "Echt", copyLabel({ ...c, proxy: false })].filter(Boolean).join(" · ");
+    const take = Math.min(c.qty, Math.max(1, r.open));
+    return `<div class="oc-row">
+      ${c.image ? `<img src="${esc(c.image)}" alt="" loading="lazy" data-img="${esc(c.image)}" class="card">` : '<span class="oc-noimg"></span>'}
+      <div><b>${esc(r.name)}</b><small>${esc(facts)}</small>
+        <small>Im Deck: ${r.placed} von ${r.need}</small>
+        ${c.used_by ? `<small class="warn">Wird in „${esc(c.used_by)}“ gespielt</small>` : ""}</div>
+      <span class="oc-act">
+        ${c.qty > 1 ? `<input type="number" min="1" max="${c.qty}" value="${take}" aria-label="Wie viele davon?" data-qty>` : ""}
+        <button type="button" class="btn small" data-move="${esc(c.id)}" data-name="${esc(r.name)}">Ins Deck</button></span></div>`;
+  };
+  const back = awayMoved.length ? `<h3>Gerade ins Deck gelegt</h3>${awayMoved.map((m, i) => `<div class="oc-row">
+      ${m.image ? `<img src="${esc(m.image)}" alt="" loading="lazy">` : '<span class="oc-noimg"></span>'}<div><b>${esc(m.name)}</b><small>${m.moved.qty}× aus „${esc(m.from)}“</small></div>
+      <button type="button" class="btn small" data-back="${i}">Zurücklegen</button></div>`).join("")}` : "";
+  $("#away-list").innerHTML = back + (groups.length
+    ? groups.map((g) => `<h3>${esc(g.label)} <span class="count">· ${g.items.length} ${g.items.length === 1 ? "Karte" : "Karten"}</span></h3>${g.items.map(row).join("")}`).join("")
+    : `<p class="muted small">${away?.cards ? "Keine Exemplare für diese Auswahl." : ""}</p>`);
+  if (hiddenPlayed && !$("#away-decks").checked)
+    $("#away-list").insertAdjacentHTML("beforeend", `<p class="muted small">${hiddenPlayed} ${hiddenPlayed === 1 ? "weitere Karte liegt" : "weitere Karten liegen"} nur in Decks, die sie spielen – siehe „Auch aus Decks, die die Karte spielen“.</p>`);
+  $("#away-copy").disabled = !groups.length;
+}
+$("#away-filter").addEventListener("change", (e) => { store.set("awayfilter", e.target.value); renderAway(); });
+$("#away-decks").addEventListener("change", (e) => { store.set("awaydecks", e.target.checked ? "1" : "0"); renderAway(); });
+$("#away-close").addEventListener("click", () => $("#away").close());
+$("#away").addEventListener("close", () => { away = null; awayMoved = []; });
+$("#away-btn").addEventListener("click", (e) => { e.target.closest("details")?.removeAttribute("open"); void openAway(); });
+// a pick list per place: what to take out of the Bulk, the binder …
+$("#away-copy").addEventListener("click", async () => {
+  const text = awayGroups().map((g) => `${g.label}:\n${g.items.map(({ row: r, copy: c }) => `${Math.min(c.qty, r.open)} ${r.name}${c.proxy ? " (Proxy)" : ""}`).join("\n")}`).join("\n\n");
+  try { await navigator.clipboard.writeText(text); toast("Liste kopiert – sortiert nach Ort."); }
+  catch { toast("Kopieren nicht erlaubt.", "error"); }
+});
+$("#away-list").addEventListener("click", async (e) => {
+  const back = e.target.closest("[data-back]");
+  if (back && away && awayMoved[back.dataset.back]) {
+    const m = awayMoved[back.dataset.back];
+    back.disabled = true;
+    awayMoved = awayMoved.filter((x) => x !== m);
+    return undoOwnMove(away.slug, m.name, m.moved).catch((err) => { back.disabled = false; awayMoved.push(m); fail(err); });
+  }
+  const btn = e.target.closest("[data-move]");
+  if (!btn || !away) return;
+  const { slug } = away, name = btn.dataset.name;
+  const entry = away.rows.flatMap((r) => r.copies).find((c) => c.id === btn.dataset.move);
+  if (!entry) return;
+  const input = btn.closest(".oc-row").querySelector("[data-qty]");
+  const qty = input ? Math.min(entry.qty, Math.max(1, Math.round(Number(input.value) || 1))) : entry.qty;
+  btn.disabled = true;
+  try {
+    const moved = await api(`/api/decks/${enc(slug)}/copies/move`, { method: "POST", body: { id: entry.id, qty } });
+    const deckName = currentDeck?.slug === slug ? currentDeck.name : slug;
+    const m = { name, from: placeLabel(entry) || "Ohne Ort", image: entry.image, moved };
+    awayMoved.push(m);
+    toast(`${moved.qty}× ${name} liegt jetzt in „${deckName}“.`, "ok", 6000,
+      { label: "Rückgängig", run: () => { awayMoved = awayMoved.filter((x) => x !== m); return undoOwnMove(slug, name, moved).catch(fail); } });
+    await afterOwnMove(slug, name);
+  } catch (err) { btn.disabled = false; fail(err); }
+});
 
 // the foil look of an own copy (`foil_kind` from the printing's Scryfall promo types), named like on the card
 const FOIL_NAMES = {
@@ -4363,6 +4466,8 @@ async function loadOwnership(d) {
     <p class="small"><b>${o.have_real + o.have_proxy} von ${o.need}</b> vorhanden · ${o.have_real} echt · ${o.have_proxy} Proxy
       · <b class="${o.missing ? "bad" : "ok"}">${o.missing} fehlen</b>${o.missing_price ? ` (≈ ${esc(fmtPrice(o.missing_price, cur))})` : ""}</p>
     ${o.shared_shortages.length ? `<p class="small warn">In mehreren Decks, aber zu wenige Exemplare: ${esc(o.shared_shortages.slice(0, 6).join(", "))}${o.shared_shortages.length > 6 ? " …" : ""}</p>` : ""}
+    ${o.elsewhere?.cards ? `<p class="small away-line">${o.elsewhere.cards === 1 ? "1 Karte hast du, sie liegt" : `${o.elsewhere.cards} Karten hast du, sie liegen`} aber woanders${o.elsewhere.played ? ` (${o.elsewhere.played} davon nur in Decks, die sie spielen)` : " (z. B. im Bulk)"}.
+      <button type="button" class="btn small" id="own-away">Woanders gelagert …</button></p>` : ""}
     ${o.missing ? `<div class="btn-group">
       <button type="button" class="btn small" id="own-buy">Einkaufsliste mit Preisen</button>
       <button type="button" class="btn small" id="own-copy">Liste kopieren</button>
@@ -4374,6 +4479,7 @@ $("#own-summary").addEventListener("click", async (e) => {
     catch { toast("Kopieren nicht erlaubt.", "error"); }
   }
   if (e.target.closest("#own-buy")) void openBuylist();
+  if (e.target.closest("#own-away")) void openAway();
   if (e.target.id === "own-print") {
     $("#print-form").elements.only_missing.checked = true;
     printLoadedFor = null;
@@ -5890,6 +5996,7 @@ function paletteItems() {
     for (const [tab, label] of Object.entries(tabNames)) items.push({ label, hint: d.name, run: () => selectTab(tab) });
     items.push({ label: "Karten bearbeiten", hint: d.name, run: () => { selectTab("karten"); if (!edit) setEditing(true); } });
     items.push({ label: "Einkaufsliste mit Preisen", hint: d.name, run: () => openBuylist() });
+    items.push({ label: "Woanders gelagerte Karten", hint: `${d.name} · liegen im Bulk oder an einem anderen Ort`, run: () => openAway() });
     items.push({ label: "Spieltisch", hint: `${d.name} · Goldfish: ein paar Züge allein spielen`, run: () => { selectTab("testen"); void ptOpen(); } });
     items.push({ label: "Rule 0", hint: d.name, run: () => { selectTab("karten"); void openRule0(); } });
     items.push({ label: "Ziel und Tischregel", hint: d.name, run: () => { selectTab("karten"); $("#deck-target").scrollIntoView({ behavior: "smooth", block: "start" }); } });
