@@ -297,6 +297,33 @@ async def test_move_copies_into_a_deck():
     assert client.get("/api/decks/own-a/copies", params={"name": "Cultivate"}).json()["elsewhere"][0]["place"] == ""
 
 
+async def test_cards_stored_elsewhere():
+    from fastapi.testclient import TestClient
+
+    from mtgdeck.gui.app import app
+
+    for name in ("Away A", "Away B"):
+        await save_deck(**{"name": name, "commanders": ["Meren of Clan Nel Toth"], "bracket": 2,
+            "cards": [{"name": l.split(" ", 1)[1], "qty": int(l.split(" ", 1)[0])} for l in deck_lines()]})  # fmt: skip
+    await collection.add([{"name": "Sol Ring", "qty": 2}], place="Bulk")
+    await collection.add([{"name": "Sol Ring", "proxy": True}], place="Away B", place_deck="away-b")
+    await collection.add([{"name": "Cultivate"}], place="Away A", place_deck="away-a")  # already in the deck
+    await collection.add([{"name": "Cultivate"}], place="Bulk")  # a spare: the deck needs only one
+    await collection.add([{"name": "Forest", "qty": 9}], place="Bulk")  # basics are left out
+    await collection.add([{"name": "Meren of Clan Nel Toth"}])  # no Ort at all
+    client = TestClient(app)
+    got = client.get("/api/decks/away-a/elsewhere").json()
+    assert [r["name"] for r in got["rows"]] == ["Meren of Clan Nel Toth", "Sol Ring"]
+    sol = got["rows"][1]
+    assert (sol["need"], sol["placed"], sol["open"], sol["free"]) == (1, 0, 1, 1)
+    assert [(c["qty"], c["place"], c["used_by"]) for c in sol["copies"]] == [(2, "Bulk", None), (1, "Away B", "Away B")]
+    assert (got["cards"], got["copies"]) == (2, 2)
+    assert client.get("/api/decks/away-a/ownership").json()["elsewhere"] == {"cards": 2, "copies": 2, "played": 0}
+    client.post("/api/decks/away-a/copies/move", json={"id": sol["copies"][0]["id"], "qty": 1})
+    assert [r["name"] for r in client.get("/api/decks/away-a/elsewhere").json()["rows"]] == ["Meren of Clan Nel Toth"]
+    assert client.get("/api/decks/missing/elsewhere").status_code == 404
+
+
 async def test_card_facts_for_the_filters():
     """„Filter“ in Meine Sammlung: colour identity, front-face types, commander, mana value, roles and text per card."""
     await collection.add([{"name": n} for n in ("Meren of Clan Nel Toth", "Sol Ring", "Cultivate", "Bayou")])

@@ -538,6 +538,45 @@ def move_to_deck(entry_id: str, slug: str, qty: int | None = None) -> dict[str, 
     return {"id": (there or entry)["id"], "qty": n, **came}
 
 
+def stored_elsewhere(slug: str) -> dict[str, Any]:
+    """The deck's cards you own but whose copies lie somewhere else (Bulk, a binder, no Ort, another deck), for
+    fetching them: per card ``need``, ``placed`` (copies whose Ort is this deck), ``open`` = what is still missing
+    there, and ``copies`` = the entries elsewhere (``used_by`` = the deck they lie in when it plays the card).
+    Only cards with copies elsewhere and an open slot; basic lands are left out. ``cards``/``copies`` = how many
+    cards could be fetched and how many copies that is (capped by ``open``), ``played`` = how many of those cards lie
+    only in other decks that play them."""
+    deck = storage.load(slug)
+    need = Counter({c: 1 for c in deck.get("commanders", [])})
+    for c in deck.get("cards", []):
+        need[c["name"]] += int(c.get("qty", 1))
+    plays = {name: {d["slug"]: d["name"] for d in ds} for name, ds in decks_by_card().items()}
+    entries = load()
+    rows, copies = [], 0
+    for name, n in need.items():
+        if name in BASIC_LANDS:
+            continue
+        mine = [e for e in entries if _same_card(e["name"], name)]
+        placed = sum(int(e["qty"]) for e in mine if e.get("place_deck") == slug)
+        left = n - placed
+        away = [e for e in mine if e.get("place_deck") != slug]
+        if left <= 0 or not away:
+            continue
+        out = []
+        for e in away:
+            row = {k: e.get(k) for k in ("id", "qty", "proxy", "foil", "lang", "place", "place_deck", *PRINTING_KEYS)}
+            sid = e.get("scryfall_id") or ""
+            row["image"] = row["image"] or (_scan(sid) if _SCRYFALL_ID.match(sid) else None)
+            row["used_by"] = plays.get(name, {}).get(e.get("place_deck") or "")
+            out.append(row)
+        out.sort(key=lambda r: (bool(r["used_by"]), bool(r["proxy"]), not r["foil"], (r["place"] or "").lower()))
+        free = sum(r["qty"] for r in out if not r["used_by"])
+        copies += min(left, sum(r["qty"] for r in out))
+        rows.append({"name": name, "need": n, "placed": placed, "open": left, "free": min(left, free), "copies": out})
+    rows.sort(key=lambda r: r["name"].lower())
+    played = sum(1 for r in rows if not r["free"])  # only in other decks that play them
+    return {"slug": slug, "cards": len(rows), "copies": copies, "played": played, "rows": rows}
+
+
 async def deck_ownership(deck: dict[str, Any], *, card_data: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
     """Compare a deck with the collection: per card real/proxy/missing, totals, shopping list."""
     entries = load()
