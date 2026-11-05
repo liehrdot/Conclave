@@ -668,3 +668,39 @@ def test_the_card_scanner_loads_its_text_recognition_lazily(tmp_path):
         assert client.get(path).status_code == 200, path
     csp = client.get("/app/").headers["content-security-policy"]
     assert "script-src 'self' 'wasm-unsafe-eval';" in csp and "unsafe-eval'" not in csp.replace("'wasm-unsafe-eval'", "")
+
+
+def test_a_write_guard_sees_what_each_operation_stores(tmp_path):
+    """One small deck.edit writes the whole deck plus a snapshot of it, so a host's quota must see those bytes,
+    not only the request body (Conclave Cloud audit 2026-11-04)."""
+    import base64
+
+    from mtgdeck.sync.remote import HttpTransport
+    from mtgdeck.sync.server import StorageFull
+
+    written, limit = [], 1_000_000
+
+    def guard(size: int) -> None:
+        if sum(written) + size > limit:
+            raise StorageFull("Dein Speicher ist voll.")
+        written.append(size)
+
+    app = create_app(tmp_path, write_guard=guard)
+    client = TestClient(app)
+    phone = HttpTransport("http://testserver", client=client).claim(app.state.devices.new_code()["code"], "Handy", "phone")
+    auth = {"Authorization": f"Bearer {phone['token']}"}
+    deck = {"name": "Big", "slug": "big", "commanders": ["Meren of Clan Nel Toth"], "version": 1, "notes": "x" * 100_000,
+            "cards": [{"name": "Sol Ring", "qty": 1, "category": "Ramp"}]}  # fmt: skip
+    put = {"path": "decks/big.json", "kind": "deck", "data": base64.b64encode(json.dumps(deck).encode()).decode(), "base_seq": None}
+    assert client.put("/api/sync/doc", json=put, headers=auth).status_code == 200
+
+    ops = [_op("deck.edit", {"deck": "big", **({"add": [{"name": "Arcane Signet"}]} if i % 2 == 0 else {"remove": ["Arcane Signet"]})},
+               f"opbig{i:03d}") for i in range(20)]  # fmt: skip
+    results = client.post("/api/app/ops", json={"ops": ops}, headers=auth).json()["results"]
+    refused = [r for r in results if not r["ok"]]
+    assert results[0]["ok"] and refused, results  # the first edits fit, then every edit that would write is refused
+    assert {r["error"] for r in refused} == {"Dein Speicher ist voll."}
+    assert sum(written) <= limit
+    sizes = sum(len(d["data"] or b"") for d in app.state.store.live("decks/").values())
+    assert sizes <= limit + len(put["data"])  # what is stored stays within the limit
+    assert client.put("/api/sync/doc", json={**put, "path": "decks/big2.json"}, headers=auth).status_code == 507

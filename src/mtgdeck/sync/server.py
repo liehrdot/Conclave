@@ -35,7 +35,7 @@ import uuid
 from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Callable, Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -246,8 +246,19 @@ def app_snapshot(store: SyncStore) -> dict[str, Any]:
     return appdata.snapshot(docs)
 
 
-def run_op(store: SyncStore, devices: Devices, op: dict[str, Any], device_id: str) -> dict[str, Any]:
-    """Apply one operation of the phone app (idempotent by its id); ``{"id", "ok", "error"?}``."""
+class StorageFull(ValueError):
+    """A ``write_guard`` refused a write: the store would grow past its owner's limit (German text for the apps)."""
+
+
+WriteGuard = Callable[[int], None]  # called with the bytes a write adds; raises StorageFull to refuse it
+
+
+def run_op(store: SyncStore, devices: Devices, op: dict[str, Any], device_id: str,
+           write_guard: WriteGuard | None = None) -> dict[str, Any]:  # fmt: skip
+    """Apply one operation of the phone app (idempotent by its id); ``{"id", "ok", "error"?}``.
+
+    ``write_guard`` sees the bytes each operation writes before they are stored: one small ``deck.edit`` writes the
+    whole deck plus a new snapshot of it, so a limit on the request body alone does not bound what a request stores."""
     from . import appops
 
     op_id = op.get("id")
@@ -271,8 +282,11 @@ def run_op(store: SyncStore, devices: Devices, op: dict[str, Any], device_id: st
                     d = store.get(path)
                     seqs[path] = d["seq"] if d is not None else None
             if changed:
-                store.put_many([{"path": p, "kind": kind_of(p) or "json", "data": None if v is None else canonical(kind_of(p) or "json", v),
-                                 "deleted": v is None, "base_seq": seqs[p]} for p, v in changed.items()], device=device_id)  # fmt: skip
+                items = [{"path": p, "kind": kind_of(p) or "json", "data": None if v is None else canonical(kind_of(p) or "json", v),
+                          "deleted": v is None, "base_seq": seqs[p]} for p, v in changed.items()]  # fmt: skip
+                if write_guard is not None:
+                    write_guard(sum(len(i["data"]) for i in items if i["data"] is not None))
+                store.put_many(items, device=device_id)
             devices.op_record(op_id, device_id, True)
             return {"id": op_id, "ok": True}
         except SyncConflict:  # a PC wrote the same document meanwhile: read again
@@ -364,7 +378,9 @@ class Cors:
             await self.app(scope, receive, send)
 
 
-def create_app(data: Path | None = None, public_url: str | None = None) -> FastAPI:
+def create_app(data: Path | None = None, public_url: str | None = None, write_guard: WriteGuard | None = None) -> FastAPI:
+    """The sync server for one data folder. ``write_guard`` (optional, e.g. a hosted account's storage quota) is asked
+    before every document write with the bytes it adds and refuses it by raising ``StorageFull`` (507)."""
     folder = Path(data) if data else data_dir()
     db_file = folder / "sync.sqlite"
     store, devices = SyncStore(db_file), Devices(db_file)
@@ -482,8 +498,12 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
         except ValueError:
             raise HTTPException(400, "Inhalt ist kein gültiges Base64") from None
         try:
+            if write_guard is not None and data is not None:
+                await asyncio.to_thread(write_guard, len(data))
             return await asyncio.to_thread(lambda: store.put(req.path, kind=req.kind, data=data, base_seq=req.base_seq,
                                                              deleted=req.deleted, device=me["id"]))  # fmt: skip
+        except StorageFull as exc:
+            raise HTTPException(507, str(exc)) from None
         except SyncConflict as exc:
             detail = f"Konflikt: {req.path} hat sich auf dem Server geändert"
             return JSONResponse({"detail": detail, "current": _out(exc.current)}, status_code=409)
@@ -537,7 +557,7 @@ def create_app(data: Path | None = None, public_url: str | None = None) -> FastA
     async def app_ops(req: OpsRequest, me: dict[str, Any] = Depends(device)) -> dict[str, Any]:
         results = []
         for op in req.ops:
-            results.append(await asyncio.to_thread(run_op, store, devices, op, me["id"]))
+            results.append(await asyncio.to_thread(run_op, store, devices, op, me["id"], write_guard))
         _, etag = await asyncio.to_thread(snapshot_body)
         return {"results": results, "etag": etag}
 
