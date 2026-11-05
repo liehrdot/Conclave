@@ -128,6 +128,18 @@ async def _remote_error(_request: Request, exc: RemoteError) -> JSONResponse:
     return JSONResponse({"detail": str(exc)}, status_code=400 if exc.status in (400, 403, 429) else 502)
 
 
+@app.exception_handler(FileNotFoundError)
+async def _not_found(_request: Request, exc: FileNotFoundError) -> JSONResponse:
+    """A deck, order, version, backup … that doesn't exist: the domain modules raise this with a German message."""
+    return JSONResponse({"detail": str(exc)}, status_code=404)
+
+
+@app.exception_handler(ValueError)
+async def _bad_request(_request: Request, exc: ValueError) -> JSONResponse:
+    """Input the domain modules refuse (they raise ValueError with a German message): the user's mistake, not a bug."""
+    return JSONResponse({"detail": str(exc)}, status_code=400)
+
+
 @app.exception_handler(HttpError)
 async def _http_error(_request: Request, exc: HttpError) -> JSONResponse:
     """Scryfall, EDHREC … unreachable or failing: say which service and what to do, not a bare 500."""
@@ -369,18 +381,12 @@ class NewDeckRequest(BaseModel):
 async def api_deck_new(req: NewDeckRequest) -> dict[str, Any]:
     """An empty deck with just its commander(s) – put together by hand (no AI needed)."""
     names = [n.strip() for n in (req.commander, req.partner) if n and n.strip()]
-    try:
-        cards, renames, missing = await resolve(names)
-    except HttpError as exc:
-        raise HTTPException(502, exc.friendly) from exc
+    cards, renames, missing = await resolve(names)
     if missing:
         raise HTTPException(404, f"Karte nicht gefunden: {', '.join(missing)}")
     commanders = [renames.get(n, n) for n in names]
-    try:
-        deck = await deckimport.save(name=req.name.strip() or " + ".join(commanders), commanders=commanders, cards=[],
-                                     bracket=req.bracket, currency=req.currency, note="Leer angelegt")  # fmt: skip
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    deck = await deckimport.save(name=req.name.strip() or " + ".join(commanders), commanders=commanders, cards=[],
+                                 bracket=req.bracket, currency=req.currency, note="Leer angelegt")  # fmt: skip
     return {"slug": deck["slug"]}
 
 
@@ -528,13 +534,13 @@ class GameIn(BaseModel):
 
 @app.get("/api/decks/{slug}/games")
 async def api_games(slug: str) -> dict[str, Any]:
-    _not_found(storage.load, slug)
+    storage.load(slug)
     return games.summary(slug)
 
 
 @app.post("/api/decks/{slug}/games")
 async def api_game_add(slug: str, req: GameIn) -> dict[str, Any]:
-    deck = _not_found(storage.load, slug)
+    deck = storage.load(slug)
     slots = [{"commander": o.strip(), "id": (req.opponent_ids[i] if i < len(req.opponent_ids) else None),
               "note": (req.opponent_notes[i] if i < len(req.opponent_notes) else ""),
               "place": (req.opponent_places[i] if i < len(req.opponent_places) else None)}
@@ -554,12 +560,9 @@ async def api_game_add(slug: str, req: GameIn) -> dict[str, Any]:
     for s, name in zip(slots, opponents):
         s["commander"] = name
     ids = await opponents_mod.link_game(slug, game_id, slots, remember=req.remember_opponents) if slots else []
-    try:
-        entry = games.add(slug, result=req.result, opponents=opponents, turn=req.turn, issues=req.issues, mvp=mvp,
-                          note=req.note, version=deck.get("version"), entry_id=game_id, opponent_ids=ids, how=req.how or None,
-                          place=req.place, opponent_places=[s["place"] for s in slots])  # fmt: skip
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    entry = games.add(slug, result=req.result, opponents=opponents, turn=req.turn, issues=req.issues, mvp=mvp,
+                      note=req.note, version=deck.get("version"), entry_id=game_id, opponent_ids=ids, how=req.how or None,
+                      place=req.place, opponent_places=[s["place"] for s in slots])  # fmt: skip
     return {"game": entry, **games.summary(slug)}
 
 
@@ -572,10 +575,7 @@ async def api_game_delete(slug: str, game_id: str) -> dict[str, Any]:
 
 @app.get("/api/decks/{slug}/rule0")
 async def api_rule0(slug: str) -> dict[str, Any]:
-    try:
-        return rule0.build(storage.load(slug))
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    return rule0.build(storage.load(slug))
 
 
 class ImportPreviewRequest(BaseModel):
@@ -584,13 +584,10 @@ class ImportPreviewRequest(BaseModel):
     name: str | None = None
 
 
-@app.post("/api/import/preview")
-async def api_import_preview(req: ImportPreviewRequest) -> dict[str, Any]:
+async def _import_url(url: str) -> dict[str, Any]:
+    """A deck from a site link; a site that answers 404 usually means a private deck."""
     try:
-        if req.url and req.url.strip():
-            data = await importers.import_url(req.url)
-        else:
-            data = importers.import_text(req.text or "", req.name)
+        return await importers.import_url(url)
     except HttpError as exc:  # before RuntimeError: HttpError is one
         status = 404 if exc.status == 404 else 502
         raise HTTPException(status, "Deck nicht gefunden – ist es öffentlich?" if status == 404 else exc.friendly) from exc
@@ -598,6 +595,14 @@ async def api_import_preview(req: ImportPreviewRequest) -> dict[str, Any]:
         raise HTTPException(400, str(exc)) from exc
     except Exception as exc:
         raise HTTPException(502, f"Seite nicht erreichbar: {_error_text(exc)}") from exc
+
+
+@app.post("/api/import/preview")
+async def api_import_preview(req: ImportPreviewRequest) -> dict[str, Any]:
+    if req.url and req.url.strip():
+        data = await _import_url(req.url)
+    else:
+        data = importers.import_text(req.text or "", req.name)
     if not data["cards"]:
         raise HTTPException(400, "Keine Karten gefunden.")
     return await deckimport.preview(data)
@@ -617,14 +622,11 @@ class ImportRequest(BaseModel):
 @app.post("/api/import")
 async def api_import(req: ImportRequest) -> dict[str, Any]:
     where = f"{req.site}: {req.source}" if req.source else (req.site or "Liste")
-    try:
-        return await deckimport.save(
-            name=req.name.strip(), commanders=req.commanders, cards=req.cards, categories=req.categories, bracket=req.bracket,
-            currency=req.currency, description=f"Importiert von {where}." if req.source else "",
-            note=f"Importiert ({req.site or 'Liste'})", extra={"imported_from": {"site": req.site, "source": req.source}},
-        )  # fmt: skip
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    return await deckimport.save(
+        name=req.name.strip(), commanders=req.commanders, cards=req.cards, categories=req.categories, bracket=req.bracket,
+        currency=req.currency, description=f"Importiert von {where}." if req.source else "",
+        note=f"Importiert ({req.site or 'Liste'})", extra={"imported_from": {"site": req.site, "source": req.source}},
+    )  # fmt: skip
 
 
 # --- collective print orders (Sammelbestellung) ------------------------------------------------------
@@ -668,24 +670,24 @@ async def api_order_create(req: OrderCreate) -> dict[str, Any]:
 
 @app.get("/api/orders/{oid}")
 async def api_order(oid: str) -> dict[str, Any]:
-    return printorders.summary(_not_found(printorders.load, oid))
+    return printorders.summary(printorders.load(oid))
 
 
 @app.patch("/api/orders/{oid}")
 async def api_order_rename(oid: str, req: OrderCreate) -> dict[str, Any]:
-    return _not_found(printorders.rename, oid, req.name)
+    return printorders.rename(oid, req.name)
 
 
 @app.delete("/api/orders/{oid}")
 async def api_order_delete(oid: str) -> dict[str, bool]:
-    _not_found(printorders.delete, oid)
+    printorders.delete(oid)
     return {"deleted": True}
 
 
 @app.get("/api/orders/{oid}/export")
 async def api_order_export(oid: str, download: bool = False) -> Response:
     """The order's cards as a Moxfield text list (tokens left out: Moxfield imports none)."""
-    order = _not_found(printorders.load, oid)
+    order = printorders.load(oid)
     text, tokens = printorders.to_moxfield(oid)
     headers = {"X-Tokens-Left-Out": str(tokens)}
     if download:
@@ -700,15 +702,12 @@ async def api_order_export(oid: str, download: bool = False) -> Response:
 async def api_deck_compare(slug: str, other: str | None = None) -> dict[str, Any]:
     """Compare a deck with another saved deck: what it needs beyond it (for a collective order), what becomes free.
     Without ``other`` the best match is used (the deck it was copied from, else the one sharing most cards)."""
-    candidates = _not_found(printorders.compare_candidates, slug)
+    candidates = printorders.compare_candidates(slug)
     if not other:
         if not candidates:
             return {"candidates": [], "other": None}
         other = candidates[0]["slug"]
-    try:
-        diff = _not_found(printorders.compare, slug, other)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    diff = printorders.compare(slug, other)
     names = [i["name"] for i in diff["added"] + diff["removed"]]
     try:
         cards, renames, _ = await resolve(names) if names else ({}, {}, [])
@@ -722,17 +721,14 @@ async def api_deck_compare(slug: str, other: str | None = None) -> dict[str, Any
 
 @app.post("/api/orders/{oid}/items")
 async def api_order_add(oid: str, req: OrderAdd) -> dict[str, Any]:
-    _not_found(printorders.load, oid)
+    printorders.load(oid)
     items = [i.model_dump() for i in req.items]
     if req.deck and req.compare_with:
-        try:
-            items += _not_found(lambda: printorders.compare_items(req.deck, req.compare_with, only_missing=req.only_missing, names=req.names))
-        except ValueError as exc:
-            raise HTTPException(400, str(exc)) from exc
+        items += printorders.compare_items(req.deck, req.compare_with, only_missing=req.only_missing, names=req.names)
     elif req.deck and req.since_version:
-        items += _not_found(lambda: printorders.added_since(req.deck, req.since_version, only_missing=req.only_missing))
+        items += printorders.added_since(req.deck, req.since_version, only_missing=req.only_missing)
     elif req.deck:
-        deck = _not_found(storage.load, req.deck)
+        deck = storage.load(req.deck)
         items += printorders.deck_items(deck, names=req.names, only_missing=req.only_missing)
     if req.text and req.text.strip():
         from ..deck import parse_decklist
@@ -741,15 +737,7 @@ async def api_order_add(oid: str, req: OrderAdd) -> dict[str, Any]:
         items += [{"kind": "card", "name": n, "qty": 1, "source": "Liste"} for n in parsed.commanders]
         items += [{"kind": "card", "name": e.name, "qty": e.qty, "source": "Liste"} for e in parsed.entries]
     if req.url and req.url.strip():
-        try:
-            data = await importers.import_url(req.url)
-        except HttpError as exc:  # before RuntimeError: HttpError is one
-            raise HTTPException(404 if exc.status == 404 else 502, "Deck nicht gefunden – ist es öffentlich?"
-                                if exc.status == 404 else exc.friendly) from exc  # fmt: skip
-        except (ValueError, RuntimeError) as exc:
-            raise HTTPException(400, str(exc)) from exc
-        except Exception as exc:
-            raise HTTPException(502, f"Seite nicht erreichbar: {_error_text(exc)}") from exc
+        data = await _import_url(req.url)
         label = f"{data.get('name') or 'Deck'} ({data.get('site')})"
         items += [{"kind": "card", "name": n, "qty": 1, "source": label} for n in data["commanders"]]
         for line in data["cards"]:
@@ -757,10 +745,7 @@ async def api_order_add(oid: str, req: OrderAdd) -> dict[str, Any]:
             items.append({"kind": "card", "name": name, "qty": int(qty), "source": label})
     if not items:
         raise HTTPException(400, "Nichts hinzuzufügen" + (" – die Sammlung hat schon alle Karten." if req.only_missing else "."))
-    try:
-        return await printorders.add(oid, items)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    return await printorders.add(oid, items)
 
 
 class OrderQty(BaseModel):
@@ -769,23 +754,20 @@ class OrderQty(BaseModel):
 
 @app.patch("/api/orders/{oid}/items/{item_id}")
 async def api_order_item(oid: str, item_id: str, req: OrderQty) -> dict[str, Any]:
-    return _not_found(printorders.update_item, oid, item_id, req.qty)
+    return printorders.update_item(oid, item_id, req.qty)
 
 
 @app.delete("/api/orders/{oid}/items")
 async def api_order_remove(oid: str, item: str | None = None, source: str | None = None) -> dict[str, Any]:
     if not item and not source:
         raise HTTPException(400, "item oder source angeben")
-    try:
-        return printorders.remove(oid, item_id=item, source=source)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    return printorders.remove(oid, item_id=item, source=source)
 
 
 @app.get("/api/decks/{slug}/added")
 async def api_deck_added(slug: str, since: int, only_missing: bool = False) -> dict[str, Any]:
     """Cards a rebuild brought in since version ``since`` (for "add to a collective order?")."""
-    items = _not_found(lambda: printorders.added_since(slug, since, only_missing=only_missing))
+    items = printorders.added_since(slug, since, only_missing=only_missing)
     return {"version": storage.load(slug).get("version"), "since": since, "items": items,
             "cards": sum(i["qty"] for i in items)}  # fmt: skip
 
@@ -795,10 +777,7 @@ async def api_token_search(q: str) -> list[dict[str, Any]]:
     """Tokens and emblems by name (Scryfall), one entry per artwork: ``[{name, type_line, id, image}]``."""
     if len(q.strip()) < 2:
         return []
-    try:
-        res = await scryfall.search(f'(t:token or t:emblem) name:"{q.strip()}"', order="released", unique="art", max_results=60)
-    except HttpError as exc:
-        raise HTTPException(502, exc.friendly) from exc
+    res = await scryfall.search(f'(t:token or t:emblem) name:"{q.strip()}"', order="released", unique="art", max_results=60)
     out = []
     for c in res["cards"]:
         cid = c.get("id")
@@ -874,10 +853,7 @@ async def api_opponents() -> dict[str, Any]:
 @app.post("/api/opponents")
 async def api_opponent_create(req: OpponentIn) -> dict[str, Any]:
     changes = req.model_dump(exclude_unset=True, exclude={"commanders", "note", "remove_note"})
-    try:
-        o = await opponents_mod.create(req.commanders or [], note=req.note, **changes)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    o = await opponents_mod.create(req.commanders or [], note=req.note, **changes)
     return opponents_mod.describe(o)
 
 
@@ -892,21 +868,13 @@ async def api_opponent(opp_id: str) -> dict[str, Any]:
 @app.patch("/api/opponents/{opp_id}")
 async def api_opponent_update(opp_id: str, req: OpponentIn) -> dict[str, Any]:
     changes = req.model_dump(exclude_unset=True, exclude={"commanders", "note", "remove_note"})
-    try:
-        o = await opponents_mod.update(opp_id, commanders=req.commanders, add_note=req.note, remove_note=req.remove_note, **changes)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    o = await opponents_mod.update(opp_id, commanders=req.commanders, add_note=req.note, remove_note=req.remove_note, **changes)
     return opponents_mod.describe(o)
 
 
 @app.delete("/api/opponents/{opp_id}")
 async def api_opponent_delete(opp_id: str) -> dict[str, str]:
-    try:
-        opponents_mod.delete(opp_id)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    opponents_mod.delete(opp_id)
     return {"deleted": opp_id}
 
 
@@ -938,22 +906,14 @@ async def api_tablerules() -> dict[str, Any]:
 
 @app.post("/api/tablerules")
 async def api_tablerule_create(req: TableRuleIn) -> dict[str, Any]:
-    try:
-        changes = _table_changes(req)
-        name = changes.pop("name", None) or ""
-        return await tablerules.create(name, add=req.add, remove=req.remove, **changes)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    changes = _table_changes(req)
+    name = changes.pop("name", None) or ""
+    return await tablerules.create(name, add=req.add, remove=req.remove, **changes)
 
 
 @app.patch("/api/tablerules/{rule_id}")
 async def api_tablerule_update(rule_id: str, req: TableRuleIn) -> dict[str, Any]:
-    try:
-        out = await tablerules.update(rule_id, add=req.add, remove=req.remove, **_table_changes(req))
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    out = await tablerules.update(rule_id, add=req.add, remove=req.remove, **_table_changes(req))
     out["revalidated"] = await deckedit.revalidate_decks(rule_id)
     return out
 
@@ -974,10 +934,7 @@ async def api_tablerule_delete(rule_id: str) -> dict[str, Any]:
 
 @app.get("/api/tablerules/{rule_id}/decks")
 async def api_tablerule_decks(rule_id: str) -> list[dict[str, Any]]:
-    try:
-        return await tablerules.check_all(rule_id)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    return await tablerules.check_all(rule_id)
 
 
 class DeckTableRule(BaseModel):
@@ -986,10 +943,7 @@ class DeckTableRule(BaseModel):
 
 @app.put("/api/decks/{slug}/table-rule")
 async def api_deck_table_rule(slug: str, req: DeckTableRule) -> dict[str, Any]:
-    try:
-        deck = await _set_table_rule(slug, req.table_rule or None)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    deck = await _set_table_rule(slug, req.table_rule or None)
     return {"slug": slug, "table_rule": deck.get("table_rule"), "validation": deck.get("validation")}
 
 
@@ -1030,10 +984,7 @@ class DeckTarget(BaseModel):
 async def api_deck_target(slug: str, req: DeckTarget) -> dict[str, Any]:
     """Set the power the deck aims for (bracket + sub-tier/house rules); the check measures the cards against it."""
     for attempt in range(3):
-        try:
-            deck = storage.load(slug)
-        except FileNotFoundError as exc:
-            raise HTTPException(404, str(exc)) from exc
+        deck = storage.load(slug)
         start_version = deck.get("version")
         profile = req.profile.model_dump(exclude_none=True) if req.profile else None
         deck["bracket"] = req.bracket
@@ -1101,10 +1052,7 @@ async def api_decks() -> list[dict[str, Any]]:
 
 @app.get("/api/decks/{slug}")
 async def api_deck(slug: str) -> dict[str, Any]:
-    try:
-        deck = storage.load(slug)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    deck = storage.load(slug)
     names = deck.get("commanders", []) + [c["name"] for c in deck.get("cards", [])] + [m["name"] for m in deck.get("maybe") or []]
     try:
         card_data, _, _ = await resolve(names)
@@ -1142,10 +1090,7 @@ def _tempo_now(deck: dict[str, Any], card_data: dict[str, Any]) -> dict[str, Any
 
 @app.post("/api/decks/{slug}/validate")
 async def api_validate(slug: str) -> dict[str, Any]:
-    try:
-        deck = storage.load(slug)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    deck = storage.load(slug)
     result = await deckedit.revalidate(deck)
     storage.save(deck, expect_version=deck.get("version"))  # never overwrite a newer save with this copy
     return result
@@ -1175,52 +1120,30 @@ class EditRequest(BaseModel):
 @app.post("/api/decks/{slug}/cards")
 async def api_edit_cards(slug: str, req: EditRequest) -> dict[str, Any]:
     """Change cards directly: re-validates and saves a new version."""
-    try:
-        return await deckedit.edit_deck(
-            slug, add=[a.model_dump() for a in req.add], remove=req.remove, set_qty=req.set_qty,
-            set_category=req.set_category, maybe_add=[m.model_dump() for m in req.maybe_add],
-            maybe_remove=req.maybe_remove, note=req.note,
-        )  # fmt: skip
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    return await deckedit.edit_deck(
+        slug, add=[a.model_dump() for a in req.add], remove=req.remove, set_qty=req.set_qty,
+        set_category=req.set_category, maybe_add=[m.model_dump() for m in req.maybe_add],
+        maybe_remove=req.maybe_remove, note=req.note,
+    )  # fmt: skip
 
 
 @app.get("/api/decks/{slug}/similar")
 async def api_similar(slug: str, card: str, limit: int = 12) -> list[dict[str, Any]]:
-    try:
-        return await deckedit.similar_cards(storage.load(slug), card, limit=min(limit, 30))
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    except HttpError as exc:
-        raise HTTPException(502, exc.friendly) from exc
+    return await deckedit.similar_cards(storage.load(slug), card, limit=min(limit, 30))
 
 
 @app.get("/api/decks/{slug}/role-candidates")
 async def api_role_candidates(slug: str, role: str, limit: int = 18) -> list[dict[str, Any]]:
-    try:
-        deck = storage.load(slug)
-        budget = deck.get("budget") if not deck.get("proxy") else None
-        # cards for one slot should not blow the budget: at most a tenth of it per card
-        return await deckedit.role_candidates(deck, role, limit=min(limit, 40), max_price=budget / 10 if budget else None)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    except HttpError as exc:
-        raise HTTPException(502, exc.friendly) from exc
+    deck = storage.load(slug)
+    budget = deck.get("budget") if not deck.get("proxy") else None
+    # cards for one slot should not blow the budget: at most a tenth of it per card
+    return await deckedit.role_candidates(deck, role, limit=min(limit, 40), max_price=budget / 10 if budget else None)
 
 
 @app.get("/api/decks/{slug}/export/text")
 async def api_export(slug: str) -> Response:
     """Download the decklist as a text file (Moxfield/Archidekt format)."""
-    try:
-        deck = storage.load(slug)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    deck = storage.load(slug)
     entries = [DeckEntry(c["name"], c.get("qty", 1)) for c in deck.get("cards", [])]
     body = to_text(deck.get("commanders", []), entries)
     return Response(body, media_type="text/plain; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="{deck["slug"]}.txt"'})
@@ -1228,14 +1151,8 @@ async def api_export(slug: str) -> Response:
 
 @app.get("/api/decks/{slug}/tokens")
 async def api_tokens(slug: str) -> list[dict[str, Any]]:
-    try:
-        deck = storage.load(slug)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
-    try:
-        return await deck_tokens(deck.get("commanders", []) + [c["name"] for c in deck.get("cards", [])])
-    except HttpError as exc:
-        raise HTTPException(502, exc.friendly) from exc
+    deck = storage.load(slug)
+    return await deck_tokens(deck.get("commanders", []) + [c["name"] for c in deck.get("cards", [])])
 
 
 class HandIn(BaseModel):
@@ -1251,10 +1168,7 @@ _HAND_DECKS: dict[tuple[Any, ...], tuple[openinghand.Deck, dict[str, Any]]] = {}
 @app.post("/api/decks/{slug}/hand")
 async def api_rate_hand(slug: str, body: HandIn) -> dict[str, Any]:
     """Rate a test hand (Testen tab): keep, borderline or mulligan, with the reasons."""
-    try:
-        deck = storage.load(slug)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    deck = storage.load(slug)
     validation = deck.get("validation") or {}
     combos = len((validation.get("combos") or {}).get("included") or [])
     key = (slug, int(deck.get("version") or 0), (validation.get("stats") or {}).get("total_mana_value"), combos, body.on_draw)
@@ -1272,10 +1186,7 @@ async def api_rate_hand(slug: str, body: HandIn) -> dict[str, Any]:
 
 @app.get("/api/decks/{slug}/ownership")
 async def api_ownership(slug: str) -> dict[str, Any]:
-    try:
-        deck = storage.load(slug)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    deck = storage.load(slug)
     out = await collection.deck_ownership(deck)
     away = collection.stored_elsewhere(slug) if out["collection_size"] else {"cards": 0, "copies": 0, "played": 0}
     out["elsewhere"] = {k: away[k] for k in ("cards", "copies", "played")}  # the count on „Woanders gelagert“
@@ -1285,19 +1196,13 @@ async def api_ownership(slug: str) -> dict[str, Any]:
 @app.get("/api/decks/{slug}/elsewhere")
 async def api_deck_elsewhere(slug: str) -> dict[str, Any]:
     """The deck's cards you own whose copies lie at another Ort (Bulk, a binder, another deck), to fetch them."""
-    try:
-        return collection.stored_elsewhere(slug)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    return collection.stored_elsewhere(slug)
 
 
 @app.get("/api/decks/{slug}/copies")
 async def api_deck_copies(slug: str, name: str) -> dict[str, Any]:
     """One card's collection copies: those in this deck and those at other places (to move them here)."""
-    try:
-        return collection.card_copies(name, slug)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    return collection.card_copies(name, slug)
 
 
 class CopyMove(BaseModel):
@@ -1310,8 +1215,6 @@ async def api_deck_copies_move(slug: str, req: CopyMove) -> dict[str, Any]:
     """Move copies of a collection entry into this deck (Ort = the deck); returns where they came from for undo."""
     try:
         return collection.move_to_deck(req.id, slug, req.qty)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
     except KeyError as exc:
         raise HTTPException(404, "Eintrag nicht gefunden") from exc
 
@@ -1320,10 +1223,7 @@ async def api_deck_copies_move(slug: str, req: CopyMove) -> dict[str, Any]:
 async def api_buylist(slug: str, owned: bool = True, proxies: bool = True) -> dict[str, Any]:
     """Einkaufsliste: the cards still to buy (``owned=false``: the whole deck, no collection check; proxies included
     unless ``proxies=false``), priced at Cardmarket's cheapest printing."""
-    try:
-        deck = storage.load(slug)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    deck = storage.load(slug)
     return await buylist.build(deck, use_collection=owned, replace_proxies=proxies)
 
 
@@ -1404,10 +1304,7 @@ async def api_collection_add(req: CollectionAdd) -> dict[str, Any]:
 
 @app.post("/api/collection/import")
 async def api_collection_import(req: CollectionImport) -> dict[str, Any]:
-    try:
-        return await collection.import_text(req.text, proxy=req.proxy, replace=req.replace)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    return await collection.import_text(req.text, proxy=req.proxy, replace=req.replace)
 
 
 @app.patch("/api/collection/{entry_id}")
@@ -1512,16 +1409,13 @@ async def api_sales_unsold(item_id: str) -> dict[str, Any]:
 
 @app.get("/api/cards/prints")
 async def api_prints(name: str, page: int = 1) -> dict[str, Any]:
-    try:
-        return await scryfall.prints(name, page=max(1, page))
-    except HttpError as exc:
-        raise HTTPException(502, exc.friendly) from exc
+    return await scryfall.prints(name, page=max(1, page))
 
 
 @app.delete("/api/decks/{slug}")
 async def api_delete(slug: str) -> dict[str, Any]:
     """Moves the deck (with versions, questions and games) to the trash."""
-    return {"ok": True, "trash_id": _not_found(storage.delete, slug)}
+    return {"ok": True, "trash_id": storage.delete(slug)}
 
 
 # --- backups ------------------------------------------------------------------------------------
@@ -1539,7 +1433,7 @@ async def api_backup_create() -> dict[str, Any]:
 
 @app.get("/api/backups/{name}")
 async def api_backup_download(name: str) -> FileResponse:
-    path = _not_found(backup.path_of, name)
+    path = backup.path_of(name)
     return FileResponse(path, media_type="application/zip", filename=f"mtgdeck-{name}")
 
 
@@ -1548,10 +1442,7 @@ async def api_backup_upload(request: Request) -> dict[str, Any]:
     data = await request.body()
     if len(data) > 2_000_000_000:
         raise HTTPException(413, "Datei zu groß")
-    try:
-        return backup.upload(data)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    return backup.upload(data)
 
 
 @app.post("/api/backups/{name}/restore")
@@ -1560,10 +1451,7 @@ async def api_backup_restore(name: str) -> dict[str, Any]:
         raise HTTPException(409, "Es läuft gerade ein Auftrag – warte, bis er fertig ist, und stell dann wieder her.")
     if _sync_state["running"]:
         raise HTTPException(409, "Gerade läuft der Abgleich mit dem Sync-Server – bitte gleich noch einmal versuchen.")
-    try:
-        return _not_found(backup.restore, name)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    return backup.restore(name)
 
 
 @app.get("/api/trash")
@@ -1573,12 +1461,12 @@ async def api_trash() -> list[dict[str, Any]]:
 
 @app.post("/api/trash/{trash_id}/restore")
 async def api_trash_restore(trash_id: str) -> dict[str, Any]:
-    return _not_found(storage.restore_deleted, trash_id)
+    return storage.restore_deleted(trash_id)
 
 
 @app.delete("/api/trash/{trash_id}")
 async def api_trash_purge(trash_id: str) -> dict[str, int]:
-    return {"deleted": _not_found(storage.purge_deleted, trash_id)}
+    return {"deleted": storage.purge_deleted(trash_id)}
 
 
 @app.delete("/api/trash")
@@ -1586,33 +1474,26 @@ async def api_trash_purge_all() -> dict[str, int]:
     return {"deleted": storage.purge_deleted()}
 
 
-def _not_found(fn, *args):
-    try:
-        return fn(*args)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
-
-
 @app.get("/api/decks/{slug}/versions")
 async def api_versions(slug: str) -> list[dict[str, Any]]:
-    return _not_found(storage.versions, slug)
+    return storage.versions(slug)
 
 
 @app.get("/api/decks/{slug}/versions/{version}")
 async def api_version(slug: str, version: int) -> dict[str, Any]:
-    deck = _not_found(storage.load_version, slug, version)
+    deck = storage.load_version(slug, version)
     entries = [DeckEntry(c["name"], c.get("qty", 1)) for c in deck.get("cards", [])]
     return {**deck, "export_text": to_text(deck.get("commanders", []), entries)}
 
 
 @app.get("/api/decks/{slug}/diff")
 async def api_diff(slug: str, a: int, b: int | None = None) -> dict[str, Any]:
-    return _not_found(storage.compare, slug, a, b)
+    return storage.compare(slug, a, b)
 
 
 @app.post("/api/decks/{slug}/versions/{version}/restore")
 async def api_restore(slug: str, version: int) -> dict[str, Any]:
-    return _not_found(storage.restore, slug, version)
+    return storage.restore(slug, version)
 
 
 class CopyRequest(BaseModel):
@@ -1622,7 +1503,7 @@ class CopyRequest(BaseModel):
 
 @app.post("/api/decks/{slug}/copy")
 async def api_copy(slug: str, req: CopyRequest) -> dict[str, Any]:
-    return _not_found(storage.copy, slug, req.name, req.version)
+    return storage.copy(slug, req.name, req.version)
 
 
 # --- proxies (MPC Autofill) & settings ---------------------------------------------------------
@@ -1683,8 +1564,8 @@ class PrintRequest(BaseModel):
 
 def _print_deck(slug: str, version: int | None = None) -> dict[str, Any]:
     if printorders.is_order_slug(slug):  # a collective order prints like a deck
-        return _not_found(printorders.as_deck, slug)
-    deck = _not_found(storage.load_version, slug, version)
+        return printorders.as_deck(slug)
+    deck = storage.load_version(slug, version)
     deck["slug"] = storage.slug(slug)
     return deck
 
@@ -1692,28 +1573,19 @@ def _print_deck(slug: str, version: int | None = None) -> dict[str, Any]:
 @app.get("/api/decks/{slug}/print/plan")
 async def api_print_plan(slug: str, source: str = "auto", version: int | None = None, only_missing: bool = False,
                          tokens: int = 0) -> dict[str, Any]:  # fmt: skip
-    try:
-        return await proxy.plan(_print_deck(slug, version), source=source, only_missing=only_missing, tokens=min(max(tokens, 0), 20))
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    return await proxy.plan(_print_deck(slug, version), source=source, only_missing=only_missing, tokens=min(max(tokens, 0), 20))
 
 
 @app.post("/api/decks/{slug}/collection/add-printed")
 async def api_add_printed(slug: str, req: PrintRequest) -> dict[str, Any]:
     """Add the printed proxies (with the chosen artwork) to the collection."""
-    try:
-        plan = await proxy.plan(_print_deck(slug, req.version), source=req.source, only_missing=req.only_missing)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    plan = await proxy.plan(_print_deck(slug, req.version), source=req.source, only_missing=req.only_missing)
     return await collection.add_printed(plan)
 
 
 @app.get("/api/decks/{slug}/print/alternatives")
 async def api_print_alternatives(slug: str, card: str, side: str = "front", token: bool = False, page: int = 1) -> dict[str, Any]:
-    try:
-        return await proxy.alternatives(_print_deck(slug), card, "back" if side == "back" else "front", token=token, page=max(1, page))
-    except HttpError as exc:
-        raise HTTPException(502, exc.friendly) from exc
+    return await proxy.alternatives(_print_deck(slug), card, "back" if side == "back" else "front", token=token, page=max(1, page))
 
 
 class ChooseRequest(BaseModel):
@@ -1734,10 +1606,7 @@ async def api_print_upload(slug: str, request: Request, face: str, filename: str
     if int(request.headers.get("content-length") or 0) > proxy.MAX_UPLOAD_BYTES:
         raise HTTPException(413, f"Das Bild ist zu groß (höchstens {proxy.MAX_UPLOAD_BYTES // 1_000_000} MB).")
     data = await request.body()
-    try:
-        option = await asyncio.to_thread(proxy.save_upload, storage.slug(slug), face, data, filename, bleed)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    option = await asyncio.to_thread(proxy.save_upload, storage.slug(slug), face, data, filename, bleed)
     if choose:
         proxy.choose(storage.slug(slug), face, option)
     return option
@@ -1757,10 +1626,7 @@ async def api_print_upload_file(slug: str, name: str) -> FileResponse:
 async def api_print_upload_delete(slug: str, key: str) -> dict[str, bool]:
     if not re.fullmatch(r"[0-9a-f]{16}", key):
         raise HTTPException(404, "Kein Bild")
-    try:
-        proxy.delete_upload(storage.slug(slug), key)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    proxy.delete_upload(storage.slug(slug), key)
     return {"ok": True}
 
 
@@ -1836,10 +1702,7 @@ async def api_print_prepared(slug: str) -> dict[str, Any]:
 @app.get("/api/decks/{slug}/print/image")
 async def api_print_image(slug: str, face: str, kind: str = "file") -> Response:
     """kind: original (as downloaded) | file (print file with bleed) | trim (print file without bleed)."""
-    try:
-        path = proxy.prepared_image(storage.slug(slug), face, kind)
-    except FileNotFoundError as exc:
-        raise HTTPException(404, str(exc)) from exc
+    path = proxy.prepared_image(storage.slug(slug), face, kind)
     if kind != "trim":
         return FileResponse(path)
 
@@ -2069,13 +1932,6 @@ def _sync_view() -> dict[str, Any]:
             "interval": _sync_interval(), "pending_revalidation": sync_service.pending_revalidation()}
 
 
-async def _sync_call(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
-    try:
-        return await asyncio.to_thread(fn, *args, **kwargs)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-
-
 class SyncConnect(BaseModel):
     link: str = Field(default="", max_length=500)
     url: str = Field(default="", max_length=300)
@@ -2090,7 +1946,7 @@ async def api_sync() -> dict[str, Any]:
 
 @app.post("/api/sync/connect")
 async def api_sync_connect(req: SyncConnect) -> dict[str, Any]:
-    await _sync_call(sync_service.connect, req.link, url=req.url, code=req.code, name=req.name)
+    await asyncio.to_thread(sync_service.connect, req.link, url=req.url, code=req.code, name=req.name)
     _sync_state["last_presence"] = 0.0
     run = await _sync_now("verbunden")
     return {**_sync_view(), "run": run}
@@ -2106,25 +1962,25 @@ async def api_sync_run() -> dict[str, Any]:
 
 @app.post("/api/sync/disconnect")
 async def api_sync_disconnect() -> dict[str, Any]:
-    await _sync_call(sync_service.disconnect)
+    await asyncio.to_thread(sync_service.disconnect)
     _sync_state["online"] = None
     return _sync_view()
 
 
 @app.get("/api/sync/devices")
 async def api_sync_devices() -> dict[str, Any]:
-    return {"devices": await _sync_call(sync_service.devices), "now": time.time()}
+    return {"devices": await asyncio.to_thread(sync_service.devices), "now": time.time()}
 
 
 @app.delete("/api/sync/devices/{device_id}")
 async def api_sync_revoke(device_id: str) -> dict[str, Any]:
-    got = await _sync_call(sync_service.revoke, device_id)
+    got = await asyncio.to_thread(sync_service.revoke, device_id)
     return {**got, **_sync_view()}
 
 
 @app.post("/api/sync/pair")
 async def api_sync_pair() -> dict[str, Any]:
-    return await _sync_call(sync_service.pair_code)
+    return await asyncio.to_thread(sync_service.pair_code)
 
 
 @app.get("/api/sync/conflicts")
