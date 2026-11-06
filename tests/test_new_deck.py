@@ -36,6 +36,18 @@ def test_ai_routes_are_gone():
     assert set(client.get("/api/health").json()) == {"ok", "service", "version", "home", "frozen"}
 
 
+async def test_deck_can_be_renamed():
+    deck = await save_deck("Vorher", ["Meren of Clan Nel Toth"], deck_lines(), 2)
+    with TestClient(gui.app) as client:
+        r = client.put(f"/api/decks/{deck['slug']}/name", json={"name": "Nachher"})
+        assert r.status_code == 200, r.text
+        renamed = r.json()
+        assert renamed["slug"] == deck["slug"] and renamed["name"] == "Nachher"
+        assert renamed["version"] == deck["version"] + 1
+        assert storage.load(deck["slug"])["history"][-1]["note"] == "Umbenannt in „Nachher“"
+        assert client.put(f"/api/decks/{deck['slug']}/name", json={"name": "   "}).status_code == 422
+
+
 async def test_target_power_is_saved_and_checked():
     slug = (await save_deck("Ziel", ["Meren of Clan Nel Toth"], deck_lines(), 2, power_profile={"notes": "Lieblingskarten bleiben"}))["slug"]
     with TestClient(gui.app) as client:
