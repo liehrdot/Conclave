@@ -233,9 +233,10 @@ def copy(deck_slug: str, new_name: str | None = None, version: int | None = None
 
 def _deck_files(s: str) -> dict[str, Path]:
     """Everything that belongs to a deck, by its name inside a trash entry."""
-    return {"deck.json": DECKS_DIR / f"{s}.json", "deck.txt": DECKS_DIR / f"{s}.txt",
-            "questions.json": DECKS_DIR / ".questions" / f"{s}.json",  # the former „Fragen zum Deck“ (kept for old trash entries)
-            "games.json": DECKS_DIR / ".games" / f"{s}.json",  # games.GAMES_DIRNAME
+    s = slug(s)
+    return {"deck.json": paths.inside(DECKS_DIR, f"{s}.json"), "deck.txt": paths.inside(DECKS_DIR, f"{s}.txt"),
+            "questions.json": paths.inside(DECKS_DIR, ".questions", f"{s}.json"),  # the former „Fragen zum Deck“ (kept for old trash entries)
+            "games.json": paths.inside(DECKS_DIR, ".games", f"{s}.json"),  # games.GAMES_DIRNAME
             "versions": _versions_dir(s)}  # fmt: skip
 
 
@@ -245,7 +246,7 @@ def delete(deck_slug: str) -> str:
     with locked(_path(s)):
         deck = load(s)
         trash_id = f"{time.strftime('%Y%m%d-%H%M%S')}-{s}"
-        target = DECKS_DIR / TRASH_DIRNAME / trash_id
+        target = paths.inside(DECKS_DIR, TRASH_DIRNAME, trash_id)
         target.mkdir(parents=True, exist_ok=True)
         write_json(target / "info.json", {"slug": s, "name": deck.get("name") or s, "commanders": deck.get("commanders", []),
                                           "deleted": _now(), "version": deck.get("version")})  # fmt: skip
@@ -272,7 +273,7 @@ def trash() -> list[dict[str, Any]]:
 def _trash_dir(trash_id: str) -> Path:
     if not re.fullmatch(r"\d{8}-\d{6}-[a-z0-9-]+", trash_id):
         raise FileNotFoundError(f"Nicht im Papierkorb: {trash_id}")
-    d = DECKS_DIR / TRASH_DIRNAME / trash_id
+    d = paths.inside(DECKS_DIR, TRASH_DIRNAME, trash_id)
     if not (d / "info.json").exists():
         raise FileNotFoundError(f"Nicht im Papierkorb: {trash_id}")
     return d
@@ -282,7 +283,8 @@ def restore_deleted(trash_id: str) -> dict[str, Any]:
     """Bring a deleted deck back (under a new slug if the old one is taken again)."""
     d = _trash_dir(trash_id)
     info = read_json(d / "info.json")
-    s = unique_slug(info["slug"]) if _path(info["slug"]).exists() else info["slug"]
+    s = slug(info["slug"])  # info.json is a file on disk: never trust its slug for paths
+    s = unique_slug(s) if _path(s).exists() else s
     with locked(_path(s)):
         deck = read_json(d / "deck.json")
         deck["slug"] = s
