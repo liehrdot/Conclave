@@ -6,6 +6,7 @@ import pytest
 from conftest import deck_lines, save_deck
 from fastapi.testclient import TestClient
 
+from mtgdeck.gui import jobs
 from mtgdeck import collection, printorders, proxy
 from mtgdeck.gui import app as app_mod
 from mtgdeck.gui.app import app
@@ -86,10 +87,10 @@ def _routes(client):
     assert plan["quantity"] == 53 and {c["name"] for c in plan["cards"]} == {"Sol Ring", "Cultivate", "Treasure"}
     job = client.post(f"/api/decks/{slug}/print/prepare", json={"source": "scryfall"}).json()["job"]
     for _ in range(300):
-        if any(e["type"] == "done" for e in app_mod.JOBS[job].events):
+        if any(e["type"] == "done" for e in jobs.JOBS[job].events):
             break
         time.sleep(0.02)
-    assert any(e["type"] == "print" for e in app_mod.JOBS[job].events), app_mod.JOBS[job].events
+    assert any(e["type"] == "print" for e in jobs.JOBS[job].events), jobs.JOBS[job].events
     pdf = client.post(f"/api/decks/{slug}/print/pdf", json={"paper": "A4"})
     assert pdf.status_code == 200 and pdf.json()["pages"] >= 6
     added = client.post(f"/api/decks/{slug}/collection/add-printed", json={"source": "scryfall"}).json()

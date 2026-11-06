@@ -10,6 +10,7 @@ from conftest import MPC_SERVER
 from fastapi.testclient import TestClient
 from PIL import Image
 
+from mtgdeck.gui import jobs
 from mtgdeck import imaging, proxy, settings
 from mtgdeck.gui import app as gui
 
@@ -167,11 +168,11 @@ def _screen(job):
 def _wait(job_id, cond, timeout=15):
     end = time.time() + timeout
     while time.time() < end:
-        job = gui.JOBS[job_id]
+        job = jobs.JOBS[job_id]
         if cond(job):
             return job
         time.sleep(0.05)
-    raise AssertionError([e for e in gui.JOBS[job_id].events])
+    raise AssertionError([e for e in jobs.JOBS[job_id].events])
 
 
 def test_gui_print_studio_flow(tmp_path):
@@ -206,12 +207,12 @@ def test_gui_print_studio_flow(tmp_path):
 
         job = client.post("/api/decks/meren-print/print/autofill", json={"mode": "mpc"}).json()["job"]
         _wait(job, lambda j: "How would you like to upload this order?" in _screen(j))
-        assert "--directory" in _screen(gui.JOBS[job]) and "--no-image-post-processing" in _screen(gui.JOBS[job])
+        assert "--directory" in _screen(jobs.JOBS[job]) and "--no-image-post-processing" in _screen(jobs.JOBS[job])
         # arrow down + Enter in the menu, exactly what xterm.js sends from the browser
         assert client.post(f"/api/jobs/{job}/input", json={"text": "\x1b[B", "raw": True}).json() == {"ok": True}
         client.post(f"/api/jobs/{job}/input", json={"text": "\r", "raw": True})
         _wait(job, lambda j: "Press Enter to close" in _screen(j))
-        assert "CHOICE: Add more cards to an existing project" in _screen(gui.JOBS[job])
+        assert "CHOICE: Add more cards to an existing project" in _screen(jobs.JOBS[job])
         client.post(f"/api/jobs/{job}/resize", json={"rows": 40, "cols": 120})
         client.post(f"/api/jobs/{job}/input", json={"text": "ok"})  # line mode: text + Enter
         j = _wait(job, lambda j: j.done)

@@ -195,6 +195,7 @@ def test_connect_explains_missing_and_wrong_input(net):
 
 def test_gui_routes_connect_sync_pair_and_check_merged_decks(net, monkeypatch):
     from mtgdeck.gui import app as gui
+    from mtgdeck.gui import sync as gui_sync
 
     app, client, a, b, use, pair, code = net
     monkeypatch.setenv("MTG_SYNC_AUTO", "0")
@@ -224,9 +225,9 @@ def test_gui_routes_connect_sync_pair_and_check_merged_decks(net, monkeypatch):
         pairing = g.post("/api/sync/pair").json()
         assert pairing["qr"].startswith("<svg") and "#" in pairing["link"]
 
-        before = gui._sync_state["dirty"]
+        before = gui_sync.state["dirty"]
         g.post("/api/settings", json={"sync_interval": 15})
-        assert gui._sync_state["dirty"] > before and g.get("/api/sync").json()["interval"] == 15
+        assert gui_sync.state["dirty"] > before and g.get("/api/sync").json()["interval"] == 15
         assert g.post("/api/settings", json={"sync_interval": -1}).status_code == 422
 
         assert g.get("/api/sync/conflicts").json() == []

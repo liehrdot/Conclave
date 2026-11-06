@@ -4,6 +4,8 @@ import time
 
 from fastapi.testclient import TestClient
 
+from mtgdeck.gui import jobs
+from mtgdeck.gui import sync as gui_sync
 from mtgdeck import settings
 from mtgdeck.gui import app as gui
 from mtgdeck.gui import desktop, releases
@@ -49,13 +51,13 @@ def test_notices_follow_the_setting_and_the_tooltip_shows_the_state(monkeypatch)
     assert desktop.notify("x") is None
     settings.update({"desktop_notify": True})
     assert desktop.notify("x")["title"] == "x"
-    monkeypatch.setattr(gui, "_sync_view", lambda: {"connected": True, "last_ok": time.time() - 150, "running": False,
+    monkeypatch.setattr(gui_sync, "view", lambda: {"connected": True, "last_ok": time.time() - 150, "running": False,
                                                     "online": True})  # fmt: skip
-    gui.JOBS["t1"] = gui.Job(id="t1")
+    jobs.JOBS["t1"] = jobs.Job(id="t1")
     try:
         tip = client.post("/api/desktop/poll", json={}).json()["tooltip"].split("\n")
     finally:
-        gui.JOBS.pop("t1", None)
+        jobs.JOBS.pop("t1", None)
     assert tip == ["Conclave", "Ein Auftrag läuft", "Sync: vor 2 Min."]
 
 

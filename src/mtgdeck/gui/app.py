@@ -14,10 +14,7 @@ import re
 import secrets
 import subprocess
 import sys
-import time
 import uuid
-from dataclasses import dataclass, field
-from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Literal
@@ -30,16 +27,17 @@ from pydantic import BaseModel, Field
 
 from .. import opponents as opponents_mod
 from ..jsonstore import ConflictError, StoreError
-from .. import backup, blacklist, brackets, buylist, carddb, collection, deckedit, deckimport, dropcards, importers, games, glossary, health, openinghand, precons, printorders, proxy, rule0, scryfall, selling, speed, storage, tablerules
+from .. import backup, blacklist, brackets, buylist, carddb, collection, deckedit, deckimport, dropcards, importers, games, glossary, health, openinghand, precons, printorders, proxy, rule0, scryfall, speed, storage, tablerules
 from .. import paths
 from .. import settings as settings_mod
 from ..cards import card_text, deck_tokens, name_choices, resolve
 from ..deck import DeckEntry, to_text
 from ..http import HttpError
 from ..power import TIER_LABELS, PowerProfile
-from ..sync import service as sync_service
 from ..sync.remote import RemoteError
-from . import desktop, releases, terminal
+from . import jobs, terminal
+from . import sync as gui_sync
+from .routes import backups as backup_routes, collection as collection_routes, describe as describe_routes, desktop as desktop_routes, selling as selling_routes
 
 log = logging.getLogger(__name__)
 
@@ -52,7 +50,7 @@ VERSION = "0.3.0"
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     auto = os.environ.get("MTG_SYNC_AUTO", "1") != "0"
-    tasks = [asyncio.create_task(_sync_loop())] if auto else []
+    tasks = [asyncio.create_task(gui_sync.loop())] if auto else []
     try:
         yield
     finally:
@@ -111,7 +109,7 @@ async def _guard(request: Request, call_next: Any) -> Any:
     response = await call_next(request)
     path = request.url.path
     if request.method not in _SAFE_METHODS and path.startswith("/api/") and not path.startswith("/api/sync") and response.status_code < 400:
-        _mark_dirty()
+        gui_sync.mark_dirty()
     return response
 
 
@@ -143,82 +141,6 @@ async def _bad_request(_request: Request, exc: ValueError) -> JSONResponse:
 async def _http_error(_request: Request, exc: HttpError) -> JSONResponse:
     """Scryfall, EDHREC … unreachable or failing: say which service and what to do, not a bare 500."""
     return JSONResponse({"detail": exc.friendly}, status_code=502)
-
-
-def _error_text(exc: BaseException) -> str:
-    """A message for the user: friendly for known failures, the exception type for real bugs."""
-    if isinstance(exc, HttpError):
-        return exc.friendly
-    if isinstance(exc, (StoreError, LookupError, ValueError)) and not isinstance(exc, (KeyError, IndexError)):
-        return str(exc)
-    return f"{type(exc).__name__}: {exc}"
-
-
-# --- jobs: long tasks (printing, MPC Autofill, card database) with events for the browser -------------------------------------------------------------
-
-
-@dataclass
-class Job:
-    id: str
-    started: float = field(default_factory=time.time)
-    events: list[dict[str, Any]] = field(default_factory=list)
-    done: bool = False
-    task: asyncio.Task | None = None
-    changed: asyncio.Event = field(default_factory=asyncio.Event)
-    proc: Any = None  # terminal.Terminal of the MPC Autofill job
-    loop: asyncio.AbstractEventLoop | None = None
-    ended: float | None = None
-
-    def emit(self, **event: Any) -> None:
-        self.events.append(event)
-        self.changed.set()
-
-    def emit_threadsafe(self, **event: Any) -> None:
-        assert self.loop is not None
-        self.loop.call_soon_threadsafe(lambda: self.emit(**event))
-
-    def close(self) -> None:
-        """End the job. One that never said ``done`` (e.g. a crash in its last step) says it now, so the browser
-        never waits forever."""
-        if not any(e.get("type") == "done" for e in self.events):
-            self.emit(type="done", ok=False)
-        self.done = True
-        self.ended = time.time()
-        self.changed.set()
-        _mark_dirty()  # a job may have saved something: sync soon
-
-
-JOBS: dict[str, Job] = {}
-JOB_KEEP_SECONDS = 3600  # finished jobs stay replayable this long (page reload, reconnect)
-
-
-def _register(job: Job, work: Awaitable[None]) -> dict[str, str]:
-    """Run ``work`` for ``job`` in the background; whatever happens, the job ends with a ``done`` event."""
-    now = time.time()
-    for old in [j for j in JOBS.values() if j.done and now - (j.ended or now) > JOB_KEEP_SECONDS]:
-        JOBS.pop(old.id, None)
-    JOBS[job.id] = job
-
-    async def supervised() -> None:
-        try:
-            await work
-        except asyncio.CancelledError:
-            job.emit(type="error", text="Abgebrochen.")
-            raise
-        except Exception as exc:
-            log.exception("Job %s failed", job.id)
-            job.emit(type="error", text=_error_text(exc))
-        finally:
-            job.close()
-
-    job.task = asyncio.create_task(supervised())
-    return {"job": job.id}
-
-
-def _start_runner(runner: Any) -> dict[str, str]:
-    """Run ``runner(job)`` as a background job whose events stream to the browser."""
-    job = Job(id=uuid.uuid4().hex[:12], loop=asyncio.get_running_loop())
-    return _register(job, runner(job))
 
 
 async def _set_table_rule(slug: str, rule_id: str | None, note: str = "") -> dict[str, Any]:
@@ -260,112 +182,8 @@ async def api_health() -> dict[str, Any]:
     return {"ok": True, "service": "mtgdeck-gui", "version": VERSION, "home": str(paths.home()), "frozen": paths.frozen()}
 
 
-# --- desktop shell (Tauri): tray tooltip, notifications while hidden, commands from the settings page ---------
+app.include_router(desktop_routes.router)
 
-
-class DesktopPoll(BaseModel):
-    since: int = Field(0, ge=0)
-    visible: bool = True
-    autostart: bool | None = None
-    version: str | None = None
-    update: dict[str, Any] | None = None  # the shell's update state: state, rev, current, version, notes, progress, downloaded, total, speed, error, failed_step
-    features: list[str] | None = None  # what this shell can do, e.g. "moxfield" (opens moxfield.com links in its own window)
-    wait: float = Field(0, ge=0, le=60)  # long poll: hold the answer up to this many seconds until a notice or command comes up
-
-
-class DesktopCommand(BaseModel):
-    type: Literal["autostart", "open_data", "open_log", "check_update", "install_update", "install_version"]
-    value: bool | str | None = None  # install_version: the version to go to (also an older one)
-
-
-def _ago(ts: Any) -> str:
-    from datetime import datetime
-
-    try:
-        t = float(ts) if isinstance(ts, (int, float)) else datetime.fromisoformat(str(ts)).timestamp()
-    except (TypeError, ValueError):
-        return "zuletzt unbekannt"
-    s = max(0, int(time.time() - t))
-    if s < 90:
-        return "gerade eben"
-    if s < 3600:
-        return f"vor {s // 60} Min."
-    if s < 86400:
-        return f"vor {s // 3600} Std."
-    return f"vor {s // 86400} Tagen"
-
-
-def _desktop_tooltip() -> str:
-    """What the tray icon shows on hover: the app's name and the state that matters."""
-    lines = [paths.APP_NAME]
-    running = sum(1 for j in JOBS.values() if not j.done)
-    if running:
-        lines.append("Ein Auftrag läuft" if running == 1 else f"{running} Aufträge laufen")
-    sv = _sync_view()
-    if sv.get("connected"):
-        if sv.get("revoked"):
-            lines.append("Sync: Gerät am Server abgemeldet")
-        elif sv.get("running"):
-            lines.append("Sync: läuft …")
-        elif sv.get("online") is False:
-            lines.append("Sync: Server nicht erreichbar")
-        elif sv.get("last_ok"):
-            lines.append(f"Sync: {_ago(sv['last_ok'])}")
-        else:
-            lines.append("Sync: noch kein Abgleich")
-    return "\n".join(lines)
-
-
-@app.get("/api/desktop")
-async def api_desktop() -> dict[str, Any]:
-    cfg = settings_mod.load()
-    return {"shell": desktop.shell(), "notify": bool(cfg.get("desktop_notify", True)), "preview": bool(cfg.get("desktop_preview", False))}
-
-
-@app.post("/api/desktop/poll")
-async def api_desktop_poll(req: DesktopPoll) -> dict[str, Any]:
-    info = req.model_dump(exclude_none=True)
-    if req.wait > 0:
-        answer = await asyncio.to_thread(desktop.poll, info, req.since, req.wait)
-    else:
-        answer = desktop.poll(info, req.since)
-    return {**answer, "tooltip": _desktop_tooltip()}
-
-
-@app.post("/api/desktop/update")
-async def api_desktop_update(update: dict[str, Any]) -> dict[str, Any]:
-    """The shell's update state while it downloads and installs (pushed a few times a second)."""
-    desktop.report_update(update)
-    return {"ok": True}
-
-
-@app.post("/api/desktop/command")
-async def api_desktop_command(req: DesktopCommand) -> dict[str, Any]:
-    if not desktop.present():
-        raise HTTPException(409, "Die Desktop-App läuft gerade nicht – diese Einstellung gibt es nur dort.")
-    if req.type == "install_version" and not isinstance(req.value, str):
-        raise HTTPException(422, "Welche Version? Sie fehlt.")
-    return desktop.command(req.type, req.value)
-
-
-@app.get("/api/desktop/releases")
-async def api_desktop_releases() -> dict[str, Any]:
-    """The versions the settings page offers to install (also older ones); previews only with the setting on."""
-    preview = bool(settings_mod.load().get("desktop_preview", False))
-    return {"preview": preview, "releases": await releases.available(preview)}
-
-
-@app.get("/api/desktop/feed")
-async def api_desktop_feed(version: str | None = None) -> dict[str, Any]:
-    """For the shell: which latest.json to check (stable, the newest preview, or one picked version)."""
-    try:
-        return await asyncio.wait_for(releases.feed(version), 4)  # the shell waits 5 s for an answer
-    except LookupError as e:
-        raise HTTPException(404, str(e)) from e
-    except (HttpError, asyncio.TimeoutError) as e:
-        if version:
-            raise HTTPException(502, getattr(e, "friendly", "GitHub antwortet gerade nicht.")) from e
-        return {"feed": releases.STABLE_FEED, "preview": False}  # offline: the stable check fails on its own
 
 
 class NewDeckRequest(BaseModel):
@@ -409,7 +227,7 @@ async def api_card(name: str, choices: bool = False) -> dict[str, Any]:
     try:
         cards, _, missing = await resolve([name])
     except Exception as exc:
-        raise HTTPException(502, f"Kartendaten nicht erreichbar: {_error_text(exc)}") from exc
+        raise HTTPException(502, f"Kartendaten nicht erreichbar: {jobs.error_text(exc)}") from exc
     if missing or not cards:
         raise HTTPException(404, f"Karte nicht gefunden: {name}")
     card = next(iter(cards.values()))
@@ -431,73 +249,8 @@ async def api_cards_drop(req: DropRequest) -> dict[str, Any]:
     return await dropcards.resolve(found)
 
 
-# --- card search by description: the sync server asks Claude (sync/cardsearch.py), Scryfall answers here ---
-class DescribeIn(BaseModel):
-    text: str = Field(min_length=1, max_length=1000)
-    colors: list[str] = Field(default_factory=list, max_length=6)
-    types: list[str] = Field(default_factory=list, max_length=8)
+app.include_router(describe_routes.router)
 
-
-class AiSetupIn(BaseModel):
-    key: str | None = Field(default=None, max_length=400)
-    model: str | None = Field(default=None, max_length=100)
-
-
-_NOT_PAIRED = "Die Suche mit KI läuft über deinen Sync-Server – verbinde ihn zuerst unter Einstellungen → Sync."
-
-
-async def _ai_call(fn: Callable[..., Any], *args: Any) -> Any:
-    try:
-        return await asyncio.to_thread(fn, *args)
-    except ValueError:
-        raise HTTPException(409, _NOT_PAIRED) from None
-    except RemoteError as exc:
-        if exc.status == 404:
-            raise HTTPException(502, "Dein Sync-Server kennt die Suche mit KI noch nicht – er holt sich das Update von selbst.") from None
-        raise HTTPException(exc.status if exc.status in (400, 402, 409, 429, 503, 504) else 502, str(exc)) from None
-
-
-async def _query_page(q: str, page: int) -> dict[str, Any]:
-    try:
-        got = await scryfall.search_page(q, page=page, order="edhrec", unique="cards")
-    except HttpError as exc:
-        if exc.status == 400:
-            raise HTTPException(400, "Scryfall versteht diese Suche nicht – Suche anpassen oder anders beschreiben.") from None
-        raise
-    cards = [{k: c.get(k) for k in ("name", "type_line", "mana_cost", "image", "price_eur", "price_usd")}
-             for c in (scryfall.compact(raw, with_text=False) for raw in got["cards"])]  # fmt: skip
-    return {"total": got["total"], "cards": cards, "has_more": got["has_more"]}
-
-
-@app.post("/api/cards/describe")
-async def api_cards_describe(req: DescribeIn) -> dict[str, Any]:
-    """A description → Scryfall query (via the sync server) → the first result page; the broader query if none."""
-    found = await _ai_call(sync_service.describe_cards, req.text, req.colors, req.types)
-    used = found.get("query") or ""
-    result = await _query_page(used, 1) if used else {"total": 0, "cards": [], "has_more": False}
-    if not result["cards"] and found.get("broader"):
-        used = found["broader"]
-        result = await _query_page(used, 1)
-    return {**found, "used": used, **result}
-
-
-@app.get("/api/cards/query")
-async def api_cards_query(q: str, page: int = 1) -> dict[str, Any]:
-    """One page of a Scryfall query (an edited query, or "more")."""
-    q = " ".join(q.split())[:500]
-    if not q:
-        raise HTTPException(400, "Die Suche ist leer.")
-    return await _query_page(q, max(1, page))
-
-
-@app.get("/api/cards/describe/setup")
-async def api_ai_setup_get() -> dict[str, Any]:
-    return await _ai_call(sync_service.ai)
-
-
-@app.put("/api/cards/describe/setup")
-async def api_ai_setup_put(req: AiSetupIn) -> dict[str, Any]:
-    return await _ai_call(sync_service.ai, req.model_dump(exclude_none=True))
 
 
 @app.get("/api/cards/text")
@@ -505,7 +258,7 @@ async def api_card_text(name: str, lang: str = "de") -> dict[str, Any]:
     try:
         data = await card_text(name, lang)
     except Exception as exc:
-        raise HTTPException(502, f"Kartendaten nicht erreichbar: {_error_text(exc)}") from exc
+        raise HTTPException(502, f"Kartendaten nicht erreichbar: {jobs.error_text(exc)}") from exc
     if not data:
         raise HTTPException(404, f"Karte nicht gefunden: {name}")
     return data
@@ -593,7 +346,7 @@ async def _import_url(url: str) -> dict[str, Any]:
     except (ValueError, RuntimeError) as exc:
         raise HTTPException(400, str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(502, f"Seite nicht erreichbar: {_error_text(exc)}") from exc
+        raise HTTPException(502, f"Seite nicht erreichbar: {jobs.error_text(exc)}") from exc
 
 
 @app.post("/api/import/preview")
@@ -791,7 +544,7 @@ async def api_precons(q: str = "", limit: int = 60) -> list[dict[str, Any]]:
     try:
         return await precons.search(q, limit=min(limit, 200))
     except Exception as exc:  # offline or MTGJSON down
-        raise HTTPException(502, f"MTGJSON nicht erreichbar: {_error_text(exc)}") from exc
+        raise HTTPException(502, f"MTGJSON nicht erreichbar: {jobs.error_text(exc)}") from exc
 
 
 @app.get("/api/precons/{file_name}")
@@ -803,7 +556,7 @@ async def api_precon(file_name: str) -> dict[str, Any]:
     except HttpError as exc:
         raise HTTPException(404 if exc.status == 404 else 502, exc.friendly) from exc
     except Exception as exc:
-        raise HTTPException(502, f"MTGJSON nicht erreichbar: {_error_text(exc)}") from exc
+        raise HTTPException(502, f"MTGJSON nicht erreichbar: {jobs.error_text(exc)}") from exc
     try:  # commander images for the preview
         data, _, _ = await resolve(p["commanders"])
         p["commander_images"] = {n: c.get("image") for n, c in data.items()}
@@ -825,7 +578,7 @@ async def api_precon_import(req: PreconImport) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(502, f"MTGJSON nicht erreichbar: {_error_text(exc)}") from exc
+        raise HTTPException(502, f"MTGJSON nicht erreichbar: {jobs.error_text(exc)}") from exc
 
 
 class BlacklistUpdate(BaseModel):
@@ -1012,7 +765,7 @@ async def api_blacklist_update(req: BlacklistUpdate) -> dict[str, Any]:
 
 @app.get("/api/jobs/{job_id}/events")
 async def api_job_events(job_id: str, request: Request) -> StreamingResponse:
-    job = JOBS.get(job_id)
+    job = jobs.JOBS.get(job_id)
     if not job:
         raise HTTPException(404, "Unbekannter Job")
     start = int(request.headers.get("last-event-id", -1)) + 1
@@ -1036,7 +789,7 @@ async def api_job_events(job_id: str, request: Request) -> StreamingResponse:
 
 @app.post("/api/jobs/{job_id}/cancel")
 async def api_job_cancel(job_id: str) -> dict[str, bool]:
-    job = JOBS.get(job_id)
+    job = jobs.JOBS.get(job_id)
     if job and isinstance(job.proc, terminal.Terminal):
         job.proc.terminate()
     if job and job.task and not job.done:
@@ -1226,184 +979,12 @@ async def api_buylist(slug: str, owned: bool = True, proxies: bool = True) -> di
     return await buylist.build(deck, use_collection=owned, replace_proxies=proxies)
 
 
-# --- my collection -------------------------------------------------------------------------------
+app.include_router(collection_routes.router)
 
 
-class CollectionItem(BaseModel):
-    name: str | None = None
-    qty: int = Field(default=1, ge=1, le=9999)
-    proxy: bool = False
-    foil: bool = False
-    lang: str | None = None
-    set: str | None = None
-    collector_number: str | None = None
-    scryfall_id: str | None = None
-    printing: dict[str, Any] | None = None  # a printing from /api/cards/prints (artwork picker)
 
+app.include_router(selling_routes.router)
 
-class CollectionAdd(BaseModel):
-    items: list[CollectionItem]
-    place: str = Field(default="", max_length=200)  # where the cards are: free text or a deck's name
-    place_deck: str = Field(default="", max_length=100)  # that deck's slug
-
-
-class CollectionImport(BaseModel):
-    text: str = Field(max_length=5_000_000)
-    proxy: bool = False
-    replace: bool = False
-
-
-class EntryUpdate(BaseModel):
-    qty: int | None = None
-    proxy: bool | None = None
-    foil: bool | None = None
-    lang: str | None = None
-    note: str | None = None
-    printing: dict[str, Any] | None = None
-    place: str | None = Field(default=None, max_length=200)
-    place_deck: str | None = Field(default=None, max_length=100)
-
-
-class CollectionBulk(BaseModel):
-    ids: list[str] = Field(min_length=1, max_length=50000)
-    place: str | None = Field(default=None, max_length=200)
-    place_deck: str | None = Field(default=None, max_length=100)
-    proxy: bool | None = None
-    foil: bool | None = None
-    lang: str | None = Field(default=None, pattern=r"^[a-z]{2,3}$")
-    delete: bool = False
-    qty: int | None = Field(default=None, ge=1, le=100000)  # only that many copies of each entry
-
-
-@app.get("/api/collection")
-async def api_collection() -> dict[str, Any]:
-    entries = collection.load()
-    usage = collection.decks_by_card() if entries else {}
-    return {"entries": entries, "summary": collection.summary(entries), "places": collection.places(entries),
-            "decks": {name: [d["name"] for d in decks] for name, decks in usage.items()},
-            "deck_slugs": {name: [d["slug"] for d in decks] for name, decks in usage.items()}, "sales": selling.tags(entries)}  # fmt: skip
-
-
-@app.get("/api/collection/cards")
-async def api_collection_cards() -> dict[str, Any]:
-    """Card facts for the collection's filters (colours, types, commander, mana value, roles, text)."""
-    return await collection.card_facts()
-
-
-@app.post("/api/collection/bulk")
-async def api_collection_bulk(req: CollectionBulk) -> dict[str, int]:
-    """Change or delete several marked entries at once (Ort, Proxy/Original, Foil, Sprache, Löschen)."""
-    return {"changed": collection.bulk_update(req.ids, **req.model_dump(exclude={"ids"}))}
-
-
-@app.post("/api/collection")
-async def api_collection_add(req: CollectionAdd) -> dict[str, Any]:
-    return await collection.add([i.model_dump() for i in req.items], place=req.place, place_deck=req.place_deck)
-
-
-@app.post("/api/collection/import")
-async def api_collection_import(req: CollectionImport) -> dict[str, Any]:
-    return await collection.import_text(req.text, proxy=req.proxy, replace=req.replace)
-
-
-@app.patch("/api/collection/{entry_id}")
-async def api_collection_update(entry_id: str, req: EntryUpdate) -> dict[str, Any]:
-    try:
-        entry = collection.update(entry_id, **req.model_dump(exclude_unset=True))
-    except KeyError as exc:
-        raise HTTPException(404, "Eintrag nicht gefunden") from exc
-    return {"entry": entry}
-
-
-@app.delete("/api/collection/{entry_id}")
-async def api_collection_delete(entry_id: str) -> dict[str, int]:
-    return {"deleted": collection.delete(entry_id)}
-
-
-@app.delete("/api/collection")
-async def api_collection_clear(confirm: bool = False) -> dict[str, int]:
-    if not confirm:
-        raise HTTPException(400, "Zum Leeren der ganzen Sammlung confirm=true mitschicken.")
-    return {"deleted": collection.delete()}
-
-
-@app.get("/api/collection/export")
-async def api_collection_export() -> Response:
-    return Response(collection.to_csv(), media_type="text/csv; charset=utf-8",
-                    headers={"Content-Disposition": 'attachment; filename="sammlung.csv"'})  # fmt: skip
-
-
-# --- Verkaufsliste (selling on Cardmarket) ---------------------------------------------------------
-
-
-class SaleAdd(BaseModel):
-    ids: list[str] = Field(min_length=1, max_length=5000)  # collection entry ids
-    qty: int | None = Field(default=None, ge=1, le=100000)  # only that many copies (one entry)
-    condition: str = Field(default="NM", pattern=r"^(MT|NM|EX|GD|LP|PL|PO)$")
-
-
-class SaleUpdate(BaseModel):
-    qty: int | None = Field(default=None, ge=1, le=100000)
-    condition: str | None = Field(default=None, pattern=r"^(MT|NM|EX|GD|LP|PL|PO)$")
-    price: float | None = Field(default=None, ge=0.02, le=1_000_000)  # sent as null: back to the price rule
-    comment: str | None = Field(default=None, max_length=selling.COMMENT_MAX)
-    status: str | None = Field(default=None, pattern=r"^(open|listed)$")
-
-
-class SaleRule(BaseModel):
-    rule: str = Field(pattern=r"^(trend|trend95|trend90|low)$")
-
-
-@app.get("/api/sales")
-async def api_sales() -> dict[str, Any]:
-    return await selling.view()
-
-
-@app.post("/api/sales")
-async def api_sales_add(req: SaleAdd) -> dict[str, Any]:
-    """Put marked collection entries on the Verkaufsliste (prices from Cardmarket's price guide)."""
-    return await selling.add(req.ids, qty=req.qty, condition=req.condition)
-
-
-@app.put("/api/sales/rule")
-async def api_sales_rule(req: SaleRule) -> dict[str, Any]:
-    selling.set_rule(req.rule)
-    return await selling.view()
-
-
-@app.delete("/api/sales/sold")
-async def api_sales_clear_sold() -> dict[str, int]:
-    return {"deleted": selling.clear_sold()}
-
-
-@app.patch("/api/sales/{item_id}")
-async def api_sales_update(item_id: str, req: SaleUpdate) -> dict[str, Any]:
-    try:
-        return {"item": selling.update(item_id, **req.model_dump(exclude_unset=True))}
-    except KeyError as exc:
-        raise HTTPException(404, "Karte nicht auf der Verkaufsliste") from exc
-
-
-@app.delete("/api/sales/{item_id}")
-async def api_sales_remove(item_id: str) -> dict[str, int]:
-    return {"deleted": selling.remove(item_id)}
-
-
-@app.post("/api/sales/{item_id}/sold")
-async def api_sales_sold(item_id: str) -> dict[str, Any]:
-    """„Verkauft“: the copies leave the collection."""
-    try:
-        return selling.sold(item_id)
-    except KeyError as exc:
-        raise HTTPException(404, "Karte nicht auf der Verkaufsliste") from exc
-
-
-@app.post("/api/sales/{item_id}/unsold")
-async def api_sales_unsold(item_id: str) -> dict[str, Any]:
-    try:
-        return {"item": selling.unsold(item_id)}
-    except KeyError as exc:
-        raise HTTPException(404, "Karte nicht auf der Verkaufsliste") from exc
 
 
 @app.get("/api/cards/prints")
@@ -1417,60 +998,8 @@ async def api_delete(slug: str) -> dict[str, Any]:
     return {"ok": True, "trash_id": storage.delete(slug)}
 
 
-# --- backups ------------------------------------------------------------------------------------
+app.include_router(backup_routes.router)
 
-
-@app.get("/api/backups")
-async def api_backups() -> dict[str, Any]:
-    return {"backups": backup.backups(), "dir": str(backup.BACKUP_DIR), "keep_auto": backup.KEEP_AUTO}
-
-
-@app.post("/api/backups")
-async def api_backup_create() -> dict[str, Any]:
-    return backup.create("manuell")
-
-
-@app.get("/api/backups/{name}")
-async def api_backup_download(name: str) -> FileResponse:
-    path = backup.path_of(name)
-    return FileResponse(path, media_type="application/zip", filename=f"mtgdeck-{name}")
-
-
-@app.post("/api/backups/upload")
-async def api_backup_upload(request: Request) -> dict[str, Any]:
-    data = await request.body()
-    if len(data) > 2_000_000_000:
-        raise HTTPException(413, "Datei zu groß")
-    return backup.upload(data)
-
-
-@app.post("/api/backups/{name}/restore")
-async def api_backup_restore(name: str) -> dict[str, Any]:
-    if any(not j.done for j in JOBS.values()):
-        raise HTTPException(409, "Es läuft gerade ein Auftrag – warte, bis er fertig ist, und stell dann wieder her.")
-    if _sync_state["running"]:
-        raise HTTPException(409, "Gerade läuft der Abgleich mit dem Sync-Server – bitte gleich noch einmal versuchen.")
-    return backup.restore(name)
-
-
-@app.get("/api/trash")
-async def api_trash() -> list[dict[str, Any]]:
-    return storage.trash()
-
-
-@app.post("/api/trash/{trash_id}/restore")
-async def api_trash_restore(trash_id: str) -> dict[str, Any]:
-    return storage.restore_deleted(trash_id)
-
-
-@app.delete("/api/trash/{trash_id}")
-async def api_trash_purge(trash_id: str) -> dict[str, int]:
-    return {"deleted": storage.purge_deleted(trash_id)}
-
-
-@app.delete("/api/trash")
-async def api_trash_purge_all() -> dict[str, int]:
-    return {"deleted": storage.purge_deleted()}
 
 
 @app.get("/api/decks/{slug}/versions")
@@ -1647,7 +1176,7 @@ async def api_print_token_qty(slug: str, req: TokenQtyRequest) -> dict[str, int]
 async def api_print_prepare(slug: str, req: PrintRequest) -> dict[str, str]:
     deck = _print_deck(slug, req.version)
 
-    async def runner(job: Job) -> None:
+    async def runner(job: jobs.Job) -> None:
         job.emit(type="status", text="Plane Bilder …")
 
         def progress(done: int, total: int, name: str) -> None:
@@ -1674,7 +1203,7 @@ async def api_print_prepare(slug: str, req: PrintRequest) -> dict[str, str]:
         job.emit(type="print", result=result)
         job.emit(type="done", ok=not result["missing"])
 
-    return _start_runner(runner)
+    return jobs.start_runner(runner)
 
 
 @app.get("/api/decks/{slug}/print/files")
@@ -1777,7 +1306,7 @@ async def api_print_autofill(slug: str, req: AutofillRequest) -> dict[str, Any]:
     except (FileNotFoundError, RuntimeError) as exc:
         raise HTTPException(400, str(exc)) from exc
 
-    async def runner(job: Job) -> None:
+    async def runner(job: jobs.Job) -> None:
         job.emit(type="status", text="Starte MPC Autofill … Bedienung direkt im Terminal unten (Pfeiltasten + Enter).")
         term = terminal.Terminal(cmd, cwd=str(folder), rows=req.rows, cols=req.cols)
         job.proc = term
@@ -1793,7 +1322,7 @@ async def api_print_autofill(slug: str, req: AutofillRequest) -> dict[str, Any]:
         job.emit(type="result", text=f"MPC Autofill beendet (Code {code}).")
         job.emit(type="done", ok=code == 0)
 
-    return {**_start_runner(runner), "window": False}
+    return {**jobs.start_runner(runner), "window": False}
 
 
 class InputRequest(BaseModel):
@@ -1803,7 +1332,7 @@ class InputRequest(BaseModel):
 
 @app.post("/api/jobs/{job_id}/input")
 async def api_job_input(job_id: str, req: InputRequest) -> dict[str, bool]:
-    job = JOBS.get(job_id)
+    job = jobs.JOBS.get(job_id)
     if not job or not isinstance(job.proc, terminal.Terminal) or not job.proc.alive():
         raise HTTPException(409, "Kein laufender Prozess für Eingaben")
     await asyncio.to_thread(job.proc.write, req.text if req.raw else req.text + "\r")
@@ -1817,7 +1346,7 @@ class ResizeRequest(BaseModel):
 
 @app.post("/api/jobs/{job_id}/resize")
 async def api_job_resize(job_id: str, req: ResizeRequest) -> dict[str, bool]:
-    job = JOBS.get(job_id)
+    job = jobs.JOBS.get(job_id)
     if job and isinstance(job.proc, terminal.Terminal) and job.proc.alive():
         job.proc.resize(req.rows, req.cols)
     return {"ok": True}
@@ -1849,148 +1378,8 @@ async def api_carddb_refresh_state() -> dict[str, Any]:
     return {"running": False, "error": str(exc) if exc else None}
 
 
-# --- sync with the own sync server (sync/service.py) --------------------------------------------
+app.include_router(gui_sync.router)
 
-SYNC_TICK = 5  # seconds between two looks at whether a sync is due
-SYNC_DEBOUNCE = 15  # seconds of quiet after a local change before it is synced
-PRESENCE_EVERY = 60  # "this PC is running" for the other devices
-_sync_state: dict[str, Any] = {"dirty": 0.0, "running": False, "last_try": 0.0, "last_presence": 0.0, "online": None}
-_sync_lock: asyncio.Lock | None = None
-
-
-def _mark_dirty() -> None:
-    _sync_state["dirty"] = time.time()
-
-
-def _sync_interval() -> int:
-    try:
-        return max(0, int(settings_mod.load().get("sync_interval") or 0))
-    except (TypeError, ValueError):
-        return 5
-
-
-async def _sync_now(reason: str) -> dict[str, Any]:
-    """One sync at a time (a second caller waits and then syncs again); merged decks are checked afterwards."""
-    global _sync_lock
-    if _sync_lock is None:
-        _sync_lock = asyncio.Lock()
-    async with _sync_lock:
-        _sync_state["running"], _sync_state["last_try"] = True, time.time()
-        try:
-            entry = await asyncio.to_thread(sync_service.run, reason)
-        finally:
-            _sync_state["running"] = False
-    if entry.get("ok"):
-        _sync_state["online"] = True
-        if sync_service.pending_revalidation():
-            entry["revalidated"] = await sync_service.revalidate_pending()
-        if entry.get("incoming"):
-            more = entry.get("incoming_more") or 0
-            desktop.notify("Neu von deinen anderen Geräten", ", ".join(entry["incoming"][:3]) + (f" … und {more} mehr" if more else ""))
-    return entry
-
-
-def _sync_due(now: float) -> str | None:
-    cfg = sync_service.config()
-    minutes = _sync_interval()
-    if not cfg or cfg.get("revoked") or not minutes:
-        return None
-    last = _sync_state["last_try"]
-    if not last:
-        return "start"
-    if _sync_state["dirty"] > last and now - _sync_state["dirty"] >= SYNC_DEBOUNCE:
-        return "änderung"
-    if now - last >= minutes * 60:
-        return "intervall"
-    return None
-
-
-async def _sync_loop() -> None:
-    """Background sync while the app runs: at the start, after local changes (debounced), every few minutes; plus a
-    presence report every minute (the phone shows whether this PC is running)."""
-    while True:
-        await asyncio.sleep(SYNC_TICK)
-        try:
-            now = time.time()
-            reason = _sync_due(now)
-            if reason:
-                await _sync_now(reason)
-            cfg = sync_service.config()
-            if cfg and not cfg.get("revoked") and now - _sync_state["last_presence"] >= PRESENCE_EVERY:
-                _sync_state["last_presence"] = now
-                info = {"app": "pc"}
-                _sync_state["online"] = await asyncio.to_thread(sync_service.presence, info)
-        except asyncio.CancelledError:
-            raise
-        except Exception:  # never let the loop die (a damaged file, a full disk …) – the status shows run errors
-            log.exception("Sync-Schleife")
-
-
-def _sync_view() -> dict[str, Any]:
-    return {**sync_service.status(), "running": _sync_state["running"], "online": _sync_state["online"],
-            "interval": _sync_interval(), "pending_revalidation": sync_service.pending_revalidation()}
-
-
-class SyncConnect(BaseModel):
-    link: str = Field(default="", max_length=500)
-    url: str = Field(default="", max_length=300)
-    code: str = Field(default="", max_length=40)
-    name: str = Field(default="", max_length=60)
-
-
-@app.get("/api/sync")
-async def api_sync() -> dict[str, Any]:
-    return _sync_view()
-
-
-@app.post("/api/sync/connect")
-async def api_sync_connect(req: SyncConnect) -> dict[str, Any]:
-    await asyncio.to_thread(sync_service.connect, req.link, url=req.url, code=req.code, name=req.name)
-    _sync_state["last_presence"] = 0.0
-    run = await _sync_now("verbunden")
-    return {**_sync_view(), "run": run}
-
-
-@app.post("/api/sync/run")
-async def api_sync_run() -> dict[str, Any]:
-    if not sync_service.config():
-        raise HTTPException(400, "Dieses Gerät ist mit keinem Sync-Server verbunden.")
-    run = await _sync_now("knopf")
-    return {**_sync_view(), "run": run}
-
-
-@app.post("/api/sync/disconnect")
-async def api_sync_disconnect() -> dict[str, Any]:
-    await asyncio.to_thread(sync_service.disconnect)
-    _sync_state["online"] = None
-    return _sync_view()
-
-
-@app.get("/api/sync/devices")
-async def api_sync_devices() -> dict[str, Any]:
-    return {"devices": await asyncio.to_thread(sync_service.devices), "now": time.time()}
-
-
-@app.delete("/api/sync/devices/{device_id}")
-async def api_sync_revoke(device_id: str) -> dict[str, Any]:
-    got = await asyncio.to_thread(sync_service.revoke, device_id)
-    return {**got, **_sync_view()}
-
-
-@app.post("/api/sync/pair")
-async def api_sync_pair() -> dict[str, Any]:
-    return await asyncio.to_thread(sync_service.pair_code)
-
-
-@app.get("/api/sync/conflicts")
-async def api_sync_conflicts() -> list[dict[str, Any]]:
-    return sync_service.conflicts()
-
-
-@app.delete("/api/sync/conflicts")
-async def api_sync_conflicts_clear() -> dict[str, bool]:
-    sync_service.clear_conflicts()
-    return {"ok": True}
 
 
 def serve() -> None:
