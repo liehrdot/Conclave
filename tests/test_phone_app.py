@@ -73,6 +73,8 @@ def test_server_serves_the_app_with_a_strict_policy(tmp_path):
 # ---- operations of the phone app (sync/appops.py) ----------------------------------------------
 
 import json
+import os
+import shutil
 import subprocess
 import sys
 
@@ -704,3 +706,10 @@ def test_a_write_guard_sees_what_each_operation_stores(tmp_path):
     sizes = sum(len(d["data"] or b"") for d in app.state.store.live("decks/").values())
     assert sizes <= limit + len(put["data"])  # what is stored stays within the limit
     assert client.put("/api/sync/doc", json={**put, "path": "decks/big2.json"}, headers=auth).status_code == 507
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="needs node")
+def test_phone_apply_matches_the_server_cases():
+    """The phone shows an op at once (apply.js); docs/app-api/ops.json holds what the server makes of it."""
+    run = subprocess.run(["node", os.path.join(os.path.dirname(__file__), "js", "apply_cases.mjs")], capture_output=True, text=True, timeout=60)
+    assert run.returncode == 0, run.stdout + run.stderr
