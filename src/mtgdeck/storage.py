@@ -231,6 +231,19 @@ def copy(deck_slug: str, new_name: str | None = None, version: int | None = None
     return save(new)
 
 
+def rename(deck_slug: str, new_name: str) -> dict[str, Any]:
+    """Change a deck's visible name without changing its stable slug or linked data."""
+    name = new_name.strip()
+    if not name:
+        raise ValueError("Der Deckname darf nicht leer sein.")
+    deck = load(deck_slug)
+    if deck.get("name") == name:
+        return deck
+    deck["name"] = name
+    deck["change_note"] = f"Umbenannt in „{name}“"
+    return save(deck, expect_version=deck.get("version"))
+
+
 def _deck_files(s: str) -> dict[str, Path]:
     """Everything that belongs to a deck, by its name inside a trash entry."""
     s = slug(s)

@@ -2598,6 +2598,20 @@ async function copyAsDeck(version) {
   toast(`„${name}“ angelegt.`);
   go(`#/deck/${enc(r.slug)}`);
 }
+async function renameDeck() {
+  if (!currentDeck) return;
+  const deck = currentDeck;
+  const name = await ask({ title: "Deck umbenennen", value: deck.name, ok: "Speichern" });
+  if (!name || name === deck.name) return;
+  try {
+    await api(`/api/decks/${enc(deck.slug)}/name`, { method: "PUT", body: { name } });
+    currentDeck = null;
+    await refreshDeckList();
+    await route();
+    toast(`Deck heißt jetzt „${name}“.`, "ok");
+  } catch (err) { fail(err); }
+}
+$("#rename-deck-btn").addEventListener("click", () => void renameDeck());
 $("#duplicate-btn").addEventListener("click", () => currentDeck && copyAsDeck(null).catch(fail));
 
 $("#validate-btn").addEventListener("click", async () => {

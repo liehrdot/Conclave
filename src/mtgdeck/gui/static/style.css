@@ -992,7 +992,7 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .terms dd.on, .terms dt.on { color: var(--text); }
 .gl-filter { margin-bottom: var(--space-4); }
 .gl-group { margin-bottom: var(--space-4); }
-.gl-group dd { font-size: var(--fs-base); color: var(--text); margin-bottom: var(--space-3); }
+.gl-group dd { font-size: var(--fs-sm); color: var(--text); opacity: .5; margin-bottom: var(--space-3); }
 .gl-group dt { scroll-margin-top: 80px; }
 .gl-group dt:target, .gl-group dt:target + dd { background: var(--accent-soft); }
 
