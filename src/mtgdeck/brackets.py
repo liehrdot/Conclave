@@ -92,10 +92,6 @@ _MLD_RE = re.compile(
 _EXTRA_TURN_RE = re.compile(r"takes? \w+ extra turns?", re.I)
 
 
-def describe() -> list[dict[str, Any]]:
-    return BRACKETS
-
-
 def evaluate(
     target: int,
     cards: list[dict[str, Any]],

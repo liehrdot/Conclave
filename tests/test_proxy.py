@@ -301,7 +301,7 @@ def test_upscale_models_from_folder(tmp_path):
 
 
 def test_find_upscaler_in_tools(tmp_path, monkeypatch):
-    monkeypatch.setattr(proxy, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(proxy.paths, "REPO_ROOT", tmp_path)
     assert proxy.find_upscaler() is None
     exe = tmp_path / "tools" / "realesrgan-ncnn-vulkan-20220424-windows" / "realesrgan-ncnn-vulkan.exe"
     exe.parent.mkdir(parents=True)

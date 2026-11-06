@@ -83,10 +83,6 @@ def clean_places(place: Any, opponent_places: Any, opponents: int) -> tuple[int 
     return ok(place), theirs if any(v is not None for v in theirs) else None
 
 
-def place_text(place: int) -> str:
-    return f"{place}. Platz"
-
-
 def add(deck_slug: str, *, result: str, opponents: list[str] | None = None, turn: int | None = None,
         issues: list[str] | None = None, mvp: str | None = None, note: str = "", version: int | None = None,
         played: str | None = None, entry_id: str | None = None, opponent_ids: list[str | None] | None = None,

@@ -491,11 +491,3 @@ def game_changers() -> list[str]:
     with closing(_connect()) as conn:
         return [r[0] for r in conn.execute("SELECT name FROM cards WHERE game_changer = 1 ORDER BY name")]
 
-
-def popular_tags(prefix: str = "", limit: int = 50) -> list[dict[str, Any]]:
-    with closing(_connect()) as conn:
-        rows = conn.execute(
-            "SELECT tag, COUNT(*) AS n FROM card_tags WHERE tag LIKE ? GROUP BY tag ORDER BY n DESC LIMIT ?",
-            (f"{prefix.lower()}%", limit),
-        )
-        return [{"tag": r[0], "cards": r[1]} for r in rows]

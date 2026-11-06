@@ -1,10 +1,9 @@
-import sqlite3
 from contextlib import closing
 
 from conftest import card, deck_lines, save_deck
 from fastapi.testclient import TestClient
 
-from mtgdeck import buylist, cardmarket, carddb, collection, storage
+from mtgdeck import buylist, cardmarket, carddb, collection
 from mtgdeck.gui.app import app
 
 DECK = {"slug": "x", "name": "X", "commanders": ["Meren of Clan Nel Toth"],

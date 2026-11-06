@@ -323,7 +323,6 @@ export function undo(entry) {
   const inv = INVERSE[entry.type]?.(entry.payload);
   if (inv) op(inv.type, inv.payload);
 }
-export const inverseOf = (type, payload) => INVERSE[type]?.(payload) || null;
 
 export function dropOp(opId) {
   state.ops = state.ops.filter((x) => x.id !== opId);

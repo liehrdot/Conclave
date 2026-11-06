@@ -32,11 +32,6 @@ def frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 
 
-def bundle_dir() -> Path:
-    """The packaged app's read-only files (``_internal/`` of the PyInstaller folder build)."""
-    return Path(getattr(sys, "_MEIPASS", REPO_ROOT))
-
-
 def _platform_data() -> Path:
     if sys.platform == "win32":
         return Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming") / DATA_FOLDER
