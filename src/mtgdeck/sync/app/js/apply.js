@@ -6,7 +6,7 @@
 import { uid } from "./util.js";
 
 // one collection entry per printing and place: name, Scryfall id, proxy, foil, language, deck or place text
-// (like collection._key on the PC)
+// (like collection_key.key on the PC)
 export const collKey = (e) => [String(e.name || "").toLowerCase(), e.scryfall_id || "", !!e.proxy, !!e.foil, e.lang || "en",
   e.place_deck || "", e.place_deck ? "" : String(e.place || "").trim().toLowerCase()].join("|");
 const COLL_KEYS = ["id", "name", "qty", "proxy", "foil", "lang", "set", "set_name", "collector_number", "scryfall_id", "price_eur",

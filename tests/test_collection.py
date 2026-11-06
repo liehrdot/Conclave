@@ -2,7 +2,7 @@
 
 from conftest import deck_lines, save_deck
 
-from mtgdeck import collection, storage
+from mtgdeck import collection, collection_key, storage
 
 MANABOX = """Name,Set code,Set name,Collector number,Foil,Rarity,Quantity,ManaBox ID,Scryfall ID,Purchase price,Misprint,Altered,Condition,Language
 Sol Ring,c21,Commander 2021,263,normal,uncommon,2,1,a1b2-sol,1.00,false,false,near_mint,en
@@ -209,7 +209,7 @@ async def test_places_split_entries_and_move_together():
     entries = collection.load()
     assert sorted((e["place"], e["place_deck"], e["qty"]) for e in entries) == [("", "", 1), ("Binder rot", "", 3), ("Meren", "meren", 1)]
     assert collection.places() == [{"place": "Binder rot", "place_deck": "", "cards": 3}, {"place": "Meren", "place_deck": "meren", "cards": 1}]
-    assert collection.clean_place(" a " * 50, "../x") == (" ".join(["a"] * 50)[: collection.PLACE_MAX], "")
+    assert collection_key.clean_place(" a " * 50, "../x") == (" ".join(["a"] * 50)[: collection_key.PLACE_MAX], "")
 
     client = TestClient(app)
     ids = [e["id"] for e in entries if e["place_deck"] != "meren"]
