@@ -30,7 +30,7 @@ from .cards import resolve
 from .deck import split_qty
 from .http import HttpError
 from .jsonstore import locked, read_json, write_json
-from . import paths
+from . import collection_key, paths
 
 COLLECTION_FILE = Path(os.environ.get("MTG_COLLECTION_FILE", paths.home() / "collection.json"))
 
@@ -60,28 +60,11 @@ def _write(entries: list[dict[str, Any]]) -> None:
     write_json(COLLECTION_FILE, entries, indent=1)
 
 
-PLACE_MAX = 80
-
-
-def _key(e: dict[str, Any]) -> tuple[Any, ...]:
-    return (e["name"].lower(), e.get("scryfall_id") or "", bool(e.get("proxy")), bool(e.get("foil")), e.get("lang") or "en",
-            e.get("place_deck") or "", "" if e.get("place_deck") else (e.get("place") or "").strip().lower())  # fmt: skip
-
-
-def clean_place(place: str | None, place_deck: str | None) -> tuple[str, str]:
-    """(place, place_deck) as stored: trimmed text (≤ ``PLACE_MAX``), a deck slug only when it looks like one."""
-    text = " ".join(str(place or "").split())[:PLACE_MAX]
-    slug = str(place_deck or "").strip()
-    if slug and not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,80}", slug):
-        slug = ""
-    return text, slug
-
-
 def _merge(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Combine entries that describe the same thing (same card, printing, proxy, foil, language, place)."""
     out: dict[tuple[Any, ...], dict[str, Any]] = {}
     for e in entries:
-        k = _key(e)
+        k = collection_key.key(e)
         if k in out:
             out[k]["qty"] += int(e.get("qty", 1))
         else:
@@ -269,7 +252,7 @@ async def add(items: list[dict[str, Any]], *, proxy_default: bool = False, repla
     """Add raw items (``name``/``qty``/``proxy``/``foil``/``lang``/``set``/``collector_number``/``scryfall_id``), all
     at ``place`` (text or a deck's name, with ``place_deck`` = its slug)."""
     new, not_found = await _resolve_items(items, proxy_default=proxy_default)
-    place, place_deck = clean_place(place, place_deck)
+    place, place_deck = collection_key.clean_place(place, place_deck)
     for e in new:
         e["place"], e["place_deck"] = place, place_deck
     with locked(COLLECTION_FILE):  # read after the (slow) lookups, so nothing saved meanwhile is lost
@@ -324,7 +307,7 @@ def bulk_update(entry_ids: list[str], *, place: str | None = None, place_deck: s
     deck, the other into the bulk box). Returns how many entries were found."""
     wanted = set(entry_ids)
     if place is not None or place_deck is not None:
-        place, place_deck = clean_place(place or "", place_deck or "")
+        place, place_deck = collection_key.clean_place(place or "", place_deck or "")
     with locked(COLLECTION_FILE):
         entries = load()
         hits = [e for e in entries if e["id"] in wanted]
@@ -384,11 +367,11 @@ def _update(entry_id: str, *, qty: int | None, proxy: bool | None, foil: bool | 
     if printing is not None:
         entry.update({k: printing.get(k) for k in PRINTING_KEYS})
     if place is not None or place_deck is not None:
-        entry["place"], entry["place_deck"] = clean_place(entry.get("place") if place is None else place,
+        entry["place"], entry["place_deck"] = collection_key.clean_place(entry.get("place") if place is None else place,
                                                           entry.get("place_deck") if place_deck is None else place_deck)  # fmt: skip
     merged = _merge(entries)
     _write(merged)
-    return next((e for e in merged if _key(e) == _key(entry)), None)
+    return next((e for e in merged if collection_key.key(e) == collection_key.key(entry)), None)
 
 
 def restore_entry(entry: dict[str, Any]) -> dict[str, Any]:
@@ -397,7 +380,7 @@ def restore_entry(entry: dict[str, Any]) -> dict[str, Any]:
     with locked(COLLECTION_FILE):
         merged = _merge(load() + [back])
         _write(merged)
-    return next((e for e in merged if _key(e) == _key(back)), back)
+    return next((e for e in merged if collection_key.key(e) == collection_key.key(back)), back)
 
 
 def delete(entry_id: str | None = None) -> int:
@@ -514,7 +497,7 @@ def move_to_deck(entry_id: str, slug: str, qty: int | None = None) -> dict[str, 
     """Put ``qty`` copies (all when None) of one entry into the deck ``slug`` (its Ort becomes the deck; the other
     copies stay where they were). Returns ``{id, qty, place, place_deck}``: the entry in the deck now (it may have
     merged with one already there) and where the copies came from, for undoing it."""
-    label, slug = clean_place(storage.load(slug).get("name") or slug, slug)  # FileNotFoundError: no such deck
+    label, slug = collection_key.clean_place(storage.load(slug).get("name") or slug, slug)  # FileNotFoundError: no such deck
     if not slug:
         raise KeyError(entry_id)
     with locked(COLLECTION_FILE):
@@ -529,7 +512,7 @@ def move_to_deck(entry_id: str, slug: str, qty: int | None = None) -> dict[str, 
             entry = {**entry, "id": uuid.uuid4().hex[:12], "qty": n}
             entries.append(entry)
         entry["place"], entry["place_deck"] = label, slug
-        there = next((e for e in entries if e is not entry and _key(e) == _key(entry)), None)
+        there = next((e for e in entries if e is not entry and collection_key.key(e) == collection_key.key(entry)), None)
         if there is not None:  # the same copy already lies in the deck: it keeps its id, so the undo can find it
             there["qty"] += entry["qty"]
             entries = [e for e in entries if e is not entry]

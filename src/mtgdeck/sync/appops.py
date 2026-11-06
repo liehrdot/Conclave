@@ -14,7 +14,7 @@ the server, so the check (legality, bracket, price) is left to the PC: the deck 
 desktop app checks it after its next sync (``service.revalidate_pending``).
 
 Cards scanned or picked on the phone go into ``collection.json`` like ``collection.add`` does it: one entry per printing,
-an entry that matches name, printing, proxy, foil and language only gets more copies (``collection._key``).
+an entry that matches name, printing, proxy, foil and language only gets more copies (``collection_key.key``).
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ import re
 import uuid
 from typing import Any
 
+from .. import collection_key
 from .. import maybe as maybe_list
 from ..games import HOW, ISSUES, RESULTS, clean_places
 from ..opponents import MAX_NOTES, TAGS
@@ -321,17 +322,8 @@ def _pin_order(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def _coll_key(e: dict[str, Any]) -> tuple[Any, ...]:  # like collection._key (that module needs the network stack)
-    return (str(e.get("name") or "").lower(), e.get("scryfall_id") or "", bool(e.get("proxy")), bool(e.get("foil")), e.get("lang") or "en",
-            e.get("place_deck") or "", "" if e.get("place_deck") else str(e.get("place") or "").strip().lower())  # fmt: skip
-
-
-PLACE_DECK_RE = re.compile(r"[a-z0-9][a-z0-9-]{0,80}")
-
-
-def _place(place: Any, place_deck: Any) -> tuple[str, str]:  # like collection.clean_place
-    text = " ".join(str(place or "").split())[:80] if isinstance(place, str) else ""
-    return text, _match_str(place_deck, PLACE_DECK_RE) or ""
+def _place(place: Any, place_deck: Any) -> tuple[str, str]:  # the phone may send anything: only text is a place
+    return collection_key.clean_place(place if isinstance(place, str) else "", place_deck)
 
 
 def _coll_items(doc: Any) -> list[Any]:
@@ -366,8 +358,8 @@ def _collection_add(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[st
     }  # fmt: skip
     entry["place"], entry["place_deck"] = _place(e.get("place"), e.get("place_deck"))
     items = _coll_items(docs.get(COLLECTION))
-    key = _coll_key(entry)
-    hit = next((x for x in items if isinstance(x, dict) and x.get("name") and _coll_key(x) == key), None)
+    key = collection_key.key(entry)
+    hit = next((x for x in items if isinstance(x, dict) and x.get("name") and collection_key.key(x) == key), None)
     if hit is not None:
         hit["qty"] = min(9999, int(hit.get("qty") or 0) + qty)
         if hit["qty"] <= 0:
@@ -414,7 +406,7 @@ def _collection_update(p: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any
         if not (isinstance(x, dict) and x.get("name")):
             out.append(x)
             continue
-        k = _coll_key(x)
+        k = collection_key.key(x)
         if k in seen:
             seen[k]["qty"] = int(seen[k].get("qty") or 0) + int(x.get("qty") or 0)
             continue
