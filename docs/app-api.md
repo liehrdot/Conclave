@@ -114,7 +114,8 @@ what came out: `bases` are read models, and each case is `{name, about, base, op
 keys of the read model the server changed, with their new value; `{}` = nothing changed) or `error` (the German
 message). An app's tests apply `op` to `bases[base]` with its own optimistic code and compare the keys in `after`; what
 an optimistic apply cannot know yet (Rule 0 rows, records, `checking`) a test may leave out, as long as it says so.
-`tests/test_app_fixtures.py` fails when `appops` changes and the file was not written again.
+`tests/test_app_fixtures.py` fails when `appops` changes and the file was not written again. The web app's own optimistic code (`sync/app/js/apply.js`) is checked the same way by
+`tests/js/apply_cases.mjs`: it leaves out only a new deck's Rule 0, and a refused op must change nothing.
 
 ## Card search by description
 

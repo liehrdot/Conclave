@@ -5,6 +5,7 @@
 //
 // Modes: "none" (not paired – the welcome screen), "demo" (example data, nothing leaves the phone), "live".
 
+import { apply, recompute } from "./apply.js";
 import { cached } from "./scry.js";
 import { load, nowIso, save, uid } from "./util.js";
 
@@ -94,7 +95,7 @@ function rebuild() {
   if (!state.base) { state.snap = null; emit(); return; }
   const snap = structuredClone(state.base);
   for (const op of state.ops) if (op.status !== "failed") apply(snap, op);
-  recompute(snap);
+  recompute(snap, (name) => cached(name)?.colors || "");
   state.snap = snap;
   emit();
 }
@@ -356,188 +357,4 @@ export function currentDeck() {
 export const gamesOf = (slug) => state.snap.games.filter((g) => g.deck === slug);
 export const isPending = (gameId) => state.ops.some((o) => o.status === "pending" && o.type === "game.add" && o.payload?.game?.id === gameId);
 
-// ---------- applying operations (mirrors sync/appops.py) ---------------------------------------
-
-// one collection entry per printing and place: name, Scryfall id, proxy, foil, language, deck or place text
-// (like collection._key on the PC)
-export const collKey = (e) => [String(e.name || "").toLowerCase(), e.scryfall_id || "", !!e.proxy, !!e.foil, e.lang || "en",
-  e.place_deck || "", e.place_deck ? "" : String(e.place || "").trim().toLowerCase()].join("|");
-const COLL_KEYS = ["id", "name", "qty", "proxy", "foil", "lang", "set", "set_name", "collector_number", "scryfall_id", "price_eur",
-  "place", "place_deck"];
-
-function applyCollection(snap, op) {
-  const p = op.payload || {};
-  const list = (snap.collection ||= []);
-  if (op.type === "collection.add") {
-    const e = p.entry || {};
-    const hit = list.find((x) => collKey(x) === collKey(e));
-    if (hit) hit.qty += e.qty;
-    else if (e.qty > 0) {
-      const row = Object.fromEntries(COLL_KEYS.map((k) => [k, e[k] ?? null]));
-      Object.assign(row, { id: e.id || op.id, proxy: !!e.proxy, foil: !!e.foil, lang: e.lang || "en",
-        place: String(e.place || "").trim(), place_deck: e.place_deck || "" });
-      if (!row.scryfall_id && e.image) row.image = e.image;
-      list.push(row);
-    }
-  } else {
-    const e = list.find((x) => x.id === p.id);
-    if (!e) return;
-    if ("qty" in p) e.qty = p.qty;
-    for (const k of ["proxy", "foil", "lang", "place", "place_deck"]) if (k in p) e[k] = p[k];
-    const seen = new Map();  // entries that now describe the same thing become one
-    for (const x of [...list]) {
-      const k = collKey(x);
-      if (seen.has(k)) { seen.get(k).qty += x.qty; list.splice(list.indexOf(x), 1); } else seen.set(k, x);
-    }
-  }
-  snap.collection = list.filter((x) => x.qty > 0).sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-}
-
-function findOpponent(snap, slot) {
-  if (slot.id) {
-    const o = snap.opponents.find((x) => x.id === slot.id);
-    if (o) return o;
-  }
-  const name = (slot.commander || "").trim().toLowerCase();
-  if (!name) return null;
-  const hits = snap.opponents.filter((x) => (x.commanders || []).some((c) => c.toLowerCase() === name));
-  return hits.sort((a, b) => String(b.updated).localeCompare(String(a.updated)))[0] || null;
-}
-
-function newOpponent(fields, at) {
-  return { id: fields.id || uid().slice(0, 8), commanders: fields.commanders || [], colors: fields.colors || "", label: fields.label || "",
-    player: fields.player || "", bracket: null, tags: fields.tags || [], notes: [], created: at, updated: at,
-    record: { games: 0, wins: 0, losses: 0, draws: 0, last: null, per_deck: [] } };
-}
-
-/** Like games.clean_places: the user's place and the opponents' (1..N, N = everyone at the table; ties allowed). */
-export const PLACES_MAX = 6;
-export function cleanPlaces(place, oppPlaces, opponents) {
-  const top = opponents ? Math.min(PLACES_MAX, 1 + opponents) : PLACES_MAX;
-  const ok = (v) => (Number.isInteger(v) && v >= 1 && v <= top ? v : null);
-  const theirs = Array.from({ length: opponents }, (_, i) => ok(oppPlaces?.[i]));
-  return { place: ok(place), opponent_places: theirs.some((v) => v !== null) ? theirs : undefined };
-}
-
-function apply(snap, op) {
-  const p = op.payload || {};
-  if (op.type.startsWith("collection.")) return applyCollection(snap, op);
-  if (op.type === "game.add") {
-    if (snap.games.some((g) => g.id === p.game.id && g.deck === p.game.deck)) return;
-    const deck = snap.decks.find((d) => d.slug === p.game.deck);
-    const ids = [], names = [], places = [];
-    for (const slot of p.opponents || []) {
-      let o = findOpponent(snap, slot);
-      if (!o) {
-        if (!slot.commander) continue;
-        o = newOpponent({ id: slot.new_id, commanders: [slot.commander], colors: slot.colors }, op.at);
-        snap.opponents.push(o);
-      }
-      if ((slot.note || "").trim()) o.notes = [{ id: `${op.id}-${o.id}`, text: slot.note.trim(), at: op.at, game_id: p.game.id, deck_slug: p.game.deck }, ...(o.notes || [])];
-      o.updated = op.at;
-      ids.push(o.id);
-      names.push(slot.commander || o.commanders[0]);
-      places.push(slot.place ?? null);
-    }
-    const game = { ...p.game, played: p.game.played || op.at, opponents: names, opponent_ids: ids, version: deck?.version ?? null };
-    Object.assign(game, cleanPlaces(p.game.place, places, names.length));
-    snap.games.unshift(game);
-  } else if (op.type === "game.delete") {
-    snap.games = snap.games.filter((g) => !(g.id === p.id && g.deck === p.deck));
-  } else if (op.type === "opponent.add") {
-    if (!snap.opponents.some((o) => o.id === p.opponent.id)) {
-      const o = newOpponent(p.opponent, op.at);
-      if ((p.note || "").trim()) o.notes = [{ id: p.note_id || `${op.id}-n`, text: p.note.trim(), at: op.at }];
-      snap.opponents.push(o);
-    }
-  } else if (op.type === "deck.new") {
-    const d = p.deck || {};
-    if (snap.decks.some((x) => x.slug === d.slug)) return;
-    const level = `Bracket ${d.bracket || 3}`;
-    snap.decks.unshift({ slug: d.slug, name: d.name || d.commanders.join(" + "), commanders: d.commanders, colors: d.colors || "", bracket: d.bracket || 3,
-      tier: null, level, proxy: false, legal: null, description: "", version: 1, updated: op.at, checking: true, cards: [],
-      rule0: { rows: [{ label: "Stufe", value: level }, { label: "Commander", value: d.commanders.join(" + ") }], text: "" }, record: recordOf([]) });
-  } else if (op.type === "deck.edit") {
-    const d = snap.decks.find((x) => x.slug === p.deck);
-    if (!d) return;
-    const cards = new Map(d.cards.map((c) => [c.name, { ...c }]));
-    for (const a of p.add || []) {
-      const c = cards.get(a.name);
-      if (c) c.qty += a.qty || 1; else cards.set(a.name, { name: a.name, qty: a.qty || 1, category: a.category || "Synergy" });
-    }
-    for (const n of p.remove || []) cards.delete(n);
-    for (const [n, q] of Object.entries(p.set_qty || {})) { const c = cards.get(n); if (c && q > 0) c.qty = q; else cards.delete(n); }
-    for (const [n, k] of Object.entries(p.set_category || {})) { const c = cards.get(n); if (c) c.category = k; }
-    // the maybe list, like maybe.change(): deck cards leave it, a card put on it leaves the deck
-    const maybe = new Map((d.maybe || []).filter((m) => !cards.has(m.name)).map((m) => [m.name, { ...m }]));
-    for (const n of p.maybe_remove || []) maybe.delete(n);
-    for (const m of p.maybe_add || []) {
-      const c = cards.get(m.name);
-      cards.delete(m.name);
-      maybe.set(m.name, { name: m.name, category: m.category || c?.category || maybe.get(m.name)?.category || "Synergy" });
-    }
-    d.maybe = [...maybe.values()].sort((a, b) => a.name.localeCompare(b.name));
-    d.cards = [...cards.values()].sort((a, b) => a.name.localeCompare(b.name));
-    Object.assign(d, { checking: true, version: (d.version || 0) + 1, updated: op.at });
-  } else if (op.type === "deck.flags") {  // like appops._deck_flags: pinned / shelved, no new version
-    const d = snap.decks.find((x) => x.slug === p.deck);
-    for (const k of ["pinned", "shelved"]) if (d && typeof p[k] === "boolean") d[k] = p[k];
-    if (d && !d.pinned) d.pin_rank = null;
-  } else if (op.type === "deck.pin_order") {  // like appops._pin_order
-    (p.slugs || []).forEach((slug, i) => { const d = snap.decks.find((x) => x.slug === slug); if (d?.pinned) d.pin_rank = i; });
-  } else if (op.type === "opponent.delete") {
-    snap.opponents = snap.opponents.filter((o) => o.id !== p.id);
-  } else {
-    const o = snap.opponents.find((x) => x.id === p.id);
-    if (!o) return;
-    if (op.type === "opponent.update") {
-      for (const k of ["tags", "player", "label", "bracket", "commanders", "colors"]) if (k in p) o[k] = p[k];
-      o.updated = op.at;
-    } else if (op.type === "opponent.note") {
-      if (!(o.notes || []).some((n) => n.id === p.note_id)) o.notes = [{ id: p.note_id, text: p.text, at: op.at }, ...(o.notes || [])];
-    } else if (op.type === "opponent.note_delete") {
-      o.notes = (o.notes || []).filter((n) => n.id !== p.note_id);
-    }
-  }
-}
-
-function recordOf(games) {
-  const r = { games: games.length, wins: 0, losses: 0, draws: 0, last: null };
-  for (const g of games) {
-    r.wins += g.result === "win"; r.losses += g.result === "loss"; r.draws += g.result === "draw";
-    if (!r.last || (g.played || "") > r.last) r.last = g.played;
-  }
-  return r;
-}
-
-function faced(o, g) {
-  if ((g.opponent_ids || []).includes(o.id)) return true;
-  const linked = (g.opponent_ids || []).filter(Boolean);
-  const names = new Set((o.commanders || []).map((c) => c.toLowerCase()));
-  return !linked.length && (g.opponents || []).some((n) => names.has(String(n).toLowerCase()));
-}
-
-// pinned decks first (newly pinned on top, then in the dragged order), shelved ones last (like storage.list_rank)
-const deckRank = (d) => [(d.shelved ? 2 : 0) + (d.pinned ? 0 : 1), d.pinned && d.pin_rank != null ? 1 : 0, d.pinned ? d.pin_rank ?? 0 : 0];
-const byRank = (a, b) => { const x = deckRank(a), y = deckRank(b); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; };
-
-function recompute(snap) {
-  for (const d of snap.decks) {  // a deck the PC has not checked yet has no colour identity: take the commanders'
-    if (!d.colors) d.colors = [..."WUBRG"].filter((c) => d.commanders.some((n) => (cached(n)?.colors || "").includes(c))).join("");
-  }
-  snap.games.sort((a, b) => String(b.played).localeCompare(String(a.played)));
-  snap.decks.sort(byRank);  // stable: the server's order inside each group
-  for (const d of snap.decks) d.record = recordOf(snap.games.filter((g) => g.deck === d.slug));
-  const names = Object.fromEntries(snap.decks.map((d) => [d.slug, d.name]));
-  for (const o of snap.opponents) {
-    const mine = snap.games.filter((g) => faced(o, g));
-    const per = {};
-    for (const g of mine) {
-      const p = (per[g.deck] ||= { slug: g.deck, name: names[g.deck] || g.deck, games: 0, wins: 0, losses: 0 });
-      p.games++; p.wins += g.result === "win"; p.losses += g.result === "loss";
-    }
-    o.record = { ...recordOf(mine), per_deck: Object.values(per).sort((a, b) => b.games - a.games) };
-  }
-  snap.opponents.sort((a, b) => String(b.record.last || b.updated || "").localeCompare(String(a.record.last || a.updated || "")));
-  snap.players = [...new Set(snap.opponents.map((o) => o.player).filter(Boolean))].sort((a, b) => a.localeCompare(b, "de"));
-}
+export { PLACES_MAX, cleanPlaces, collKey } from "./apply.js";
