@@ -13,11 +13,12 @@ reached the server are renumbered behind the remote ones) and a merged result be
 
 from __future__ import annotations
 
-import json
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
+
+from ..deckrecord import content, history_entry
 
 
 class _Missing:
@@ -146,12 +147,6 @@ def _cards_map(deck: Any, key: str = "cards") -> dict[str, Any]:
     return {c["name"]: c for c in (deck or {}).get(key) or []} if isinstance(deck, dict) else {}
 
 
-def _content(deck: dict[str, Any]) -> str:
-    from ..storage import _CONTENT_KEYS
-
-    return json.dumps({k: deck.get(k) for k in _CONTENT_KEYS}, sort_keys=True, default=str)
-
-
 @dataclass
 class DeckMerge:
     deck: dict[str, Any]
@@ -161,8 +156,6 @@ class DeckMerge:
 
 def merge_deck(base: Any, local: dict[str, Any], remote: dict[str, Any], log: Log) -> DeckMerge:
     """Merge two changed copies of a deck that share ``base`` (see module doc)."""
-    from ..storage import _metrics, diff, level_text
-
     b = base if isinstance(base, dict) else {}
     base_version = int(b.get("version") or 0)
     # cards: per card name; everything else except bookkeeping: generic
@@ -188,17 +181,15 @@ def merge_deck(base: Any, local: dict[str, Any], remote: dict[str, Any], log: Lo
     last = local if local_new else remote  # the snapshot the history ends with
     version = remote_max + len(local_new)
     merge_version = None
-    if _content(merged) != _content(last):
+    if content(merged) != content(last):
         version += 1
         merge_version = version
-        change = diff(last, merged)
-        history.append({"version": version, "at": _now(), "note": "Zusammengeführt (Änderungen von zwei Geräten)", **change,
-                        "from": level_text(last), "to": level_text(merged), **_metrics(merged)})  # fmt: skip
+        history.append(history_entry(last, {**merged, "version": version}, "Zusammengeführt (Änderungen von zwei Geräten)", _now()))
     merged["history"] = history
     merged["version"] = version
     merged["created"] = remote.get("created") or local.get("created")
     merged["updated"] = _now() if merge_version else max(str(remote.get("updated") or ""), str(local.get("updated") or "")) or _now()
-    same_as = next((d for d in (remote, local) if _content(d) == _content(merged)), None)
+    same_as = next((d for d in (remote, local) if content(d) == content(merged)), None)
     merged["validation"] = (same_as or remote).get("validation")
     if same_as is None or same_as.get("needs_revalidation"):
         merged["needs_revalidation"] = True
