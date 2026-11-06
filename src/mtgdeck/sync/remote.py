@@ -13,6 +13,7 @@ from urllib.parse import quote
 import httpx
 
 from ..http import USER_AGENT
+from .protocol import SERVICE
 from .store import SyncConflict, decode_b64, encode
 
 
@@ -104,7 +105,7 @@ class HttpTransport:
             data = self._call("GET", "/api/health").json()
         except ValueError:
             data = {}
-        if not isinstance(data, dict) or data.get("service") != "mtgdeck-sync":
+        if not isinstance(data, dict) or data.get("service") != SERVICE:
             raise RemoteError("Unter dieser Adresse läuft kein Sync-Server von Conclave.")
         return data
 
