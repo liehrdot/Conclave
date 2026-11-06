@@ -46,7 +46,6 @@ from . import carddb, collection, imaging, scryfall
 from . import settings as settings_mod
 from .cards import deck_tokens, resolve
 from .http import download, get_json, post_json
-from .storage import PROJECT_ROOT
 from . import paths
 
 PROXIES_DIR = Path(os.environ.get("MTG_PROXIES_DIR", paths.home() / "proxies"))
@@ -566,7 +565,7 @@ def find_upscaler(cfg: dict[str, Any] | None = None) -> Path | None:
         p = Path(cfg["upscaler_path"]).expanduser()
         return p if p.is_file() else None
     for pattern in ("realesrgan-ncnn-vulkan.exe", "realesrgan-ncnn-vulkan", "realesrgan*.py"):
-        for candidate in sorted((PROJECT_ROOT / "tools").rglob(pattern)):
+        for candidate in sorted((paths.REPO_ROOT / "tools").rglob(pattern)):
             if candidate.is_file():
                 return candidate
     return None
@@ -933,7 +932,7 @@ def find_autofill(cfg: dict[str, Any] | None = None) -> Path | None:
         p = Path(cfg["autofill_path"]).expanduser()
         return p if p.is_file() else None
     for pattern in ("autofill*.exe", "autofill*", "autofill.py"):
-        for candidate in sorted((PROJECT_ROOT / "tools").glob(pattern)):
+        for candidate in sorted((paths.REPO_ROOT / "tools").glob(pattern)):
             if candidate.is_file() and candidate.name != "README.md":
                 return candidate
     return None

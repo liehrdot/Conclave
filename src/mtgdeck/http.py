@@ -31,7 +31,6 @@ _MIN_INTERVAL = {
     "json.edhrec.com": 0.5,
     "backend.commanderspellbook.com": 0.75,  # "80 requests per minute should be a safe rate"
     "archidekt.com": 0.5,
-    "image.pollinations.ai": 3.0,  # free generator: anonymous requests are queued, be gentle
     "cards.scryfall.io": 0.05,
     "cdn.mpcautofill.com": 0.05,  # image CDN, no documented rate limit – stay polite anyway
 }
@@ -45,7 +44,7 @@ DEFAULT_TTL = int(os.environ.get("MTG_CACHE_TTL", 24 * 3600))  # Scryfall recomm
 SERVICES = {
     "scryfall": "Scryfall", "edhrec": "EDHREC", "commanderspellbook": "Commander Spellbook",
     "archidekt": "Archidekt", "moxfield": "Moxfield", "mtggoldfish": "MTGGoldfish", "tappedout": "TappedOut",
-    "deckstats": "Deckstats", "mtgjson": "MTGJSON", "mpcautofill": "MPC Autofill", "pollinations": "der Bildgenerator",
+    "deckstats": "Deckstats", "mtgjson": "MTGJSON", "mpcautofill": "MPC Autofill",
     "github": "GitHub", "cardmarket": "Cardmarket",
 }  # fmt: skip
 

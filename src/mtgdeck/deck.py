@@ -202,9 +202,3 @@ def to_text(commanders: list[str], entries: list[DeckEntry]) -> str:
     lines = [f"1 {c} *CMDR*" for c in commanders]
     lines += [f"{e.qty} {e.name}" for e in sorted(entries, key=lambda e: e.name)]
     return "\n".join(lines) + "\n"
-
-
-def to_sectioned_text(commanders: list[str], entries: list[DeckEntry]) -> str:
-    lines = ["Commander"] + [f"1 {c}" for c in commanders] + ["", "Deck"]
-    lines += [f"{e.qty} {e.name}" for e in sorted(entries, key=lambda e: e.name)]
-    return "\n".join(lines) + "\n"

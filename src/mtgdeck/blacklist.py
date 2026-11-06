@@ -352,10 +352,6 @@ def deck_rule(key: str) -> dict[str, Any] | None:
     return next((r for r in rules() if r["key"] == key), None)
 
 
-def blocked(card: dict[str, Any], *, currency: str = "eur") -> bool:
-    return (card.get("name") or "").lower() in names_lower() or bool(card_rules(card, currency=currency))
-
-
 def filter_cards(cards: list[dict[str, Any]], key: str = "name", *, currency: str = "eur") -> list[dict[str, Any]]:
     """Drop blacklisted cards and cards that break a rule. Name-only entries (EDHREC) are looked up in
     the local card DB so predicate rules apply to them too, when it is available."""

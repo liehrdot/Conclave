@@ -44,7 +44,6 @@ from . import desktop, releases, terminal
 log = logging.getLogger(__name__)
 
 STATIC = Path(__file__).parent / "static"
-PROJECT_ROOT = storage.PROJECT_ROOT
 GUI_TOKEN = os.environ.get("MTG_GUI_TOKEN", "")  # set by the desktop shell: every request must carry it (cookie or Bearer)
 TOKEN_COOKIE = "mtg_token"
 VERSION = "0.3.0"
@@ -392,7 +391,7 @@ async def api_deck_new(req: NewDeckRequest) -> dict[str, Any]:
 
 @app.get("/api/brackets")
 async def api_brackets() -> list[dict[str, Any]]:
-    return brackets.describe()
+    return brackets.BRACKETS
 
 
 @app.get("/api/autocomplete")
@@ -2021,10 +2020,3 @@ def serve() -> None:
     config = uvicorn.Config(app, host=host, port=port, log_level="warning")
     uvicorn.Server(config).run(sockets=[sock])
 
-
-def main() -> None:  # the old console script; ``mtg-gui`` now goes through launch.main (arguments first)
-    serve()
-
-
-if __name__ == "__main__":
-    main()

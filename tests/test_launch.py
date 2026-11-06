@@ -7,7 +7,6 @@ import subprocess
 import sys
 import time
 import urllib.request
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient

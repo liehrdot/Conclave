@@ -24,10 +24,6 @@ ROLE_LABELS = {"ramp": "Ramp", "card_draw": "Kartenzug", "removal": "Removal", "
 LAND_RANGE = (33, 40)
 
 
-def _fits_identity(card_ci: list[str], allowed: set[str]) -> bool:
-    return set(card_ci) <= allowed
-
-
 async def validate_deck(
     commanders: list[str],
     cards: list[str],
@@ -95,7 +91,7 @@ async def validate_deck(
             continue
         if not c.get("commander_legal"):
             errors.append(f"{e.name} ist in Commander nicht legal (gebannt oder nicht turnierlegal)")
-        if identity and not _fits_identity(c.get("color_identity") or [], identity):
+        if identity and not set(c.get("color_identity") or []) <= identity:
             errors.append(
                 f"{e.name} ({''.join(c.get('color_identity') or [])}) liegt außerhalb der Farbidentität "
                 f"{''.join(sorted(identity)) or 'farblos'}"

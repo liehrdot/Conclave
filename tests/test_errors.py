@@ -39,7 +39,6 @@ async def test_unreachable_service_becomes_http_error_with_german_text(monkeypat
 def test_friendly_texts_by_status():
     assert "bremst" in HttpError(429, "https://api.scryfall.com/x").friendly
     assert "Probleme (Fehler 503)" in HttpError(503, "https://backend.commanderspellbook.com/x").friendly
-    assert HttpError(500, "https://image.pollinations.ai/p").friendly.startswith("Der Bildgenerator")
     assert "abgelehnt (Fehler 403)" in HttpError(403, "https://example.org/x").friendly
 
 
