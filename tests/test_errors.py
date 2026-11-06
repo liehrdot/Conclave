@@ -7,6 +7,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from mtgdeck.gui import jobs
 from mtgdeck import http
 from mtgdeck.gui import app as gui
 from mtgdeck.http import HttpError
@@ -59,10 +60,10 @@ def test_route_reports_unreachable_service_as_502(monkeypatch):
 def _wait(job_id, timeout=10):
     end = time.time() + timeout
     while time.time() < end:
-        if gui.JOBS[job_id].done:
-            return gui.JOBS[job_id]
+        if jobs.JOBS[job_id].done:
+            return jobs.JOBS[job_id]
         time.sleep(0.05)
-    raise AssertionError(gui.JOBS[job_id].events)
+    raise AssertionError(jobs.JOBS[job_id].events)
 
 
 def test_job_always_ends_with_done_even_when_its_last_step_crashes():
@@ -72,7 +73,7 @@ def test_job_always_ends_with_done_even_when_its_last_step_crashes():
 
     with TestClient(gui.app) as client:
         async def start():
-            return gui._start_runner(broken)["job"]
+            return jobs.start_runner(broken)["job"]
 
         job_id = client.portal.call(start)
         job = _wait(job_id)
@@ -89,11 +90,11 @@ def test_runner_crash_and_old_jobs_are_pruned():
             raise KeyError("kaputt")
 
         async def start():
-            return gui._start_runner(boom)["job"]
+            return jobs.start_runner(boom)["job"]
 
-        old = gui.Job(id="old-job", done=True, ended=time.time() - gui.JOB_KEEP_SECONDS - 5)
-        gui.JOBS[old.id] = old
+        old = jobs.Job(id="old-job", done=True, ended=time.time() - jobs.JOB_KEEP_SECONDS - 5)
+        jobs.JOBS[old.id] = old
         job = _wait(client.portal.call(start))
         assert job.events == [{"type": "error", "text": "KeyError: 'kaputt'"}, {"type": "done", "ok": False}]
-        assert "old-job" not in gui.JOBS
+        assert "old-job" not in jobs.JOBS
         assert client.get("/api/jobs/old-job/events").status_code == 404
