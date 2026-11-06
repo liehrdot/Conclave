@@ -136,9 +136,12 @@ def backups() -> list[dict[str, Any]]:
 
 
 def path_of(name: str) -> Path:
-    if not _NAME_RE.match(name) or not (BACKUP_DIR / name).is_file():
+    if not _NAME_RE.fullmatch(name):
         raise FileNotFoundError(f"Keine Sicherung „{name}“")
-    return BACKUP_DIR / name
+    path = paths.inside(BACKUP_DIR, name)
+    if not path.is_file():
+        raise FileNotFoundError(f"Keine Sicherung „{name}“")
+    return path
 
 
 def auto_backup(max_age_hours: float = 20) -> dict[str, Any] | None:

@@ -213,6 +213,27 @@ def test_auto_backup_once_a_day_and_pruned():
     assert len([b for b in backup.backups() if b["kind"] == "auto"]) == backup.KEEP_AUTO
 
 
+def test_trash_restore_never_trusts_the_stored_slug():
+    import json
+
+    tid = storage.delete(_deck())
+    info = storage.DECKS_DIR / storage.TRASH_DIRNAME / tid / "info.json"
+    info.write_text(json.dumps({**json.loads(info.read_text("utf-8")), "slug": "../../outside"}), "utf-8")
+    back = storage.restore_deleted(tid)
+    assert back["slug"] == "outside" and (storage.DECKS_DIR / "outside.json").exists()
+
+
+def test_backup_names_must_match_whole():
+    import pytest
+
+    from mtgdeck import backup
+
+    name = backup.create("manuell")["name"]
+    assert backup.path_of(name).name == name
+    with pytest.raises(FileNotFoundError):
+        backup.path_of(name + "\n")
+
+
 def test_backup_and_trash_routes():
     slug = _deck()
     with TestClient(gui.app) as client:
