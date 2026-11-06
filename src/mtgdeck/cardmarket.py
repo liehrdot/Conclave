@@ -16,7 +16,7 @@ import time
 from datetime import datetime
 from typing import Any
 
-from . import http
+from . import bulk, http
 
 GUIDE_URL = "https://downloads.s3.cardmarket.com/productCatalog/priceGuide/price_guide_1.json"
 PRODUCTS_URL = "https://downloads.s3.cardmarket.com/productCatalog/productList/products_singles_1.json"
@@ -36,14 +36,6 @@ def norm(name: str) -> str:
     return " ".join(name.replace("//", "/").lower().split())
 
 
-def _num(v: Any) -> float | None:
-    try:
-        f = float(v)
-    except (TypeError, ValueError):
-        return None
-    return f if f > 0 else None
-
-
 def build_index(guide: Any, products: Any) -> dict[str, Any]:
     """Name (``norm``) -> the printings with prices. Defensive: unknown shapes give an empty index."""
     prices: dict[int, dict[str, float | None]] = {}
@@ -51,8 +43,8 @@ def build_index(guide: Any, products: Any) -> dict[str, Any]:
         if not isinstance(g, dict) or "idProduct" not in g:
             continue
         prices[g["idProduct"]] = {
-            "low": _num(g.get("low")), "trend": _num(g.get("trend")),
-            "low_foil": _num(g.get("low-foil")), "trend_foil": _num(g.get("trend-foil")),
+            "low": bulk.price(g.get("low")), "trend": bulk.price(g.get("trend")),
+            "low_foil": bulk.price(g.get("low-foil")), "trend_foil": bulk.price(g.get("trend-foil")),
         }  # fmt: skip
     by_name: dict[str, list[dict[str, Any]]] = {}
     for p in (products or {}).get("products") or []:

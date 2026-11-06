@@ -382,3 +382,15 @@ def test_cors_origins_from_env(tmp_path, monkeypatch):
     client = TestClient(create_app(tmp_path / "server2"))
     got = client.get("/api/app/status", headers={"Origin": "https://table.example"})
     assert got.headers["access-control-allow-origin"] == "https://table.example"
+
+
+def test_every_write_route_is_sorted_into_doc_writes_or_not(tmp_path):
+    """A host's quota and read-only checks follow ``protocol.DOC_WRITES``; a new write route must be put on one side."""
+    from mtgdeck.sync.protocol import DOC_WRITES
+
+    app = create_app(tmp_path / "srv")
+    writes = {(m, r.path) for r in app.routes for m in getattr(r, "methods", ()) or () if m not in ("GET", "HEAD")}
+    device_table_only = {("POST", "/api/pair/claim"), ("POST", "/api/pair/start"), ("DELETE", "/api/devices/{device_id}"),
+                         ("POST", "/api/presence"), ("PUT", "/api/app/ai"), ("POST", "/api/app/cards/describe")}  # fmt: skip
+    assert DOC_WRITES <= writes
+    assert writes - DOC_WRITES == device_table_only

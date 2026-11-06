@@ -4,7 +4,7 @@ from contextlib import closing
 
 from conftest import card
 
-from mtgdeck import carddb
+from mtgdeck import bulk, carddb
 from mtgdeck.cards import resolve
 
 
@@ -29,7 +29,7 @@ def build_db(tmp_path):
         {"object": "tag", "id": "t-ramp", "slug": "ramp", "taggings": [{"oracle_id": sol_en["oracle_id"]}]},
     ]  # fmt: skip
     with closing(carddb._connect()) as conn, conn:
-        n = carddb._import_cards(conn, carddb._iter_jsonl_gz(path))
+        n = carddb._import_cards(conn, bulk.iter_jsonl_gz(path))
         carddb._import_tags(conn, tags)
     return n
 
@@ -104,7 +104,7 @@ def build_prepared_db(tmp_path):
         for c in [bear, bear_de, growth, growth_de]:
             fh.write(json.dumps(c) + "\n")
     with closing(carddb._connect()) as conn, conn:
-        carddb._import_cards(conn, carddb._iter_jsonl_gz(path))
+        carddb._import_cards(conn, bulk.iter_jsonl_gz(path))
 
 
 async def test_spell_name_means_the_spell_not_the_prepared_creature(tmp_path):

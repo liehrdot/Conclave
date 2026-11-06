@@ -4,34 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import bulk
 from .http import HttpError, get_json, post_json
 
 BASE = "https://api.scryfall.com"
 COLLECTION_CHUNK = 75  # hard limit of /cards/collection
-
-
-def _faces_text(card: dict[str, Any], field: str) -> str:
-    if card.get(field):
-        return card[field]
-    faces = card.get("card_faces") or []
-    return " // ".join(f.get(field, "") for f in faces if f.get(field))
-
-
-def _image(card: dict[str, Any], size: str = "normal") -> str | None:
-    if "image_uris" in card:
-        return card["image_uris"].get(size)
-    faces = card.get("card_faces") or []
-    if faces and "image_uris" in faces[0]:
-        return faces[0]["image_uris"].get(size)
-    return None
-
-
-def _back_image(card: dict[str, Any], size: str = "normal") -> str | None:
-    """Image of the back face for double-faced cards (transform, MDFC, ...), else None."""
-    faces = card.get("card_faces") or []
-    if "image_uris" not in card and len(faces) > 1 and "image_uris" in faces[1]:
-        return faces[1]["image_uris"].get(size)
-    return None
 
 
 # Related objects worth printing next to the deck: tokens, emblems and markers such as
@@ -55,17 +32,17 @@ def compact(card: dict[str, Any], *, with_text: bool = True) -> dict[str, Any]:
     prices = card.get("prices") or {}
     out: dict[str, Any] = {
         "name": card.get("name"),
-        "mana_cost": _faces_text(card, "mana_cost"),
+        "mana_cost": bulk.faces_text(card, "mana_cost"),
         "cmc": card.get("cmc", 0),
-        "type_line": _faces_text(card, "type_line"),
+        "type_line": bulk.faces_text(card, "type_line"),
         "color_identity": card.get("color_identity", []),
         "commander_legal": (card.get("legalities") or {}).get("commander") == "legal",
         "game_changer": bool(card.get("game_changer", False)),
         "edhrec_rank": card.get("edhrec_rank"),
         "price_usd": prices.get("usd") or prices.get("usd_foil"),
         "price_eur": prices.get("eur") or prices.get("eur_foil"),
-        "image": _image(card),
-        "image_back": _back_image(card),
+        "image": bulk.image(card),
+        "image_back": bulk.back_image(card),
         "layout": card.get("layout"),
         "scryfall_uri": card.get("scryfall_uri"),
         "tokens": _tokens(card),
@@ -73,7 +50,7 @@ def compact(card: dict[str, Any], *, with_text: bool = True) -> dict[str, Any]:
     if "_query_name" in card:
         out["_query_name"] = card["_query_name"]
     if with_text:
-        out["oracle_text"] = _faces_text(card, "oracle_text")
+        out["oracle_text"] = bulk.faces_text(card, "oracle_text")
         if card.get("power") is not None:
             out["pt"] = f"{card.get('power')}/{card.get('toughness')}"
     return out
@@ -199,8 +176,8 @@ def printing(card: dict[str, Any], *, foil: bool = False) -> dict[str, Any]:
         "set_name": card.get("set_name"),
         "collector_number": card.get("collector_number"),
         "lang": card.get("lang", "en"),
-        "image": _image(card),
-        "image_back": _back_image(card),
+        "image": bulk.image(card),
+        "image_back": bulk.back_image(card),
         "released": card.get("released_at"),
         "price_eur": eur,
         "price_usd": usd,

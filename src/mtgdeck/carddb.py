@@ -18,7 +18,6 @@ Prices in bulk data are up to ~24 h old; they are fine for a budget estimate, no
 from __future__ import annotations
 
 import asyncio
-import gzip
 import json
 import os
 import sqlite3
@@ -26,9 +25,9 @@ import tempfile
 import time
 from contextlib import closing
 from pathlib import Path
-from typing import Any, Iterable, Iterator
+from typing import Any, Iterable
 
-from . import scryfall
+from . import bulk, scryfall
 from .http import client, get_json, save_stream
 from . import paths
 
@@ -40,9 +39,6 @@ BULK_TYPE = os.environ.get("MTG_BULK_TYPE", "all_cards")
 # 2: layout + image_back (double-faced cards)
 # 3: tokens (tokens, emblems and markers a card creates, from all_parts)
 SCHEMA_VERSION = 3
-
-# Layouts in the bulk file that are not deck cards.
-_SKIP_LAYOUTS = {"token", "double_faced_token", "emblem", "art_series", "planar", "scheme", "vanguard", "augment", "host"}
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS cards (
@@ -152,41 +148,6 @@ async def _download(url: str, dest: Path) -> None:
         await save_stream(resp, dest)
 
 
-def _iter_jsonl_gz(path: Path) -> Iterator[dict[str, Any]]:
-    with gzip.open(path, "rt", encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip().rstrip(",")
-            if not line or line in ("[", "]"):
-                continue
-            try:
-                yield json.loads(line)
-            except ValueError:
-                continue
-
-
-def _is_commander(card: dict[str, Any]) -> bool:
-    type_line = (card.get("type_line") or "").split("//")[0]
-    text = card.get("oracle_text") or " ".join(f.get("oracle_text", "") for f in card.get("card_faces") or [])
-    return ("Legendary" in type_line and "Creature" in type_line) or "can be your commander" in text
-
-
-def _oracle_id(card: dict[str, Any]) -> str | None:
-    if card.get("oracle_id"):
-        return card["oracle_id"]
-    faces = card.get("card_faces") or []  # reversible cards keep the oracle id on the faces
-    return faces[0].get("oracle_id") if faces else None
-
-
-def _printing_score(card: dict[str, Any]) -> int:
-    """Which printing represents the card (image, default text): English, paper, normal frame."""
-    return (
-        8 * (card.get("lang") == "en")
-        + 4 * (not card.get("digital"))
-        + 2 * (not card.get("promo"))
-        + (card.get("image_status") == "highres_scan")
-    )
-
-
 def playable(card: dict[str, Any]) -> bool:
     """A printing you can sleeve up: not oversized, not gold-bordered, not memorabilia or a token."""
     return not (card.get("oversized") or card.get("border_color") == "gold" or card.get("set_type") in ("memorabilia", "token"))
@@ -208,9 +169,9 @@ def _import_cards(conn: sqlite3.Connection, cards: Iterable[dict[str, Any]]) -> 
     cm: dict[int, tuple[Any, ...]] = {}
 
     for card in cards:
-        if card.get("object") != "card" or card.get("layout") in _SKIP_LAYOUTS:
+        if card.get("object") != "card" or card.get("layout") in bulk.SKIP_LAYOUTS:
             continue
-        oid = _oracle_id(card)
+        oid = bulk.oracle_id(card)
         if not oid:
             continue
         lang = card.get("lang", "en")
@@ -233,9 +194,9 @@ def _import_cards(conn: sqlite3.Connection, cards: Iterable[dict[str, Any]]) -> 
             p["eur"] = _min_price(p["eur"], prices.get("eur") or prices.get("eur_foil"))
             p["usd"] = _min_price(p["usd"], prices.get("usd") or prices.get("usd_foil") or prices.get("usd_etched"))
 
-        score = _printing_score(card)
+        score = bulk.printing_score(card)
         if oid not in best or score > best[oid][0]:
-            best[oid] = (score, scryfall.compact(card), _is_commander(card))
+            best[oid] = (score, scryfall.compact(card), bulk.is_commander(card))
 
     conn.execute("DELETE FROM cards")
     conn.execute("DELETE FROM names")
@@ -260,42 +221,11 @@ def _import_cards(conn: sqlite3.Connection, cards: Iterable[dict[str, Any]]) -> 
     return len(best)
 
 
-def _tag_rows(objs: Iterable[dict[str, Any]]) -> Iterator[tuple[str, str]]:
-    """Yield (oracle_id, tag slug) pairs from the Oracle Tags bulk file.
-
-    One line per tag: {"object": "tag", "id", "slug", "type": "oracle", "parent_ids": [...],
-    "aliases": [...], "taggings": [{"oracle_id", "weight", ...}]}. Membership in a child tag does
-    not roll up to its parents in the file, so we add every ancestor ourselves: a card tagged
-    'removal-creature' also counts as 'removal'.
-    """
-    tags = [o for o in objs if o.get("slug") or o.get("label")]
-    by_id = {t.get("id"): t for t in tags if t.get("id")}
-
-    def ancestors(tag: dict[str, Any], seen: set[str]) -> set[str]:
-        out: set[str] = set()
-        for pid in tag.get("parent_ids") or []:
-            parent = by_id.get(pid)
-            if parent is None or pid in seen:
-                continue
-            seen.add(pid)
-            out.add(parent.get("slug") or parent["label"])
-            out |= ancestors(parent, seen)
-        return out
-
-    for tag in tags:
-        slugs = {tag.get("slug") or tag["label"]} | ancestors(tag, set())
-        for tagging in tag.get("taggings") or tag.get("oracle_ids") or []:
-            oid = tagging.get("oracle_id") if isinstance(tagging, dict) else tagging
-            if oid:
-                for slug in slugs:
-                    yield oid, slug
-
-
 def _import_tags(conn: sqlite3.Connection, objs: Iterable[dict[str, Any]]) -> int:
     objs = list(objs)
     conn.execute("DELETE FROM card_tags")
     conn.execute("DELETE FROM tag_aliases")
-    rows = {(oid, tag.lower()) for oid, tag in _tag_rows(objs)}
+    rows = {(oid, tag.lower()) for oid, tag in bulk.tag_rows(objs)}
     conn.executemany("INSERT OR IGNORE INTO card_tags VALUES (?, ?)", sorted(rows))
     aliases = {
         (alias.lower(), (o.get("slug") or "").lower())
@@ -307,16 +237,6 @@ def _import_tags(conn: sqlite3.Connection, objs: Iterable[dict[str, Any]]) -> in
     return len(rows)
 
 
-def _find_bulk(items: list[dict[str, Any]], *types: str) -> dict[str, Any] | None:
-    for item in items:
-        if item.get("type") in types:
-            return item
-    for item in items:  # fallback on the human-readable name
-        if (item.get("name") or "").lower().replace(" ", "_") in types:
-            return item
-    return None
-
-
 async def refresh(force: bool = False, with_tags: bool = True) -> dict[str, Any]:
     """Download the latest bulk files (if older than MTG_BULK_MAX_AGE_DAYS) and rebuild the DB."""
     if not force and not needs_refresh():
@@ -324,10 +244,10 @@ async def refresh(force: bool = False, with_tags: bool = True) -> dict[str, Any]
 
     listing = await get_json(f"{scryfall.BASE}/bulk-data", ttl=3600)
     items = listing.get("data", [])
-    cards_item = _find_bulk(items, BULK_TYPE)
+    cards_item = bulk.find_bulk(items, BULK_TYPE)
     if not cards_item:
         raise RuntimeError(f"Scryfall bulk-data listing has no '{BULK_TYPE}' entry")
-    tags_item = _find_bulk(items, "oracle_tags", "oracle_tag") if with_tags else None
+    tags_item = bulk.find_bulk(items, "oracle_tags", "oracle_tag") if with_tags else None
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(dir=DATA_DIR) as tmp:
@@ -340,11 +260,11 @@ async def refresh(force: bool = False, with_tags: bool = True) -> dict[str, Any]
 
         def build() -> dict[str, int]:
             with closing(_connect()) as conn, conn:
-                counts = {"cards": _import_cards(conn, _iter_jsonl_gz(cards_file))}
+                counts = {"cards": _import_cards(conn, bulk.iter_jsonl_gz(cards_file))}
                 _set_meta(conn, "cards_bulk_type", BULK_TYPE)
                 _set_meta(conn, "cards_updated_at", cards_item.get("updated_at", ""))
                 if tags_file:
-                    counts["tag_links"] = _import_tags(conn, _iter_jsonl_gz(tags_file))
+                    counts["tag_links"] = _import_tags(conn, bulk.iter_jsonl_gz(tags_file))
                     _set_meta(conn, "oracle_tags_updated_at", tags_item.get("updated_at", ""))
                 _set_meta(conn, "last_refresh", time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
                 _set_meta(conn, "schema_version", str(SCHEMA_VERSION))

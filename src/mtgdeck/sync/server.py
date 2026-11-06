@@ -44,9 +44,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .files import canonical, decode, kind_of
+from .protocol import CODE_WRONG, NOT_SIGNED_IN, PROTOCOL, SERVICE, TOO_MANY_CODES, bearer, pairing_link
 from .store import SyncConflict, SyncStore, decode_b64, encode
 
-PROTOCOL = 1
 PAIR_MINUTES = 15
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I: easy to type from a screen
 ONLINE_SECONDS = 150  # the desktop app reports every minute
@@ -347,13 +347,22 @@ class PresenceRequest(BaseModel):
     info: dict[str, Any] = Field(default_factory=dict)
 
 
-def _qr_svg(text: str) -> str | None:
+def qr_svg(text: str) -> str | None:
     """``text`` as an inline SVG QR code, or None without segno (an optional import: the server needs only files/store)."""
     try:
         import segno
     except ImportError:
         return None
     return segno.make(text, error="m").svg_inline(scale=5, border=2, dark="#000", light="#fff", omitsize=True)
+
+
+def pairing_reply(code: dict[str, Any], base: str, qr: bool = False) -> dict[str, Any]:
+    """``POST /api/pair/start``'s answer for a new code from ``Devices.new_code``: plus the link and the server, and with
+    ``qr`` the link as a QR code (the phone app has no QR encoder of its own)."""
+    got = {**code, "link": pairing_link(base, code["code"]), "server": base}
+    if qr:
+        got["qr"] = qr_svg(got["link"])
+    return got
 
 
 def cors_origins() -> list[str]:
@@ -442,10 +451,9 @@ def create_app(data: Path | None = None, public_url: str | None = None, write_gu
         return (public_url or os.environ.get("MTG_SYNC_PUBLIC_URL") or str(request.base_url)).rstrip("/")
 
     def device(authorization: str = Header(default="")) -> dict[str, Any]:
-        token = authorization[7:].strip() if authorization[:7].lower() == "bearer " else ""
-        dev = devices.auth(token)
+        dev = devices.auth(bearer(authorization))
         if dev is None:
-            raise HTTPException(401, "Dieses Gerät ist nicht (mehr) angemeldet – bitte neu koppeln.")
+            raise HTTPException(401, NOT_SIGNED_IN)
         return dev
 
     @app.get("/", include_in_schema=False)
@@ -458,7 +466,7 @@ def create_app(data: Path | None = None, public_url: str | None = None, write_gu
 
     @app.get("/api/health")
     async def health() -> dict[str, Any]:
-        return {"ok": True, "service": "mtgdeck-sync", "protocol": PROTOCOL, "server_id": store.server_id(),
+        return {"ok": True, "service": SERVICE, "protocol": PROTOCOL, "server_id": store.server_id(),
                 "epoch": store.epoch()}  # fmt: skip
 
     @app.post("/api/pair/claim")
@@ -467,20 +475,16 @@ def create_app(data: Path | None = None, public_url: str | None = None, write_gu
         while fails and now - fails[0] > CLAIM_WINDOW:
             fails.popleft()
         if len(fails) >= CLAIM_FAILS:
-            raise HTTPException(429, "Zu viele falsche Codes – bitte in ein paar Minuten noch einmal versuchen.")
+            raise HTTPException(429, TOO_MANY_CODES)
         got = devices.claim(req.code, req.name, req.kind)
         if got is None:
             fails.append(now)
-            raise HTTPException(403, "Der Kopplungscode stimmt nicht oder ist abgelaufen.")
+            raise HTTPException(403, CODE_WRONG)
         return {**got, "server": base_url(request), "server_id": store.server_id()}
 
     @app.post("/api/pair/start")
     async def pair_start(request: Request, qr: bool = False, me: dict[str, Any] = Depends(device)) -> dict[str, Any]:
-        got = devices.new_code(by=me["id"])
-        got = {**got, "link": f"{base_url(request)}/koppeln#{got['code']}", "server": base_url(request)}
-        if qr:  # the phone app shows the link as a QR code too (it has no QR encoder of its own)
-            got["qr"] = _qr_svg(got["link"])
-        return got
+        return pairing_reply(devices.new_code(by=me["id"]), base_url(request), qr)
 
     @app.get("/api/sync/changes")
     async def changes(since: int = 0, limit: int | None = None, me: dict[str, Any] = Depends(device)) -> dict[str, Any]:
