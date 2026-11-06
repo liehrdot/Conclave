@@ -29,10 +29,8 @@ from .. import maybe as maybe_list
 from ..games import HOW, ISSUES, RESULTS, clean_places
 from ..opponents import MAX_NOTES, TAGS
 from ..deckrecord import FLAGS, add_version, snapshot, with_flags, with_pin_rank
-from .files import snapshot_path
+from .files import COLLECTION, OPPONENTS, deck_path, games_path, snapshot_path
 
-OPPONENTS = "decks/.opponents.json"
-COLLECTION = "collection.json"
 SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]{0,80}")
 ID_RE = re.compile(r"[A-Za-z0-9_-]{1,40}")
 ISO_RE = re.compile(r"\d{4}-\d\d-\d\dT[\d:.]+(Z|[+-]\d\d:\d\d)?")
@@ -77,18 +75,18 @@ def paths(op: dict[str, Any]) -> list[str]:
         raise OpError(f"Unbekannte Aktion: {t}")
     if t == "game.add":
         slug = _deck_slug(p.get("game") or {})
-        return [f"decks/{slug}.json", f"decks/.games/{slug}.json", OPPONENTS]
+        return [deck_path(slug), games_path(slug), OPPONENTS]
     if t == "game.delete":
-        return [f"decks/.games/{_deck_slug(p)}.json"]
+        return [games_path(_deck_slug(p))]
     if t == "deck.new":
         return [f"decks/{_deck_slug(p.get('deck') or {}, 'slug')}.json"]
     if t in ("deck.edit", "deck.flags"):
-        return [f"decks/{_deck_slug(p)}.json"]
+        return [deck_path(_deck_slug(p))]
     if t == "deck.pin_order":
         slugs = p.get("slugs")
         if not isinstance(slugs, list) or not 0 < len(slugs) <= PIN_ORDER_MAX:
             raise OpError("Ungültige Daten")
-        return [f"decks/{s}.json" for s in dict.fromkeys(_deck_slug({"deck": s}) for s in slugs)]
+        return [deck_path(s) for s in dict.fromkeys(_deck_slug({"deck": s}) for s in slugs)]
     if t.startswith("collection."):
         return [COLLECTION]
     return [OPPONENTS]
@@ -190,7 +188,7 @@ def _save_version(deck: dict[str, Any], old: dict[str, Any] | None, note: str, a
     deck["updated"] = at
     deck["needs_revalidation"] = True
     add_version(deck, old, note, at)
-    return {f"decks/{deck['slug']}.json": deck, snapshot_path(deck["slug"], deck["version"]): snapshot(deck)}
+    return {deck_path(deck["slug"]): deck, snapshot_path(deck["slug"], deck["version"]): snapshot(deck)}
 
 
 def _deck_new(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, Any]:
@@ -199,7 +197,7 @@ def _deck_new(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, Any
     commanders = [_text(c, 160) for c in d.get("commanders") or [] if _text(c, 160)][:2]
     if not commanders:
         raise OpError("Wähle den Commander des Decks.")
-    if docs.get(f"decks/{slug}.json") is not None:
+    if docs.get(deck_path(slug)) is not None:
         raise OpError("Ein Deck mit diesem Namen gibt es schon – bitte anders nennen.")
     deck = {
         "name": _text(d.get("name"), 120) or " + ".join(commanders), "slug": slug, "commanders": commanders,
@@ -223,7 +221,7 @@ def _deck_edit(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, An
     maybe list (a deck card moves there), ``maybe_remove`` [names] off it (``maybe.change``). Applied to the server's
     current deck, so changes made on the PC meanwhile stay. Nothing changed → nothing is written."""
     slug = _deck_slug(p)
-    old = docs.get(f"decks/{slug}.json")
+    old = docs.get(deck_path(slug))
     if not isinstance(old, dict):
         raise OpError("Dieses Deck gibt es nicht mehr – am PC gelöscht?")
     adds, removes = p.get("add") or [], p.get("remove") or []
@@ -289,14 +287,14 @@ def _deck_edit(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, An
 def _deck_flags(p: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
     """Like ``storage.set_flags``: ``pinned`` / ``shelved`` (bools) set or cleared in the file, no new version."""
     slug = _deck_slug(p)
-    old = docs.get(f"decks/{slug}.json")
+    old = docs.get(deck_path(slug))
     if not isinstance(old, dict):
         raise OpError("Dieses Deck gibt es nicht mehr – am PC gelöscht?")
     flags = {k: p[k] for k in FLAGS if k in p}
     if not flags or not all(isinstance(v, bool) for v in flags.values()):
         raise OpError("Ungültige Daten")
     deck = with_flags(old, flags)
-    return {} if deck == old else {f"decks/{slug}.json": deck}
+    return {} if deck == old else {deck_path(slug): deck}
 
 
 def _pin_order(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
@@ -425,11 +423,11 @@ def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
     if t == "game.add":
         g = p.get("game") or {}
         slug = _deck_slug(g)
-        deck = docs.get(f"decks/{slug}.json")
+        deck = docs.get(deck_path(slug))
         if not isinstance(deck, dict):
             raise OpError("Dieses Deck gibt es nicht mehr – am PC gelöscht?")
         game_id = _id(g.get("id"), "Partie")
-        games = [x for x in docs.get(f"decks/.games/{slug}.json") or [] if isinstance(x, dict)]
+        games = [x for x in docs.get(games_path(slug)) or [] if isinstance(x, dict)]
         if any(x.get("id") == game_id for x in games):
             return out  # already there (sent twice)
         result = g.get("result")
@@ -482,12 +480,12 @@ def apply(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
         round_log = _round(g.get("round"))
         if round_log:
             entry["round"] = round_log
-        out[f"decks/.games/{slug}.json"] = games + [entry]
+        out[games_path(slug)] = games + [entry]
         if changed:
             out[OPPONENTS] = opp_doc
         return out
     if t == "game.delete":
-        path = f"decks/.games/{_deck_slug(p)}.json"
+        path = games_path(_deck_slug(p))
         games = [x for x in docs.get(path) or [] if isinstance(x, dict)]
         keep = [x for x in games if x.get("id") != p.get("id")]
         if len(keep) != len(games):

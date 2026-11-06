@@ -9,7 +9,6 @@ network – so the sync server can build it from its store and tests from plain 
 
 from __future__ import annotations
 
-import re
 from collections import Counter
 from typing import Any
 
@@ -17,11 +16,8 @@ from .. import rule0, speed
 from ..games import HOW, HOW_EN, ISSUES, ISSUES_EN, RESULTS, RESULTS_EN
 from ..opponents import TAGS, TAGS_EN, record as opponent_record, title as opponent_title
 from ..deckrecord import level_text, list_rank
-from .files import DECK_RE
+from .files import COLLECTION, DECK_RE, GAMES_RE, OPPONENTS
 
-GAMES_RE = re.compile(r"decks/\.games/([^/.][^/]*)\.json")
-OPPONENTS_PATH = "decks/.opponents.json"
-COLLECTION_PATH = "collection.json"
 COLLECTION_KEYS = ("id", "name", "qty", "proxy", "foil", "lang", "set", "set_name", "collector_number", "scryfall_id", "price_eur", "place", "place_deck")
 GAMES_MAX = 400
 NOTES_MAX = 30
@@ -79,6 +75,11 @@ def collection(doc: Any) -> list[dict[str, Any]]:
     return sorted(out, key=lambda e: e["name"].lower())
 
 
+def reads(path: str) -> bool:
+    """Whether ``snapshot`` uses the document at ``path`` (the server hands it only those)."""
+    return path in (OPPONENTS, COLLECTION) or bool(DECK_RE.fullmatch(path) or GAMES_RE.fullmatch(path))
+
+
 def snapshot(docs: dict[str, Any]) -> dict[str, Any]:
     decks_raw = {m.group(1): v for p, v in docs.items() if (m := DECK_RE.fullmatch(p)) and isinstance(v, dict)}
     games: list[dict[str, Any]] = []
@@ -94,7 +95,7 @@ def snapshot(docs: dict[str, Any]) -> dict[str, Any]:
 
     names = {d["slug"]: d["name"] for d in decks}
     all_games = [(g["deck"], names.get(g["deck"], g["deck"]), g) for g in games]
-    raw = (docs.get(OPPONENTS_PATH) or {}).get("opponents") if isinstance(docs.get(OPPONENTS_PATH), dict) else []
+    raw = (docs.get(OPPONENTS) or {}).get("opponents") if isinstance(docs.get(OPPONENTS), dict) else []
     opponents = []
     for o in raw or []:
         if not isinstance(o, dict) or not o.get("id"):
@@ -112,7 +113,7 @@ def snapshot(docs: dict[str, Any]) -> dict[str, Any]:
 
     return {
         "version": VERSION, "decks": decks, "opponents": opponents, "games": games[:GAMES_MAX],
-        "collection": collection(docs.get(COLLECTION_PATH)),
+        "collection": collection(docs.get(COLLECTION)),
         "players": sorted({o["player"] for o in opponents if o["player"]}, key=str.lower),
         "options": {
             "results": RESULTS, "issues": [[k, v[0]] for k, v in ISSUES.items()],

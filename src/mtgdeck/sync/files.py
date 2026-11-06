@@ -44,6 +44,17 @@ RULES: list[tuple[re.Pattern[str], str]] = [(re.compile(p.replace("<slug>", SLUG
 ]]  # fmt: skip
 SNAPSHOT_RE = re.compile(rf"decks/\.versions/({SLUG})/v(\d+)\.json")
 DECK_RE = re.compile(rf"decks/({SLUG})\.json")
+GAMES_RE = re.compile(rf"decks/\.games/({SLUG})\.json")
+OPPONENTS = "decks/.opponents.json"
+COLLECTION = "collection.json"
+
+
+def deck_path(deck_slug: str) -> str:
+    return f"decks/{deck_slug}.json"
+
+
+def games_path(deck_slug: str) -> str:
+    return f"decks/.games/{deck_slug}.json"
 
 
 def kind_of(path: str) -> str | None:
@@ -217,7 +228,7 @@ def describe(path: str, names: dict[str, str] | None = None) -> str:
         return f"„{names.get(s, s)}“"
 
     fixed = {"collection.json": "Sammlung", "tablerules.json": "Tischregeln", "blacklist.txt": "Blacklist",
-             "decks/.opponents.json": "Gegnerdecks", "decks/.meta-suggestions.json": "Vorschläge gegen deine Runde"}  # fmt: skip
+             OPPONENTS: "Gegnerdecks", "decks/.meta-suggestions.json": "Vorschläge gegen deine Runde"}  # fmt: skip
     if path in fixed:
         return fixed[path]
     if m := SNAPSHOT_RE.fullmatch(path):

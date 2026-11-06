@@ -43,7 +43,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from .files import canonical, decode, kind_of
+from .files import COLLECTION, canonical, decode, kind_of
 from .protocol import CODE_WRONG, NOT_SIGNED_IN, PROTOCOL, SERVICE, TOO_MANY_CODES, bearer, pairing_link
 from .store import SyncConflict, SyncStore, decode_b64, encode
 
@@ -225,7 +225,6 @@ def daily_backup(store: SyncStore, folder: Path, keep: int = BACKUP_KEEP) -> Pat
     return made
 
 
-APP_READ = re.compile(r"decks/[^/.][^/]*\.json|decks/\.games/[^/.][^/]*\.json|decks/\.opponents\.json|collection\.json")
 OP_ATTEMPTS = 8
 
 
@@ -235,10 +234,10 @@ def app_snapshot(store: SyncStore) -> dict[str, Any]:
 
     docs: dict[str, Any] = {}
     live = store.live("decks/")
-    if (c := store.get("collection.json")) is not None and not c["deleted"]:
-        live["collection.json"] = c
+    if (c := store.get(COLLECTION)) is not None and not c["deleted"]:
+        live[COLLECTION] = c
     for path, d in live.items():
-        if APP_READ.fullmatch(path):
+        if appdata.reads(path):
             try:
                 docs[path] = decode("json", d["data"])
             except ValueError:
