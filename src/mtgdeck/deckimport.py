@@ -5,25 +5,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import storage
+from . import cardrules, storage
 from .cards import resolve
 from .deck import BASIC_LANDS, parse_decklist
 from .edhrec import slugify
-
-
-def _can_be_commander(card: dict[str, Any]) -> bool:
-    front = (card.get("type_line") or "").split("//")[0]
-    text = (card.get("oracle_text") or "").lower()
-    return ("Legendary" in front and ("Creature" in front or "Background" in front)) or "can be your commander" in text
-
-
-_PAIRS = ("partner", "choose a background", "friends forever", "doctor's companion")
-
-
-def _pairs(card: dict[str, Any]) -> bool:
-    """Can share the command zone (Partner, Background, Friends forever, Doctor's companion)."""
-    text = (card.get("oracle_text") or "").lower()
-    return "Background" in (card.get("type_line") or "") or any(k in text for k in _PAIRS)
 
 
 def _candidates(counts: dict[str, int], found: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
@@ -33,10 +18,10 @@ def _candidates(counts: dict[str, int], found: dict[str, dict[str, Any]]) -> lis
     out = []
     for n in counts:
         card = found.get(n)
-        if not card or not _can_be_commander(card):
+        if not card or not cardrules.can_lead(card):
             continue
         out.append({"name": n, "image": card.get("image"), "type_line": card.get("type_line") or "",
-                    "color_identity": card.get("color_identity") or [], "pairs": _pairs(card),
+                    "color_identity": card.get("color_identity") or [], "pairs": cardrules.can_pair(card),
                     "fits": deck_ci <= set(card.get("color_identity") or [])})  # fmt: skip
     if not any(c["fits"] for c in out):  # maybe two partners cover it together
         pairs = [c for c in out if c["pairs"]]

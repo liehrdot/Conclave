@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from . import cardrules
 from . import power as power_mod
 from .power import PowerProfile
 
@@ -111,7 +112,7 @@ def evaluate(
     mld |= set((sb or {}).get("mass_land_denial", []))
     extra_turns = {c["name"] for c in cards if _EXTRA_TURN_RE.search(c.get("oracle_text") or "")}
     extra_turns |= set((sb or {}).get("extra_turns", []))
-    tutors = sorted(c["name"] for c in cards if "tutor" in (c.get("roles") or []))
+    tutors = sorted(c["name"] for c in cards if cardrules.is_tutor(c))
 
     combos = []
     if sb:

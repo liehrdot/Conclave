@@ -21,7 +21,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from . import blacklist
+from . import blacklist, cardrules
 from .jsonstore import locked, read_json, write_json
 from . import paths
 
@@ -262,7 +262,7 @@ async def check_saved(rs: dict[str, Any], deck: dict[str, Any]) -> dict[str, Any
     errors, warnings = violations(
         rs, cards=cards, qty=qty, bracket=int(deck.get("bracket") or 3), proxy=bool(deck.get("proxy")),
         game_changers=sorted({c["name"] for c in cards if c.get("game_changer")} | set(stored.get("game_changers") or [])),
-        tutors=sorted(c["name"] for c in cards if "tutor" in (c.get("roles") or []) and "Land" not in (c.get("type_line") or "")),
+        tutors=sorted(c["name"] for c in cards if cardrules.is_tutor(c)),
         two_card_combos=stored.get("two_card_combos") or [], estimated=stored.get("estimated"),
     )  # fmt: skip
     return {"slug": deck["slug"], "name": deck.get("name") or deck["slug"], "commanders": deck.get("commanders", []),

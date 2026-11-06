@@ -30,7 +30,7 @@ from .cards import resolve
 from .deck import split_qty
 from .http import HttpError
 from .jsonstore import locked, read_json, write_json
-from . import collection_key, paths
+from . import cardrules, collection_key, paths
 
 COLLECTION_FILE = Path(os.environ.get("MTG_COLLECTION_FILE", paths.home() / "collection.json"))
 
@@ -709,15 +709,7 @@ FACT_TYPES = ("Creature", "Artifact", "Enchantment", "Instant", "Sorcery", "Plan
 def can_lead(card: dict[str, Any]) -> bool:
     """Whether a card can be a commander, like Scryfall's ``is:commander``: a legendary creature, a legendary
     Vehicle or Spacecraft with power/toughness, a Background, or a card that says it can be your commander."""
-    if card.get("commander_legal") is False:
-        return False
-    front = (card.get("type_line") or "").split("//")[0]
-    text = card.get("oracle_text") or ""
-    if "can be your commander" in text:
-        return True
-    if "Legendary" not in front:
-        return False
-    return "Creature" in front or "Background" in front or (bool(card.get("pt")) and ("Vehicle" in front or "Spacecraft" in front))
+    return card.get("commander_legal") is not False and cardrules.can_lead(card)
 
 
 def _facts(card: dict[str, Any]) -> dict[str, Any]:
