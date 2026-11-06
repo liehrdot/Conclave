@@ -239,8 +239,8 @@ class SyncClient:
         local_changed = local_hash != base_hash
         if kind == "snapshot" and not local_changed:  # its deck changed here: the snapshot belongs to the deck merge
             slug = SNAPSHOT_RE.fullmatch(path).group(1)  # type: ignore[union-attr]
-            deck_loc = local.get(f"decks/{slug}.json")
-            local_changed = (deck_loc.hash if deck_loc else None) != self._base_hash(f"decks/{slug}.json")
+            deck_loc = local.get(files.deck_path(slug))
+            local_changed = (deck_loc.hash if deck_loc else None) != self._base_hash(files.deck_path(slug))
         if kind in ("deck", "snapshot") and local_changed:
             m = DECK_RE.fullmatch(path) or SNAPSHOT_RE.fullmatch(path)
             group = groups.setdefault(m.group(1), {"deck": None, "snaps": [], "docs": []})  # type: ignore[union-attr]
@@ -317,7 +317,7 @@ class SyncClient:
         return json.loads(best[1].read_text("utf-8")) if best else None
 
     def _merge_deck_group(self, slug: str, group: dict[str, Any], local: dict[str, Local], report: Report) -> bool:
-        deck_path = f"decks/{slug}.json"
+        deck_path = files.deck_path(slug)
         ddoc = group["deck"]
         snaps = sorted(group["snaps"], key=lambda d: d["path"])
         if ddoc is None:  # only colliding snapshots arrived, the deck itself not (yet): try again later
@@ -344,7 +344,7 @@ class SyncClient:
                 log.add("(Deck)", "wiederhergestellt", None, "hier gelöscht, dort geändert – wiederhergestellt")
             elif base is MISSING:  # created independently on two devices with the same name
                 new_slug = self._free_slug(slug)
-                files.write_local(self.roots, f"decks/{new_slug}.json", "deck", {**mine, "slug": new_slug})
+                files.write_local(self.roots, files.deck_path(new_slug), "deck", {**mine, "slug": new_slug})
                 for v, snap in pending.items():
                     files.write_local(self.roots, snapshot_path(new_slug, v), "snapshot", {**snap, "slug": new_slug})
                     (self.roots.decks / ".versions" / slug / f"v{v:04d}.json").unlink(missing_ok=True)

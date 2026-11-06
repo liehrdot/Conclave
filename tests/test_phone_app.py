@@ -713,3 +713,10 @@ def test_phone_apply_matches_the_server_cases():
     """The phone shows an op at once (apply.js); docs/app-api/ops.json holds what the server makes of it."""
     run = subprocess.run(["node", os.path.join(os.path.dirname(__file__), "js", "apply_cases.mjs")], capture_output=True, text=True, timeout=60)
     assert run.returncode == 0, run.stdout + run.stderr
+
+
+def test_the_read_model_names_the_documents_it_reads():
+    from mtgdeck.sync import appdata
+
+    assert all(appdata.reads(p) for p in ("decks/meren.json", "decks/.games/meren.json", "decks/.opponents.json", "collection.json"))
+    assert not any(appdata.reads(p) for p in ("decks/.versions/meren/v0001.json", "decks/.chats/0123456789ab.json", "blacklist.txt"))
