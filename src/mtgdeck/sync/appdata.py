@@ -16,7 +16,7 @@ from typing import Any
 from .. import rule0, speed
 from ..games import HOW, HOW_EN, ISSUES, ISSUES_EN, RESULTS, RESULTS_EN
 from ..opponents import TAGS, TAGS_EN, record as opponent_record, title as opponent_title
-from ..storage import level_text, list_rank
+from ..deckrecord import level_text, list_rank
 from .files import DECK_RE
 
 GAMES_RE = re.compile(r"decks/\.games/([^/.][^/]*)\.json")

@@ -8,9 +8,9 @@ remembers applied ids, so an operation sent twice (the phone retries after a los
 Types: ``game.add`` · ``game.delete`` · ``opponent.add`` · ``opponent.update`` · ``opponent.note`` ·
 ``opponent.note_delete`` · ``opponent.delete`` · ``deck.new`` · ``deck.edit`` · ``deck.flags`` · ``deck.pin_order`` · ``collection.add`` · ``collection.update``.
 
-Decks built on the phone or tablet are saved like ``storage.save`` does it: a new version with a history entry and a
-full snapshot (``decks/.versions/<slug>/vNNNN.json``, returned by ``apply`` next to the deck). Card data never reaches
-the server, so the check (legality, bracket, price) is left to the PC: the deck gets ``needs_revalidation`` and the
+Decks built on the phone or tablet are saved like ``storage.save`` does it (both use ``deckrecord``): a new version with
+a history entry and a full snapshot (``decks/.versions/<slug>/vNNNN.json``, returned by ``apply`` next to the deck).
+Card data never reaches the server, so the check (legality, bracket, price) is left to the PC: the deck gets ``needs_revalidation`` and the
 desktop app checks it after its next sync (``service.revalidate_pending``).
 
 Cards scanned or picked on the phone go into ``collection.json`` like ``collection.add`` does it: one entry per printing,
@@ -28,7 +28,7 @@ from .. import collection_key
 from .. import maybe as maybe_list
 from ..games import HOW, ISSUES, RESULTS, clean_places
 from ..opponents import MAX_NOTES, TAGS
-from ..storage import FLAGS, PIN_RANK, _metrics, diff, level_text
+from ..deckrecord import FLAGS, add_version, snapshot, with_flags, with_pin_rank
 from .files import snapshot_path
 
 OPPONENTS = "decks/.opponents.json"
@@ -186,17 +186,11 @@ def _category(value: Any) -> str | None:
 
 def _save_version(deck: dict[str, Any], old: dict[str, Any] | None, note: str, at: str) -> dict[str, Any]:
     """Like ``storage.save`` for a content change: next version, history entry, snapshot; ``{path: doc}``."""
-    deck["version"] = int((old or {}).get("version") or 0) + 1
     deck["created"] = (old or {}).get("created") or at
     deck["updated"] = at
     deck["needs_revalidation"] = True
-    change = diff(old, deck) if old else {"added": [], "removed": []}
-    deck["history"] = list((old or {}).get("history") or []) + [
-        {"version": deck["version"], "at": at, "note": note, **change, "from": level_text(old) if old else None,
-         "to": level_text(deck), **_metrics(deck)}  # fmt: skip
-    ]
-    snap = {k: v for k, v in deck.items() if k != "history"}
-    return {f"decks/{deck['slug']}.json": deck, snapshot_path(deck["slug"], deck["version"]): snap}
+    add_version(deck, old, note, at)
+    return {f"decks/{deck['slug']}.json": deck, snapshot_path(deck["slug"], deck["version"]): snapshot(deck)}
 
 
 def _deck_new(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, Any]:
@@ -301,14 +295,7 @@ def _deck_flags(p: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
     flags = {k: p[k] for k in FLAGS if k in p}
     if not flags or not all(isinstance(v, bool) for v in flags.values()):
         raise OpError("Ungültige Daten")
-    deck = dict(old)
-    for key, on in flags.items():
-        if on:
-            deck[key] = True
-        else:
-            deck.pop(key, None)
-    if not deck.get("pinned"):
-        deck.pop(PIN_RANK, None)
+    deck = with_flags(old, flags)
     return {} if deck == old else {f"decks/{slug}.json": deck}
 
 
@@ -317,8 +304,9 @@ def _pin_order(op: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
     out = {}
     for rank, path in enumerate(paths(op)):
         deck = docs.get(path)
-        if isinstance(deck, dict) and deck.get("pinned") and deck.get(PIN_RANK) != rank:
-            out[path] = {**deck, PIN_RANK: rank}
+        ranked = with_pin_rank(deck, rank) if isinstance(deck, dict) else None
+        if ranked is not None:
+            out[path] = ranked
     return out
 
 

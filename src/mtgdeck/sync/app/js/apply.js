@@ -234,7 +234,7 @@ function faced(o, g) {
   return !linked.length && (g.opponents || []).some((n) => names.has(String(n).toLowerCase()));
 }
 
-// pinned decks first (newly pinned on top, then in the dragged order), shelved ones last (like storage.list_rank)
+// pinned decks first (newly pinned on top, then in the dragged order), shelved ones last (like deckrecord.list_rank)
 const deckRank = (d) => [(d.shelved ? 2 : 0) + (d.pinned ? 0 : 1), d.pinned && d.pin_rank != null ? 1 : 0, d.pinned ? d.pin_rank ?? 0 : 0];
 // newest last game first, then the newest change (appdata.snapshot sorts decks and opponents this way)
 const newestFirst = (a, b) => String(b.record.last || "").localeCompare(String(a.record.last || ""))

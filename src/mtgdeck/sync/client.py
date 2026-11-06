@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
 
+from ..deckrecord import snapshot
 from ..jsonstore import locked, read_json, write_json
 from ..paths import inside
 from . import files
@@ -367,8 +368,7 @@ class SyncClient:
                     if old not in taken and old not in dm.renumber.values() and old != dm.merge_version:
                         (self.roots.decks / ".versions" / slug / f"v{old:04d}.json").unlink(missing_ok=True)
                 if dm.merge_version:
-                    files.write_local(self.roots, snapshot_path(slug, dm.merge_version), "snapshot",
-                                      {k: v for k, v in dm.deck.items() if k != "history"})  # fmt: skip
+                    files.write_local(self.roots, snapshot_path(slug, dm.merge_version), "snapshot", snapshot(dm.deck))
                 files.write_local(self.roots, deck_path, "deck", dm.deck)
                 self._set_base(deck_path, "deck", ddoc["seq"], ddoc["data"])
                 if dm.deck.get("needs_revalidation"):

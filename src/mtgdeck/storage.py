@@ -18,6 +18,8 @@ from typing import Any
 
 from . import paths
 from .deck import DeckEntry, to_text
+from .deckrecord import (CONTENT_KEYS, FLAGS, PER_SAVE_KEYS, PIN_RANK, add_version, content, diff, history_entry, level_text,
+                         list_rank, metrics, snapshot, with_flags, with_pin_rank)  # fmt: skip
 from .jsonstore import ConflictError, StoreError, atomic_write_text, locked, read_json, write_json
 
 DECKS_DIR = Path(os.environ.get("MTG_DECKS_DIR", paths.home() / "decks"))
@@ -30,15 +32,7 @@ def slug(name: str) -> str:
 
 VERSIONS_DIRNAME = ".versions"  # decks/.versions/<slug>/v0001.json – full snapshot per version
 
-# Fields whose change creates a new version (re-validation alone does not).
-_CONTENT_KEYS = ("name", "commanders", "cards", "bracket", "power_profile", "proxy", "budget", "currency",
-                 "description", "strategy", "notes", "table_rule", "maybe")  # fmt: skip
-# Written on every save; everything else that is not content (guide, upgrade_plan, built_against, precon,
-# copied_from …) is carried over when a caller saves a deck dict built from scratch.
-_PER_SAVE_KEYS = {"slug", "history", "version", "created", "updated", "validation", "change_note", "needs_revalidation"}
 TRASH_DIRNAME = ".trash"
-FLAGS = ("pinned", "shelved")  # per-deck marks outside the content (``set_flags``)
-PIN_RANK = "pin_rank"  # the user's order of the pinned decks (``set_pin_order``), 0 = on top
 
 
 def _now() -> str:
@@ -49,47 +43,10 @@ def _versions_dir(deck_slug: str) -> Path:
     return paths.inside(DECKS_DIR, VERSIONS_DIRNAME, slug(deck_slug))
 
 
-def _card_counts(deck: dict[str, Any]) -> dict[str, int]:
-    counts = {c["name"]: int(c.get("qty", 1)) for c in deck.get("cards", [])}
-    for cmdr in deck.get("commanders", []):
-        counts[f"{cmdr} (Commander)"] = 1
-    return counts
-
-
-def diff(old: dict[str, Any], new: dict[str, Any]) -> dict[str, list[str]]:
-    """Cards added/removed between two deck versions ('2 Forest' for count changes)."""
-    a, b = _card_counts(old), _card_counts(new)
-    added = [f"{b[n] - a.get(n, 0)} {n}" if b[n] - a.get(n, 0) > 1 else n for n in sorted(b) if b[n] > a.get(n, 0)]
-    removed = [f"{a[n] - b.get(n, 0)} {n}" if a[n] - b.get(n, 0) > 1 else n for n in sorted(a) if a[n] > b.get(n, 0)]
-    return {"added": added, "removed": removed}
-
-
-def level_text(deck: dict[str, Any], lang: str = "de") -> str:
-    """„oberes Bracket 3“; ``lang="en"`` for the native phone apps: „upper Bracket 3“."""
-    tier = (deck.get("power_profile") or {}).get("tier")
-    labels = {"low": "unteres", "mid": "mittleres", "high": "oberes"} if lang == "de" else {"low": "lower", "mid": "mid", "high": "upper"}
-    return f"{labels[tier]} Bracket {deck.get('bracket')}" if tier else f"Bracket {deck.get('bracket')}"
-
-
-def _metrics(deck: dict[str, Any]) -> dict[str, Any]:
-    v = deck.get("validation") or {}
-    return {
-        "level": level_text(deck),
-        "price": v.get("price_total"),
-        "power": ((v.get("bracket") or {}).get("power") or {}).get("value"),
-        "legal": v.get("legal"),
-    }
-
-
-def _content(deck: dict[str, Any]) -> str:
-    return json.dumps({k: deck.get(k) for k in _CONTENT_KEYS}, sort_keys=True, default=str)
-
-
 def _snapshot(deck: dict[str, Any]) -> None:
     d = _versions_dir(deck["slug"])
     d.mkdir(parents=True, exist_ok=True)
-    snap = {k: v for k, v in deck.items() if k != "history"}
-    write_json(d / f"v{deck['version']:04d}.json", snap)
+    write_json(d / f"v{deck['version']:04d}.json", snapshot(deck))
 
 
 def _path(deck_slug: str) -> Path:
@@ -134,46 +91,31 @@ def _save_locked(deck: dict[str, Any], deck_slug: str, expect_version: int | Non
         deck["change_note"] = note
         raise ConflictError(f"Das Deck „{deck.get('name', deck_slug)}“ wurde inzwischen geändert – bitte neu laden.")
     for key, value in (old or {}).items():
-        if key not in deck and key not in _CONTENT_KEYS and key not in _PER_SAVE_KEYS:
+        if key not in deck and key not in CONTENT_KEYS and key not in PER_SAVE_KEYS:
             deck[key] = value
 
     if old and not old.get("version"):  # deck from before versioning: keep it as version 1
         old["version"] = 1
-        old.setdefault("history", []).append(
-            {"version": 1, "at": old.get("updated") or now, "note": "Ursprüngliche Version", "added": [], "removed": [],
-             "from": None, "to": level_text(old), **_metrics(old)}  # fmt: skip
-        )
+        old.setdefault("history", []).append(history_entry(None, old, "Ursprüngliche Version", old.get("updated") or now))
         _snapshot(old)
 
-    deck["history"] = list((old or {}).get("history") or [])
     deck["created"] = (old or {}).get("created") or deck.get("created") or now
     deck["updated"] = now
-    if old is None or note or _content(old) != _content(deck):
-        deck["version"] = (old or {}).get("version", 0) + 1
-        change = diff(old, deck) if old else {"added": [], "removed": []}
-        deck["history"].append(
-            {
-                "version": deck["version"],
-                "at": now,
-                "note": note or ("Erstellt" if old is None else ""),
-                **change,
-                "from": level_text(old) if old else None,
-                "to": level_text(deck),
-                **_metrics(deck),
-            }
-        )
+    if old is None or note or content(old) != content(deck):
+        add_version(deck, old, note or ("Erstellt" if old is None else ""), now)
         _snapshot(deck)
     else:
         deck["version"] = old["version"]
+        deck["history"] = list(old.get("history") or [])
         if deck["history"]:  # refresh metrics of the current version (e.g. after re-validation)
-            deck["history"][-1].update(_metrics(deck))
+            deck["history"][-1].update(metrics(deck))
     return _write_current(deck)
 
 
 def set_extra(deck_slug: str, key: str, value: Any) -> dict[str, Any]:
     """Store data that belongs to the deck but is not deck content (e.g. the play guide) in the
     current file – no new version, ``updated`` stays as it is."""
-    if key in _CONTENT_KEYS or key in ("slug", "version", "history", "cards"):
+    if key in CONTENT_KEYS or key in ("slug", "version", "history", "cards"):
         raise ValueError(f"{key} ist Deck-Inhalt")
     with locked(_path(deck_slug)):
         deck = load(deck_slug)
@@ -188,17 +130,8 @@ def set_extra(deck_slug: str, key: str, value: Any) -> dict[str, Any]:
 def set_flags(deck_slug: str, **flags: bool) -> dict[str, Any]:
     """Pin a deck (``pinned``: listed first) or shelve it (``shelved``: not played at the moment, its cards may go
     into other decks). Kept like ``set_extra`` – no new version – and synced like the rest of the file."""
-    if not flags or set(flags) - set(FLAGS):
-        raise ValueError("Unbekannte Markierung")
     with locked(_path(deck_slug)):
-        deck = load(deck_slug)
-        for key, on in flags.items():
-            if on:
-                deck[key] = True
-            else:
-                deck.pop(key, None)
-        if not deck.get("pinned"):
-            deck.pop(PIN_RANK, None)
+        deck = with_flags(load(deck_slug), flags)
         _write_current(deck)
     return deck
 
@@ -213,10 +146,10 @@ def set_pin_order(slugs: list[str]) -> list[str]:
                 deck = load(s)
             except FileNotFoundError:
                 continue
-            if not deck.get("pinned") or deck.get(PIN_RANK) == rank:
+            ranked = with_pin_rank(deck, rank)
+            if ranked is None:
                 continue
-            deck[PIN_RANK] = rank
-            _write_current(deck)
+            _write_current(ranked)
             changed.append(s)
     return changed
 
@@ -255,7 +188,7 @@ def load_version(deck_slug: str, version: int | None = None) -> dict[str, Any]:
 def compare(deck_slug: str, a: int, b: int | None = None) -> dict[str, Any]:
     """Diff version ``a`` -> version ``b`` (default: current)."""
     old, new = load_version(deck_slug, a), load_version(deck_slug, b)
-    mo, mn = _metrics(old), _metrics(new)
+    mo, mn = metrics(old), metrics(new)
     return {
         "from_version": old.get("version", a),
         "to_version": new.get("version", b),
@@ -417,11 +350,3 @@ def list_decks() -> list[dict[str, Any]]:
         )
     out.sort(key=list_rank)  # stable: newest first inside each group
     return out
-
-
-def list_rank(d: dict[str, Any]) -> tuple[int, int, float]:
-    """Pinned decks first (newly pinned ones, without a dragged place yet, on top, then by ``pin_rank``), shelved
-    ones last (a deck can be both: then it leads the shelved ones)."""
-    rank = d.get(PIN_RANK) if d.get("pinned") else None
-    group = (2 if d.get("shelved") else 0) + (0 if d.get("pinned") else 1)
-    return group, 0 if not isinstance(rank, (int, float)) else 1, rank if isinstance(rank, (int, float)) else 0

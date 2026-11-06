@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import brackets, speed, storage
+from . import brackets, deckrecord, speed
 
 
 # every text Rule 0 writes itself; ``build(lang="en")`` is for the native phone apps (the web app stays German)
@@ -81,7 +81,7 @@ def build(deck: dict[str, Any], lang: str = "de") -> dict[str, Any]:
     def names(items: list[str], limit: int = 6) -> str:
         return _names(items, limit, lang)
 
-    level = f"{storage.level_text(deck, lang)} ({rules['name']})"
+    level = f"{deckrecord.level_text(deck, lang)} ({rules['name']})"
     if power.get("value"):
         value = f"{power['value']:.1f}"
         level += t["estimate"].format(v=value if en else value.replace(".", ","))
