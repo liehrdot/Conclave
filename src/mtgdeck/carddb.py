@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS cards (
     oracle_text TEXT,
     color_identity TEXT,      -- e.g. 'BGU' (sorted letters)
     commander_legal INTEGER,
-    is_commander INTEGER,     -- can be a commander (legendary creature / 'can be your commander')
+    is_commander INTEGER,     -- cardrules.can_lead (like Scryfall's is:commander)
     game_changer INTEGER,
     edhrec_rank INTEGER,
     price_usd REAL,

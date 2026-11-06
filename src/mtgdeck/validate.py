@@ -7,16 +7,13 @@ from typing import Any
 
 import httpx
 
-from . import blacklist, brackets, fmt, speed, spellbook, tablerules
+from . import blacklist, brackets, cardrules, fmt, speed, spellbook, tablerules
 from .cards import resolve
 from .deck import BASIC_LANDS, DeckEntry, deck_stats, parse_decklist
 from .http import HttpError
 from .power import PowerProfile
 
 _ANY_NUMBER_RE = re.compile(r"a deck can have (any number of|up to \w+) cards? named", re.I)
-_PARTNER_RE = re.compile(
-    r"\bpartner\b|friends forever|choose a background|doctor'?s companion|can be your commander", re.I
-)
 
 # Recommended minimums for a functional Commander deck (warnings only).
 ROLE_MINIMUMS = {"ramp": 8, "card_draw": 8, "removal": 6, "board_wipe": 1}
@@ -66,14 +63,11 @@ async def validate_deck(
         if not c:
             continue
         identity |= set(c.get("color_identity") or [])
-        front_type = (c.get("type_line") or "").split("//")[0]
-        text = c.get("oracle_text") or ""
-        is_legal_cmdr = ("Legendary" in front_type and "Creature" in front_type) or "can be your commander" in text
-        if not is_legal_cmdr and "Background" not in front_type:
+        if not cardrules.can_lead(c):
             errors.append(f"{name} kann kein Commander sein")
         if not c.get("commander_legal"):
             errors.append(f"{name} ist im Commander-Format gebannt")
-        if len(commanders) == 2 and not (_PARTNER_RE.search(text) or "Background" in front_type):
+        if len(commanders) == 2 and not cardrules.can_pair(c):
             errors.append(f"{name} hat kein Partner/Background/Friends forever – zwei Commander nicht erlaubt")
     for m in set(commanders) & set(merged):
         errors.append(f"{m} steht sowohl als Commander als auch in der Hauptliste")

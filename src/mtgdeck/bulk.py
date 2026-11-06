@@ -3,7 +3,7 @@
 Conclave's card DB (``carddb``), its Scryfall client (``scryfall``) and Cardmarket prices (``cardmarket``) use them, and so
 does Conclave Cards (github.com/liehrdot/Conclave-Cards), whose import builds the same rows: which printing stands for a
 card and how Oracle tags roll up must give the same answers in both. Rename or change one only together with a pin bump
-there.
+there. Its only package import is ``cardrules`` (stdlib only too).
 """
 
 from __future__ import annotations
@@ -12,6 +12,8 @@ import gzip
 import json
 from pathlib import Path
 from typing import Any, Iterable, Iterator
+
+from . import cardrules
 
 # Layouts in the bulk file that are not deck cards.
 SKIP_LAYOUTS = {"token", "double_faced_token", "emblem", "art_series", "planar", "scheme", "vanguard", "augment", "host"}
@@ -47,9 +49,8 @@ def oracle_id(card: dict[str, Any]) -> str | None:
 
 
 def is_commander(card: dict[str, Any]) -> bool:
-    type_line = (card.get("type_line") or "").split("//")[0]
-    text = card.get("oracle_text") or " ".join(f.get("oracle_text", "") for f in card.get("card_faces") or [])
-    return ("Legendary" in type_line and "Creature" in type_line) or "can be your commander" in text
+    """``cardrules.can_lead`` for a raw Scryfall card (the card DB's ``is_commander`` column)."""
+    return cardrules.can_lead(card)
 
 
 def printing_score(card: dict[str, Any]) -> int:

@@ -23,7 +23,7 @@ from typing import Any, Callable
 
 from .cards import resolve
 from .jsonstore import atomic_write_text, locked
-from . import paths
+from . import cardrules, paths
 
 BLACKLIST_FILE = Path(os.environ.get("MTG_BLACKLIST_FILE", paths.home() / "blacklist.txt"))
 
@@ -58,10 +58,6 @@ def _text(c: dict[str, Any]) -> str:
     return c.get("oracle_text") or ""
 
 
-def _front_type(c: dict[str, Any]) -> str:
-    return (c.get("type_line") or "").split("//")[0]
-
-
 def _roles(c: dict[str, Any]) -> set[str]:
     if "roles" in c:
         return set(c.get("roles") or [])
@@ -71,7 +67,7 @@ def _roles(c: dict[str, Any]) -> set[str]:
 
 
 def _is_tutor(c: dict[str, Any]) -> bool:
-    return "Land" not in _front_type(c) and "tutor" in _roles(c)
+    return cardrules.is_tutor(c, _roles(c))
 
 
 def _is_cheap_tutor(c: dict[str, Any]) -> bool:
