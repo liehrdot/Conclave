@@ -74,10 +74,8 @@ fn busy(state: &str) -> bool {
 
 /// Send the state to the backend now (blocking); false when it is not up.
 fn report(backend: &Backend, updates: &Updates) -> bool {
-    let st = backend::status(backend);
-    let (Some(url), true) = (st.url.clone(), st.state == "ready") else { return false };
     let body = serde_json::to_string(&snapshot(updates)).unwrap_or_default();
-    backend::http_request(&url, "POST", "/api/desktop/update", backend::token_of(&url).as_deref(), Some(&body)).is_ok()
+    matches!(backend::call(backend, "POST", "/api/desktop/update", Some(&body), backend::ANSWER_WITHIN), Some(Ok(_)))
 }
 
 /// Push every change while an install runs, and the final state once it is over (an error, say).
@@ -107,16 +105,15 @@ fn now() -> u64 {
 /// Ask the backend which `latest.json` to check (`version` = exactly that one, also an older one). None = the
 /// endpoint in `tauri.conf.json` (the backend is not up yet, or GitHub could not be asked).
 fn feed(backend: &Backend, version: Option<&str>) -> Result<Option<(Url, bool)>, String> {
-    let st = backend::status(backend);
-    let (Some(url), true) = (st.url.clone(), st.state == "ready") else { return Ok(None) };
     let path = match version {
         Some(v) => format!("/api/desktop/feed?version={}", v.chars().filter(|c| c.is_ascii_alphanumeric() || ".-".contains(*c)).collect::<String>()),
         None => "/api/desktop/feed".to_string(),
     };
-    let text = match backend::http_request(&url, "GET", &path, backend::token_of(&url).as_deref(), None) {
-        Ok(t) => t,
-        Err(e) if version.is_some() => return Err(format!("Die Update-Datei für {} fehlt ({e}).", version.unwrap_or(""))),
-        Err(_) => return Ok(None),
+    let text = match backend::call(backend, "GET", &path, None, backend::ANSWER_WITHIN) {
+        None => return Ok(None), // not up yet
+        Some(Ok(t)) => t,
+        Some(Err(e)) if version.is_some() => return Err(format!("Die Update-Datei für {} fehlt ({e}).", version.unwrap_or(""))),
+        Some(Err(_)) => return Ok(None),
     };
     let data: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
     let Some(feed) = data["feed"].as_str() else { return Ok(None) };
@@ -297,7 +294,7 @@ pub fn install(app: AppHandle, updates: Updates, backend: Backend, version: Opti
                 s.progress = None;
                 s.speed = None;
             });
-            if backend::status(&backend).state == "stopped" {
+            if backend::status(&backend).state == backend::State::Stopped {
                 backend::start(app.clone(), backend.clone());
             }
             reporter(updates.clone(), backend.clone()); // tell the (restarted) backend once it is up

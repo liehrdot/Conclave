@@ -42,17 +42,13 @@ pub fn navigate(app: &AppHandle, url: &Url) -> bool {
     false
 }
 
-/// A link with `target="_blank"` or `window.open`: own pages (the print PDF) may open a popup of the app, Moxfield
-/// goes to its window, everything else to the system browser.
+/// A link with `target="_blank"` or `window.open`: own pages (the print PDF) may open a popup of the app; every
+/// other address goes where a navigation to it would go (Moxfield, Cardmarket or the system browser).
 pub fn new_window(app: &AppHandle, url: &Url) -> bool {
-    if moxfield::is_moxfield(url) {
-        moxfield::open(app, url.clone());
-        return false;
-    }
-    if is_local(url) && !cardmarket::is_sell(url) {
+    if is_local(url) {
         return true;
     }
-    open_external(url);
+    navigate(app, url);
     false
 }
 
