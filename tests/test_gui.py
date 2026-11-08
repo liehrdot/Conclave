@@ -1,8 +1,10 @@
+from pathlib import Path
 
 from conftest import deck_lines, save_deck
 from fastapi.testclient import TestClient
 
 from mtgdeck import storage
+from mtgdeck.gui import app as gui_app
 from mtgdeck.gui.app import app
 
 
@@ -76,13 +78,29 @@ def test_deck_view_has_back_faces():
     assert d["card_data"]["Sol Ring"]["taps_for"] == 2 and "taps_for" not in delver
 
 
-def test_playtable_script_is_served_and_its_elements_exist():
-    """The Spieltisch (table.js) loads after app.js, and every id it looks up is in index.html."""
+def test_every_gui_part_is_loaded_in_strict_mode_and_start_comes_last():
+    """The GUI script is split into parts under static/app/ that share one global scope: a part left out of
+    index.html would be missing at runtime, and start.js must run once every other part is defined."""
     import re
 
     client = TestClient(app)
     page = client.get("/").text
-    assert page.index('src="/static/app.js"') < page.index('src="/static/table.js"')
+    loaded = re.findall(r'src="/static/app/(\w+)\.js"', page)
+    on_disk = sorted(p.stem for p in (Path(gui_app.__file__).parent / "static" / "app").glob("*.js"))
+    assert sorted(loaded) == on_disk and len(loaded) == len(set(loaded))
+    assert loaded[-1] == "start"
+    for name in loaded:
+        script = client.get(f"/static/app/{name}.js")
+        assert script.status_code == 200 and script.text.startswith('"use strict";'), name
+
+
+def test_playtable_script_is_served_and_its_elements_exist():
+    """The Spieltisch (table.js) loads after the GUI's parts, and every id it looks up is in index.html."""
+    import re
+
+    client = TestClient(app)
+    page = client.get("/").text
+    assert page.index('src="/static/app/start.js"') < page.index('src="/static/table.js"')
     script = client.get("/static/table.js")
     assert script.status_code == 200
     ids = set(re.findall(r'\$\("#([\w-]+)', script.text))
