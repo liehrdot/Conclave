@@ -10,15 +10,29 @@
 use std::sync::Mutex;
 
 use serde_json::{json, Value};
-use tauri::webview::PageLoadEvent;
-use tauri::{AppHandle, Manager, Url, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
+use tauri::{AppHandle, Manager, Url, WebviewWindow};
 
-pub const LABEL: &str = "cardmarket";
+use crate::site_window::{self, Site};
+
+/// What the web app may offer when the shell has this module (`features` in the bridge's poll).
+pub const FEATURE: &str = "cardmarket";
+const LABEL: &str = "cardmarket";
 const SELL_HOST: &str = "conclave-sell.invalid";
 const HOME: &str = "https://www.cardmarket.com/en/Magic";
 const MAX_PAYLOAD: usize = 1024 * 1024;
 const MAX_CARDS: usize = 2000;
-const SCRIPT: &str = include_str!("cardmarket.js");
+
+static SITE: Site = Site {
+    label: LABEL,
+    title: "Cardmarket – Conclave",
+    size: (1280.0, 900.0),
+    min_size: (760.0, 520.0),
+    script: include_str!("cardmarket.js"),
+    relay_host: SELL_HOST,
+    on_relay: handle_request,
+    on_load: Some(push_state),
+    on_closed: Some(closed),
+};
 
 struct Queue {
     cards: Vec<Value>,
@@ -62,53 +76,13 @@ pub fn start(app: &AppHandle, url: &Url) {
     let Some(first) = cards.first() else { return };
     let target = card_url(first);
     *QUEUE.lock().unwrap() = Some(Queue { cards, current: 0, done: Vec::new() });
-    open(app, target);
+    site_window::open(app, &SITE, target);
 }
 
-/// Show `url` in the Cardmarket window, building it the first time. Called from navigation handlers, so the work
-/// runs on its own thread (building a webview inside an event handler deadlocks WebView2, see moxfield.rs).
-fn open(app: &AppHandle, url: Url) {
-    let app = app.clone();
-    std::thread::spawn(move || {
-        if let Some(w) = app.get_webview_window(LABEL) {
-            let _ = w.navigate(url);
-            let _ = w.unminimize();
-            let _ = w.show();
-            let _ = w.set_focus();
-            return;
-        }
-        let handle = app.clone();
-        let built = WebviewWindowBuilder::new(&app, LABEL, WebviewUrl::External(url))
-            .title("Cardmarket – Conclave")
-            .inner_size(1280.0, 900.0)
-            .min_inner_size(760.0, 520.0)
-            .initialization_script(SCRIPT)
-            .on_navigation(move |u| {
-                if u.host_str() != Some(SELL_HOST) {
-                    return true;
-                }
-                handle_request(&handle, u);
-                false
-            })
-            .on_page_load(|w, p| {
-                if p.event() == PageLoadEvent::Finished {
-                    std::thread::spawn(move || push_state(&w));
-                }
-            })
-            .build();
-        match built {
-            Ok(w) => {
-                let app = app.clone();
-                w.on_window_event(move |e| {
-                    if let WindowEvent::Destroyed = e {
-                        *QUEUE.lock().unwrap() = None;
-                        tell_main(&app, json!({"type": "closed"}));
-                    }
-                });
-            }
-            Err(e) => eprintln!("cardmarket window: {e}"),
-        }
-    });
+/// The Cardmarket window is gone: forget the list and tell the Verkaufsliste.
+fn closed(app: &AppHandle) {
+    *QUEUE.lock().unwrap() = None;
+    tell_main(app, json!({"type": "closed"}));
 }
 
 fn state() -> Value {
@@ -124,9 +98,7 @@ fn push_state(w: &WebviewWindow) {
 }
 
 fn tell_main(app: &AppHandle, event: Value) {
-    if let Some(main) = app.get_webview_window("main") {
-        let _ = main.eval(&format!("window.conclaveSell && window.conclaveSell({event})"));
-    }
+    site_window::eval_main(app, &format!("window.conclaveSell && window.conclaveSell({event})"));
 }
 
 /// One click in the bar: `a=state|goto|done|undone|close` (with `i` = card index or `id` = card id).
@@ -166,11 +138,7 @@ fn handle_request(app: &AppHandle, url: &Url) {
             }
             "close" => {
                 let _ = w.close();
-                if let Some(main) = app.get_webview_window("main") {
-                    let _ = main.unminimize();
-                    let _ = main.show();
-                    let _ = main.set_focus();
-                }
+                site_window::show_main(&app);
             }
             _ => push_state(&w),
         }

@@ -15,6 +15,7 @@ use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_notification::NotificationExt;
 
 use crate::backend::{self, Backend};
+use crate::{cardmarket, moxfield};
 use crate::updates::{self, Updates};
 
 const FIRST_AFTER: Duration = Duration::from_secs(3);
@@ -30,21 +31,18 @@ pub fn start(app: AppHandle, backend: Backend, autostart_item: CheckMenuItem<Wry
             thread::sleep(wait);
             wait = EVERY;
             let started = std::time::Instant::now();
-            let st = backend::status(&backend);
-            let (Some(url), true) = (st.url.clone(), st.state == "ready") else { continue };
-            let token = backend::token_of(&url);
             let visible = app.get_webview_window("main").and_then(|w| w.is_visible().ok()).unwrap_or(true);
             let autostart = app.autolaunch().is_enabled().unwrap_or(false);
             let body = serde_json::json!({
                 "since": since, "visible": visible, "autostart": autostart,
                 "version": app.package_info().version.to_string(),
-                "features": ["moxfield", "cardmarket"],
+                "features": [moxfield::FEATURE, cardmarket::FEATURE],
                 "update": serde_json::to_value(updates::snapshot(&updates)).unwrap_or(serde_json::Value::Null),
                 "wait": WAIT,
             })
             .to_string();
             let within = Duration::from_secs(WAIT + 5);
-            let Ok(text) = backend::http_request_within(&url, "POST", "/api/desktop/poll", token.as_deref(), Some(&body), within) else { continue };
+            let Some(Ok(text)) = backend::call(&backend, "POST", "/api/desktop/poll", Some(&body), within) else { continue };
             let Ok(data) = serde_json::from_str::<serde_json::Value>(&text) else { continue };
             wait = MIN_GAP.saturating_sub(started.elapsed()); // poll again at once, but never more than once a second
             if let Some(n) = data["since"].as_u64() {
@@ -65,17 +63,9 @@ pub fn start(app: AppHandle, backend: Backend, autostart_item: CheckMenuItem<Wry
             }
             for c in data["commands"].as_array().into_iter().flatten() {
                 match c["type"].as_str().unwrap_or("") {
-                    "autostart" => {
-                        let m = app.autolaunch();
-                        let _ = if c["value"].as_bool().unwrap_or(false) { m.enable() } else { m.disable() };
-                        let _ = autostart_item.set_checked(m.is_enabled().unwrap_or(false));
-                    }
+                    "autostart" => crate::set_autostart(&app, &autostart_item, c["value"].as_bool().unwrap_or(false)),
                     "open_data" => crate::open_folder(&backend::dirs(&app).data),
-                    "open_log" => {
-                        if let Some(folder) = backend::dirs(&app).log.parent() {
-                            crate::open_folder(folder);
-                        }
-                    }
+                    "open_log" => crate::open_log_folder(&app),
                     "check_update" => updates::check(app.clone(), updates.clone(), backend.clone()),
                     "install_update" => updates::install(app.clone(), updates.clone(), backend.clone(), None),
                     "install_version" => {

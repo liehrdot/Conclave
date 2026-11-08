@@ -24,9 +24,21 @@ pub const APP_FOLDER: &str = "MTG Deckbuilder";
 const BACKOFF: [u64; 5] = [1, 2, 5, 5, 5];
 const HEALTHY_AFTER: Duration = Duration::from_secs(300);
 
+/// Where the backend is; the start page and the web app read the lowercase word (`"ready"` …).
+#[derive(Clone, Copy, Serialize, Default, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum State {
+    #[default]
+    Starting,
+    Ready,
+    Restarting,
+    Failed,
+    Stopped,
+}
+
 #[derive(Clone, Serialize, Default, Debug)]
 pub struct Status {
-    pub state: String, // starting | ready | restarting | failed | stopped
+    pub state: State,
     pub url: Option<String>,
     pub attempt: u32,
     pub detail: String,
@@ -142,7 +154,7 @@ fn supervise(app: AppHandle, backend: Backend, generation: u64) {
             }
         }
         set_status(&app, &backend, |s| {
-            s.state = if attempt == 0 { "starting".into() } else { "restarting".into() };
+            s.state = if attempt == 0 { State::Starting } else { State::Restarting };
             s.attempt = attempt;
             s.url = None;
         });
@@ -154,7 +166,7 @@ fn supervise(app: AppHandle, backend: Backend, generation: u64) {
             }
         }
         if backend.0.lock().unwrap().stopping {
-            set_status(&app, &backend, |s| s.state = "stopped".into());
+            set_status(&app, &backend, |s| s.state = State::Stopped);
             return;
         }
         if started.elapsed() >= HEALTHY_AFTER {
@@ -163,7 +175,7 @@ fn supervise(app: AppHandle, backend: Backend, generation: u64) {
         if attempt as usize >= BACKOFF.len() {
             let tail = log_tail(&d.log, 40);
             set_status(&app, &backend, |s| {
-                s.state = "failed".into();
+                s.state = State::Failed;
                 s.detail = "Der Hintergrunddienst startet nicht.".into();
                 s.log = tail;
             });
@@ -220,7 +232,7 @@ fn run_once(app: &AppHandle, backend: &Backend, d: &Dirs, generation: u64) -> Re
             let url = url.trim().to_string();
             wait_reachable(&url, Duration::from_secs(20));
             set_status(app, backend, |s| {
-                s.state = "ready".into();
+                s.state = State::Ready;
                 s.url = Some(url.clone());
                 s.detail.clear();
                 s.log.clear();
@@ -269,14 +281,17 @@ fn host_port(url: &str) -> Option<String> {
     Some(rest[..end].to_string())
 }
 
+/// How long an ordinary request to the backend may take.
+pub const ANSWER_WITHIN: Duration = Duration::from_secs(5);
+
 /// A tiny HTTP client (no dependency): `GET` or `POST` to `base + path`, with the app's token and a JSON body if
-/// given; the body of a 200 answer. Used by the self-test (`/api/health`) and the bridge (`/api/desktop/poll`).
-pub fn http_request(base: &str, method: &str, path: &str, token: Option<&str>, body: Option<&str>) -> Result<String, String> {
-    http_request_within(base, method, path, token, body, Duration::from_secs(5))
+/// given; the body of a 200 answer. Used by the self-test (`/api/health`) and through `call()`.
+fn http_request(base: &str, method: &str, path: &str, token: Option<&str>, body: Option<&str>) -> Result<String, String> {
+    http_request_within(base, method, path, token, body, ANSWER_WITHIN)
 }
 
 /// Like `http_request`, for an answer that may take up to `wait` (the bridge's long poll).
-pub fn http_request_within(base: &str, method: &str, path: &str, token: Option<&str>, body: Option<&str>, wait: Duration) -> Result<String, String> {
+fn http_request_within(base: &str, method: &str, path: &str, token: Option<&str>, body: Option<&str>, wait: Duration) -> Result<String, String> {
     let addr = host_port(base).ok_or("keine Adresse")?;
     let mut s = TcpStream::connect_timeout(&addr.parse().map_err(|e| format!("{e}"))?, Duration::from_secs(3)).map_err(|e| e.to_string())?;
     s.set_read_timeout(Some(wait)).ok();
@@ -305,8 +320,15 @@ pub fn http_get(base: &str, path: &str) -> Result<String, String> {
     http_request(base, "GET", path, None, None)
 }
 
+/// One request to the running backend with its access token, answered within `wait`; None while it is not ready.
+pub fn call(backend: &Backend, method: &str, path: &str, body: Option<&str>, wait: Duration) -> Option<Result<String, String>> {
+    let st = status(backend);
+    let url = st.url.filter(|_| st.state == State::Ready)?;
+    Some(http_request_within(&url, method, path, token_of(&url).as_deref(), body, wait))
+}
+
 /// The access token in `http://127.0.0.1:1234/?token=…`.
-pub fn token_of(url: &str) -> Option<String> {
+fn token_of(url: &str) -> Option<String> {
     let (_, rest) = url.split_once("?token=")?;
     let token = rest.split('&').next().unwrap_or("");
     (!token.is_empty()).then(|| token.to_string())
@@ -316,7 +338,7 @@ pub fn stop(backend: &Backend) {
     let child = {
         let mut inner = backend.0.lock().unwrap();
         inner.stopping = true;
-        inner.status.state = "stopped".into();
+        inner.status.state = State::Stopped;
         inner.child.take()
     };
     if let Some(mut c) = child {

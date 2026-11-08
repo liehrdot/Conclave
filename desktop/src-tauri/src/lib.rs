@@ -8,12 +8,14 @@ mod bridge;
 mod cardmarket;
 mod links;
 mod moxfield;
+mod site_window;
 mod updates;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use backend::Backend;
+use site_window::show_main;
 use updates::Updates;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -23,14 +25,6 @@ use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_window_state::{StateFlags, WindowExt};
 
 static HIDE_HINT_SHOWN: AtomicBool = AtomicBool::new(false);
-
-fn show_main(app: &AppHandle) {
-    if let Some(w) = app.get_webview_window("main") {
-        let _ = w.unminimize();
-        let _ = w.show();
-        let _ = w.set_focus();
-    }
-}
 
 pub(crate) fn open_folder(path: &std::path::Path) {
     let _ = std::fs::create_dir_all(path);
@@ -53,12 +47,23 @@ fn restart_backend(app: AppHandle, backend: tauri::State<'_, Backend>) {
     backend::start(app, backend.inner().clone());
 }
 
-#[tauri::command]
-fn open_log(app: AppHandle) {
-    let d = backend::dirs(&app);
-    if let Some(folder) = d.log.parent() {
+/// The folder with the backend's log (tray, settings page and the start page's „Protokoll öffnen“).
+pub(crate) fn open_log_folder(app: &AppHandle) {
+    if let Some(folder) = backend::dirs(app).log.parent() {
         open_folder(folder);
     }
+}
+
+#[tauri::command]
+fn open_log(app: AppHandle) {
+    open_log_folder(&app);
+}
+
+/// Turn starting at sign-in on or off and keep the tray's check item in step with what Windows now says.
+pub(crate) fn set_autostart(app: &AppHandle, item: &CheckMenuItem<tauri::Wry>, on: bool) {
+    let m = app.autolaunch();
+    let _ = if on { m.enable() } else { m.disable() };
+    let _ = item.set_checked(m.is_enabled().unwrap_or(on));
 }
 
 /// The tray icon with its menu; returns the „Beim Anmelden starten“ item so the bridge can keep it in step.
@@ -78,12 +83,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<CheckMenuItem<tauri::Wry>> {
         .on_menu_event(move |app, event| match event.id.as_ref() {
             "open" => show_main(app),
             "data" => open_folder(&backend::dirs(app).data),
-            "autostart" => {
-                let m = app.autolaunch();
-                let now = m.is_enabled().unwrap_or(false);
-                let _ = if now { m.disable() } else { m.enable() };
-                let _ = autostart_item.set_checked(m.is_enabled().unwrap_or(!now));
-            }
+            "autostart" => set_autostart(app, &autostart_item, !app.autolaunch().is_enabled().unwrap_or(false)),
             "quit" => app.exit(0),
             _ => {}
         })
@@ -105,7 +105,7 @@ fn selftest(app: AppHandle, backend: Backend) {
             if let Some(u) = st.url.clone() {
                 break Some(u);
             }
-            if st.state == "failed" || Instant::now() > until {
+            if st.state == backend::State::Failed || Instant::now() > until {
                 eprintln!("selftest: backend not ready: {:?}", st);
                 break None;
             }
