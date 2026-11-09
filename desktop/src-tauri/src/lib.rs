@@ -1,5 +1,5 @@
 //! The desktop shell: one window showing the local web app, the Python backend as a supervised child, a tray
-//! icon that keeps the app alive when the window is closed (sync and questions from the phone go on), one
+//! icon that keeps the app alive when the window is closed (sync goes on), one
 //! instance, remembered window state, optional autostart. `--hidden` starts into the tray, `--selftest` starts
 //! the backend, checks `/api/health` and exits (used by CI).
 
@@ -184,7 +184,7 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let (WindowEvent::CloseRequested { api, .. }, "main") = (event, window.label()) {
-                // the app lives on in the tray: sync and questions from the phone keep working
+                // the app lives on in the tray: sync keeps working
                 api.prevent_close();
                 let _ = window.hide();
                 if !HIDE_HINT_SHOWN.swap(true, Ordering::SeqCst) {

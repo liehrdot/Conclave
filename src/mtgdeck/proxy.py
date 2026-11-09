@@ -746,7 +746,7 @@ async def prepare(
         raise ValueError("Plastik-Karten (P10) gibt es nicht in Foil.")
 
     p = await plan(deck, source=source, only_missing=only_missing, tokens=tokens)
-    printable = [c for c in p["cards"] if c["qty"] > 0]  # tokens set to 0 copies stay out
+    printable = [c for c in p["cards"] if c["qty"] > 0]
     jobs = {img["id"]: img for c in printable for side in ("front", "back") if c[side] and (img := c[side]["image"])}
     total, done = len(jobs), 0
     local: dict[str, Path] = {}

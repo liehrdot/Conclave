@@ -2,9 +2,6 @@
 // The desktop GUI, part 5 of 21: the deck view: head, tabs and loading a deck.
 // index.html loads the parts in order; they share one global scope.
 
-// ============================================================================================
-// deck view
-// ============================================================================================
 let printLoadedFor = null;
 
 async function openDeck(slug) {

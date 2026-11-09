@@ -2,9 +2,6 @@
 // The desktop GUI, part 12 of 21: the Verlauf tab: versions, diffs, restore, copy.
 // index.html loads the parts in order; they share one global scope.
 
-// ============================================================================================
-// tab "Verlauf": versions, diffs, restore, copy
-// ============================================================================================
 let versions = [];
 
 async function renderHistory(d) {

@@ -2,9 +2,6 @@
 // The desktop GUI, part 2 of 21: the state, the hash router and the sidebar's deck list.
 // index.html loads the parts in order; they share one global scope.
 
-// ============================================================================================
-// state + routing  (#/new · #/deck/<slug>/<tab> · #/blacklist · #/settings)
-// ============================================================================================
 let brackets = [];
 let currentDeck = null;
 let deckIndex = [];

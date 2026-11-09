@@ -188,7 +188,7 @@ class SyncStore:
             row = db.execute("SELECT * FROM docs WHERE path = ?", (path,)).fetchone()
             if row is not None:
                 cur = self._row(row)
-                if bool(cur["deleted"]) == deleted and cur["hash"] == h:  # same content: nothing to do
+                if bool(cur["deleted"]) == deleted and cur["hash"] == h:
                     return {"seq": cur["seq"], "hash": h, "unchanged": True}
                 if base_seq != cur["seq"]:
                     raise SyncConflict(cur)
