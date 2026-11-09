@@ -173,7 +173,6 @@ class SyncClient:
             self._remember(path, kind)
         return True
 
-    # --- sync ------------------------------------------------------------------------------------
 
     def sync(self) -> dict[str, Any]:
         """One full sync; returns what happened (pulled, pushed, merged, conflicts, skipped, errors …)."""
@@ -200,7 +199,6 @@ class SyncClient:
             items += [{**c, "at": time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.gmtime())} for c in report.conflicts]
             write_json(path, items[-CONFLICT_LOG_MAX:])
 
-    # --- pull ------------------------------------------------------------------------------------
 
     def _pull(self, report: Report) -> None:
         local = self._scan(report)
@@ -395,7 +393,6 @@ class SyncClient:
             n += 1
         return f"{slug}-{n}"
 
-    # --- push ------------------------------------------------------------------------------------
 
     def _push(self, report: Report) -> bool:
         """Send local changes; ``True`` when something conflicted (another round is needed)."""

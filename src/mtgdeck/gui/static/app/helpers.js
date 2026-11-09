@@ -2,9 +2,6 @@
 // The desktop GUI, part 1 of 21: small helpers every part uses: $, api(), toast(), ask(), formats, the store.
 // index.html loads the parts in order; they share one global scope.
 
-// ============================================================================================
-// helpers
-// ============================================================================================
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

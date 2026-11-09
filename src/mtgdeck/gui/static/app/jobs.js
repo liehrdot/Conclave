@@ -2,9 +2,6 @@
 // The desktop GUI, part 4 of 21: the job panel: one print, MPC Autofill or card DB run at a time, streamed via SSE.
 // index.html loads the parts in order; they share one global scope.
 
-// ============================================================================================
-// jobs: one print or MPC Autofill run at a time, streamed via SSE
-// ============================================================================================
 let currentJob = null;   // id of the running job
 let jobInfo = null;      // { id, kind, slot, route, slug, title, started, error, dismissed }
 let eventSource = null;

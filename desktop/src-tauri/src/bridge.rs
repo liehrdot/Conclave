@@ -1,9 +1,9 @@
-//! The bridge to the backend while the app runs: every few seconds the shell posts its state to
+//! The bridge to the backend while the app runs: the shell keeps a long poll open, posting its state to
 //! `/api/desktop/poll` and gets back the tray tooltip (sync state, running jobs), notices it shows as system
 //! notifications while the window is hidden (news from your other devices), and the
 //! commands the settings page queued (autostart on/off, open the data folder or the log).
 //!
-//! The poll is a long poll: the backend holds it up to `WAIT` and answers at once when the web app queues a
+//! The backend holds each poll up to `WAIT` and answers at once when the web app queues a
 //! command, so „Update installieren“ starts right away instead of after the next poll.
 
 use std::thread;

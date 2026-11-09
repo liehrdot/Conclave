@@ -2,9 +2,6 @@
 // The desktop GUI, part 21 of 21: start-up: wire the inputs, load the lists, route.
 // index.html loads the parts in order; they share one global scope.
 
-// ============================================================================================
-// start
-// ============================================================================================
 wireAutocomplete($("#bl-input"), $("#ac-bl"));
 wireAutocomplete($("#tr-input"), $("#ac-tr"));
 wireAutocomplete($("#opp-new [name=commander]"), $("#ac-opp-new"));

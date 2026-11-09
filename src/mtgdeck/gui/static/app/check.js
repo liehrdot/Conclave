@@ -2,9 +2,6 @@
 // The desktop GUI, part 10 of 21: the deck check (table rule, target power) and Rule 0.
 // index.html loads the parts in order; they share one global scope.
 
-// ============================================================================================
-// deck check: table rule + the power the deck aims for
-// ============================================================================================
 function retuneTarget() {
   const form = $("#retune-form");
   return {

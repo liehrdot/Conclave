@@ -2,9 +2,6 @@
 // The desktop GUI, part 14 of 21: Meine Sammlung.
 // index.html loads the parts in order; they share one global scope.
 
-// ============================================================================================
-// my collection
-// ============================================================================================
 let coll = { entries: [], summary: {}, decks: {} };
 let collSummary = { cards: 0 };
 let collShown = 150;

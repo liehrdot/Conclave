@@ -844,7 +844,7 @@ def _tempo_now(deck: dict[str, Any], card_data: dict[str, Any]) -> dict[str, Any
 async def api_validate(slug: str) -> dict[str, Any]:
     deck = storage.load(slug)
     result = await deckedit.revalidate(deck)
-    storage.save(deck, expect_version=deck.get("version"))  # never overwrite a newer save with this copy
+    storage.save(deck, expect_version=deck.get("version"))
     return result
 
 
@@ -1091,7 +1091,7 @@ class PrintRequest(BaseModel):
 
 
 def _print_deck(slug: str, version: int | None = None) -> dict[str, Any]:
-    if printorders.is_order_slug(slug):  # a collective order prints like a deck
+    if printorders.is_order_slug(slug):
         return printorders.as_deck(slug)
     deck = storage.load_version(slug, version)
     deck["slug"] = storage.slug(slug)

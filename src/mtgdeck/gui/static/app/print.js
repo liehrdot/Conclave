@@ -2,9 +2,6 @@
 // The desktop GUI, part 13 of 21: the Drucken tab: print studio, before/after view, MPC Autofill terminal.
 // index.html loads the parts in order; they share one global scope.
 
-// ============================================================================================
-// tab "Drucken": print studio (MPC Autofill, PDF)
-// ============================================================================================
 let printPlan = null;
 let currentOrder = null;  // the open collective order (page #/orders/<id>)
 // what the print studio works on: the open deck or a collective order (same print routes, slug sammel-<id>)
