@@ -1034,6 +1034,19 @@ async def api_copy(slug: str, req: CopyRequest) -> dict[str, Any]:
     return storage.copy(slug, req.name, req.version)
 
 
+class RenameDeckRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
+@app.put("/api/decks/{slug}/name")
+async def api_rename_deck(slug: str, req: RenameDeckRequest) -> dict[str, Any]:
+    try:
+        renamed = storage.rename(slug, req.name)
+        return {"slug": renamed["slug"], "name": req.name.strip(), "version": renamed.get("version")}
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
 # --- proxies (MPC Autofill) & settings ---------------------------------------------------------
 
 
