@@ -82,6 +82,6 @@ def test_token_quantities_are_backed_up():
     info = backup.create("manuell")
     with zipfile.ZipFile(backup.BACKUP_DIR / info["name"]) as z:
         assert "proxies/meren/tokens.json" in z.namelist()
-    proxy._token_qty_path("meren").unlink()
+    proxy.set_token_qty("meren", {"Human": 3})
     backup.restore(info["name"])
     assert proxy.load_token_qty("meren") == {"Human": 10}

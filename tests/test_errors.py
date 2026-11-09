@@ -53,8 +53,13 @@ def test_route_reports_unreachable_service_as_502(monkeypatch):
     assert r.json()["detail"].startswith("Scryfall ist gerade nicht erreichbar")
 
     # routes without their own handling go through the global one
-    resp = asyncio.run(gui._http_error(None, HttpError(0, "https://json.edhrec.com/x", "keine Verbindung")))
-    assert resp.status_code == 502 and b"EDHREC ist gerade nicht erreichbar" in resp.body
+    async def edhrec_down(*_a, **_k):
+        raise HttpError(0, "https://json.edhrec.com/x", "keine Verbindung")
+
+    monkeypatch.setattr(gui.storage, "load", lambda slug: {"slug": slug})
+    monkeypatch.setattr(gui.deckedit, "similar_cards", edhrec_down)
+    r = TestClient(gui.app).get("/api/decks/meren/similar", params={"card": "Sol Ring"})
+    assert r.status_code == 502 and r.json()["detail"].startswith("EDHREC ist gerade nicht erreichbar")
 
 
 def _wait(job_id, timeout=10):

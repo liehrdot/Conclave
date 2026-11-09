@@ -1,3 +1,5 @@
+import zipfile
+
 from fastapi.testclient import TestClient
 
 from mtgdeck import backup, collection, selling, settings
@@ -83,7 +85,8 @@ def test_routes_and_backup():
         assert client.post(f"/api/sales/{item['id']}/sold").json()["removed"] == 2
         assert client.get("/api/collection").json()["entries"] == []
         assert client.post("/api/sales/nope/sold").status_code == 404
-        assert "sales.json" in {n for n, _ in backup._members()}
+        with zipfile.ZipFile(backup.BACKUP_DIR / backup.create("manuell")["name"]) as z:
+            assert "sales.json" in z.namelist()
         assert client.delete("/api/sales/sold").json()["deleted"] == 1
 
 
