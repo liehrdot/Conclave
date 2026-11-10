@@ -189,6 +189,9 @@ def handler(request: httpx.Request) -> httpx.Response:
             cid = int(url.path.rsplit("/", 1)[1])
             hit = CM_PRINTS.get(cid)
             return httpx.Response(200, json={"object": "card", "name": CM_PRODUCTS[cid][0], **hit}) if hit else httpx.Response(404, json={})
+        if url.path == "/sets":
+            return httpx.Response(200, json={"object": "list", "data": [
+                {"code": "c21", "name": "Commander 2021"}, {"code": "m21", "name": "Core Set 2021"}]})
         if url.path == "/cards/collection":
             idents = json.loads(request.content)["identifiers"]
             data, missing = [], []

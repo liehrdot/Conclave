@@ -115,6 +115,12 @@ async def named(name: str, *, fuzzy: bool = True) -> dict[str, Any]:
     return await get_json(f"{BASE}/cards/named", {"fuzzy" if fuzzy else "exact": name})
 
 
+async def set_codes() -> dict[str, str]:
+    """Lowered set name -> set code, for exports that name the set instead of its code (Deckbox, Dragon Shield …)."""
+    data = await get_json(f"{BASE}/sets", ttl=7 * 24 * 3600)
+    return {s["name"].strip().lower(): s["code"] for s in data.get("data", []) if s.get("name") and s.get("code")}
+
+
 async def autocomplete(prefix: str) -> list[str]:
     data = await get_json(f"{BASE}/cards/autocomplete", {"q": prefix}, ttl=7 * 24 * 3600)
     return data.get("data", [])

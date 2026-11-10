@@ -31,7 +31,7 @@ def test_parse_formats():
 
 async def test_import_resolves_printings_and_merges():
     r = await collection.import_text(MANABOX)
-    assert r == {"added": 3, "entries": 2, "not_found": [], "lines": 2}
+    assert r == {"added": 3, "entries": 2, "not_found": [], "lines": 2, "source": "ManaBox"}
     sol = next(e for e in collection.load() if e["name"] == "Sol Ring")
     assert sol["set_name"] == "Set C21" and sol["image"].endswith("a1b2-sol.jpg") and sol["price_eur"] == "1.50"
     cult = next(e for e in collection.load() if e["name"] == "Cultivate")
@@ -146,6 +146,9 @@ async def test_collection_routes_print_only_missing_and_add_printed():
         "cards": [{"name": l.split(" ", 1)[1], "qty": int(l.split(" ", 1)[0])} for l in deck_lines()]})  # fmt: skip
     client = TestClient(app)
     assert client.get("/api/collection").json()["summary"]["cards"] == 0
+    pv = client.post("/api/collection/import/preview", json={"text": MANABOX}).json()
+    assert pv["source"] == "ManaBox" and pv["cards"] == 3 and client.get("/api/collection").json()["summary"]["cards"] == 0
+    assert client.post("/api/collection/import/preview", json={"text": "  "}).status_code == 400
     r = client.post("/api/collection/import", json={"text": MANABOX}).json()
     assert r["added"] == 3
     r = client.post("/api/collection", json={"items": [{"name": "Filler 0", "qty": 1, "proxy": True}]}).json()
@@ -371,3 +374,75 @@ def test_foil_kind_from_the_printing():
     assert collection.foil_kind({"finishes": ["foil"], "promo_types": ["universesbeyond", "surgefoil"]}) == "surge"
     assert collection.foil_kind({"finishes": ["foil"], "promo_types": ["oilslick", "raisedfoil"]}) == "oilslick"
     assert collection.foil_kind({"finishes": ["foil"], "promo_types": ["boosterfun"]}) == "foil"
+
+
+# exports of other collection apps (columns as their exports write them)
+DRAGON_SHIELD = '''"sep=,"
+Folder Name,Quantity,Trade Quantity,Card Name,Set Code,Set Name,Card Number,Condition,Printing,Language,Price Bought,Date Bought
+Binder rot,2,0,Sol Ring,C21,Commander 2021,263,NearMint,Normal,English,1.00,2024-01-01
+Bulk,1,0,Cultivate,M21,Core Set 2021,177,NearMint,Foil,German,0.30,2024-01-01
+'''
+DECKBOX = '''Count,Tradelist Count,Name,Edition,Card Number,Condition,Language,Foil,Signed,Artist Proof,Altered Art,Misprint,Promo,Textless,My Price
+2,0,Sol Ring,Commander 2021,263,Near Mint,English,,,,,,,,$1.00
+1,0,Cultivate,Core Set 2021,177,Near Mint,German,foil,,,,,,,
+1,0,Demonic Tutor,Some Set Nobody Knows,93,Near Mint,English,,,,,,,,
+'''
+TCGPLAYER = '''Quantity,Name,Simple Name,Set,Card Number,Set Code,Printing,Condition,Language,Rarity,Product ID,SKU
+2,Sol Ring,Sol Ring,Commander 2021,263,C21,Normal,Near Mint,English,Uncommon,1,2
+'''
+OTHERS = {
+    "Helvault": "collector_number,extras,language,name,oracle_id,quantity,scryfall_id,set_code,set_name\n263,,en,Sol Ring,o1,2,a1b2-sol,c21,Commander 2021\n",
+    "MTGGoldfish": "Card,Set ID,Set Name,Quantity,Foil,Variation,Collector Number,Scryfall ID\nSol Ring,C21,Commander 2021,2,REGULAR,,263,\n",
+    "Deckstats": "amount,card_name,is_foil,is_pinned,set_id,set_code\n2,Sol Ring,0,0,1,C21\n",
+    "Cardsphere": "Count,Name,Edition,Edition Code,Scryfall ID,Condition,Language,Foil\n2,Sol Ring,Commander 2021,C21,a1b2-sol,NM,English,N\n",
+}
+
+
+def test_detect_source():
+    assert collection.detect_source(MANABOX) == "ManaBox"
+    assert collection.detect_source(MOXFIELD) == "Moxfield"
+    assert collection.detect_source(DRAGON_SHIELD) == "Dragon Shield"
+    assert collection.detect_source(DECKBOX) == "Deckbox"
+    assert collection.detect_source(TCGPLAYER) == "TCGplayer"
+    for label, text in OTHERS.items():
+        assert collection.detect_source(text) == label
+    assert collection.detect_source("Name,Qty\nSol Ring,1\n") == "CSV"
+    assert collection.detect_source("2 Sol Ring\n") == "Liste"
+    assert collection.detect_source("scryfall_id\na1b2-sol\n") == "CSV"  # no name column: still a CSV
+
+
+def test_parse_other_apps():
+    ds = collection.parse_import(DRAGON_SHIELD)
+    assert [(i["name"], i["qty"], i["set"], i["collector_number"], i["foil"], i["lang"], i["place"]) for i in ds] == [
+        ("Sol Ring", 2, "c21", "263", False, "en", "Binder rot"), ("Cultivate", 1, "m21", "177", True, "de", "Bulk")]
+    db = collection.parse_import(DECKBOX)  # „Edition“ is the set's name here, not its code
+    assert db[0]["set"] is None and db[0]["set_name"] == "Commander 2021" and db[1]["foil"] is True
+    assert collection.parse_import(TCGPLAYER)[0]["set"] == "c21"
+    for text in OTHERS.values():
+        item = collection.parse_import(text)[0]
+        assert (item["name"], item["qty"], item["set"], item["foil"]) == ("Sol Ring", 2, "c21", False)
+    assert collection.parse_import("scryfall_id\na1b2-sol\n")[0]["scryfall_id"] == "a1b2-sol"
+
+
+async def test_import_set_names_and_places():
+    r = await collection.import_text(DECKBOX)
+    assert r["source"] == "Deckbox" and r["not_found"] == []
+    sol = next(e for e in collection.load() if e["name"] == "Sol Ring")
+    assert sol["set"] == "c21" and sol["collector_number"] == "263"  # set name → code via Scryfall's set list
+    tutor = next(e for e in collection.load() if e["name"] == "Demonic Tutor")
+    assert not tutor["set"]  # unknown set name: found by name alone
+    collection.delete()
+    await collection.import_text(DRAGON_SHIELD)
+    assert {e["name"]: e["place"] for e in collection.load()} == {"Sol Ring": "Binder rot", "Cultivate": "Bulk"}
+    collection.delete()
+    await collection.add(collection.parse_import(DRAGON_SHIELD), place="Kiste")  # a place given wins
+    assert {e["place"] for e in collection.load()} == {"Kiste"}
+
+
+async def test_preview_does_not_save():
+    p = await collection.preview_text(DRAGON_SHIELD + "Bulk,1,0,Gibt Es Nicht,,,,NearMint,Normal,English,,\n")
+    assert collection.load() == []
+    assert p["source"] == "Dragon Shield" and p["lines"] == 3 and p["cards"] == 3 and p["foil"] == 1
+    assert p["not_found"] == ["Gibt Es Nicht"] and p["with_printing"] == 2  # Cultivate (m21/177) is found by name in the mock
+    assert p["places"] == [{"place": "Binder rot", "cards": 2}, {"place": "Bulk", "cards": 1}]
+    assert p["rows"][0]["name"] == "Sol Ring" and p["rows"][0]["set"] == "c21"

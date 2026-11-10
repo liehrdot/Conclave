@@ -85,6 +85,11 @@ async def api_collection_add(req: CollectionAdd) -> dict[str, Any]:
     return await collection.add([i.model_dump() for i in req.items], place=req.place, place_deck=req.place_deck)
 
 
+@router.post("/api/collection/import/preview")
+async def api_collection_import_preview(req: CollectionImport) -> dict[str, Any]:
+    return await collection.preview_text(req.text, proxy=req.proxy)
+
+
 @router.post("/api/collection/import")
 async def api_collection_import(req: CollectionImport) -> dict[str, Any]:
     return await collection.import_text(req.text, proxy=req.proxy, replace=req.replace)

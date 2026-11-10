@@ -92,16 +92,38 @@ def _entry(name: str, *, qty: int = 1, proxy: bool = False, foil: bool = False, 
 # --- parsing imports ------------------------------------------------------------------------------
 
 _COLS = {
-    "name": ("name", "card name", "card", "kartenname", "karte"),
+    "name": ("name", "card name", "card_name", "card", "kartenname", "karte"),
     "qty": ("quantity", "count", "qty", "anzahl", "amount", "menge"),
-    "set": ("set code", "edition code", "edition", "set", "setcode"),
+    "set": ("set code", "set_code", "edition code", "set id", "setcode", "edition", "set"),
+    "set_name": ("set name", "set_name", "expansion"),
     "collector_number": ("collector number", "collector_number", "card number", "collector #", "cn", "number", "nr"),
     "scryfall_id": ("scryfall id", "scryfall_id", "scryfallid", "scryfall uuid"),
-    "foil": ("foil", "finish", "printing"),
+    "foil": ("foil", "finish", "printing", "is_foil", "extras"),
     "proxy": ("proxy",),
     "lang": ("language", "lang", "sprache"),
+    "place": ("binder name", "folder name", "binder", "folder", "ort", "location"),
 }
-_TRUE = {"1", "true", "yes", "ja", "y", "x", "foil", "etched", "proxy"}
+# which app wrote a CSV, told by the columns only that app writes (first match wins)
+SOURCES = (
+    ("Dragon Shield", {"folder name"}),
+    ("ManaBox", {"manabox id"}),
+    ("ManaBox", {"binder name"}),
+    ("TCGplayer", {"simple name"}),
+    ("TCGplayer", {"product id", "sku"}),
+    ("Helvault", {"extras", "oracle_id"}),
+    ("Deckstats", {"is_pinned"}),
+    ("Deckstats", {"card_name", "set_code"}),
+    ("MTGGoldfish", {"set id"}),
+    ("MTGGoldfish", {"variation"}),
+    ("Cardsphere", {"edition code"}),
+    ("Archidekt", {"oracle id"}),
+    ("Moxfield", {"tradelist count", "proxy"}),
+    ("Moxfield", {"tradelist count", "tags"}),
+    ("Deckbox", {"tradelist count"}),
+    ("Conclave", {"count", "edition", "proxy", "scryfall id"}),
+)
+_CODE_RE = re.compile(r"[a-z0-9]{2,6}")
+_TRUE = {"1", "true", "yes", "ja", "y", "x", "foil", "etched", "proxy", "foil etched"}
 MAX_LINE = 300  # no card line is longer
 _FLAGS = ("*f*", "*e*", "*p*", "[proxy]", "(proxy)")
 # "(M19) 314" / "[m19] #314" at the end of a line, after the flags are cut off
@@ -132,22 +154,53 @@ def _truthy(value: str) -> bool:
     return (value or "").strip().lower() in _TRUE
 
 
+def _start(text: str) -> tuple[str, str]:
+    """The text without BOM and an Excel „sep=,“ line, and its delimiter."""
+    text = text.lstrip("\ufeff").strip()
+    first = text.splitlines()[0] if text else ""
+    if first.strip().strip('"').lower().startswith("sep="):
+        text = text.split("\n", 1)[1].lstrip() if "\n" in text else ""
+        first = text.splitlines()[0] if text else ""
+    return text, max((",", ";", "\t"), key=first.count)
+
+
+def _header(text: str, delim: str) -> list[str]:
+    first = text.splitlines()[0] if text else ""
+    return [h.strip().lower() for h in next(csv.reader([first], delimiter=delim), [])]
+
+
+def _is_csv(header: list[str], first: str, delim: str) -> bool:
+    known = set(_COLS["name"]) | set(_COLS["scryfall_id"])
+    if header and all(h in _COLS["scryfall_id"] for h in header):  # a bare list of Scryfall IDs
+        return True
+    return any(h in known for h in header) and first.count(delim) >= 1
+
+
+def detect_source(text: str) -> str:
+    """The app that wrote an import ("Dragon Shield", "ManaBox", …), "CSV" when unknown, "Liste" for a card list."""
+    text, delim = _start(text)
+    if not text:
+        return ""
+    header = _header(text, delim)
+    if not _is_csv(header, text.splitlines()[0], delim):
+        return "Liste"
+    cols = set(header)
+    return next((label for label, needs in SOURCES if needs <= cols), "CSV")
+
+
 def parse_import(text: str) -> list[dict[str, Any]]:
-    """CSV (ManaBox, Moxfield, Archidekt, …) or a plain card list -> raw items."""
-    text = text.lstrip("﻿").strip()
+    """CSV (ManaBox, Moxfield, Archidekt, Dragon Shield, Deckbox, TCGplayer, …) or a plain card list -> raw items."""
+    text, delim = _start(text)
     if not text:
         return []
-    first = text.splitlines()[0]
-    delim = max((",", ";", "\t"), key=first.count)
-    header = [h.strip().lower() for h in next(csv.reader([first], delimiter=delim))]
-    if any(h in _COLS["name"] for h in header) and first.count(delim) >= 1:
+    if _is_csv(_header(text, delim), text.splitlines()[0], delim):
         return _parse_csv(text, delim)
     return _parse_lines(text)
 
 
 def _parse_csv(text: str, delim: str) -> list[dict[str, Any]]:
     reader = csv.DictReader(io.StringIO(text), delimiter=delim)
-    fields = {f.strip().lower(): f for f in reader.fieldnames or []}
+    fields = {f.strip().lower(): f for f in reader.fieldnames or [] if f}
     col = {key: next((fields[a] for a in aliases if a in fields), None) for key, aliases in _COLS.items()}
     items = []
     for row in reader:
@@ -156,16 +209,24 @@ def _parse_csv(text: str, delim: str) -> list[dict[str, Any]]:
         if not name and not get("scryfall_id"):
             continue
         qty = get("qty")
-        items.append({
+        set_code, set_name = get("set"), get("set_name")
+        if set_code and not _CODE_RE.fullmatch(set_code.lower()):  # Deckbox writes the set's name as „Edition“
+            set_code, set_name = "", set_name or set_code
+        item = {
             "name": name,
             "qty": int(qty) if qty.isdigit() else 1,
-            "set": get("set").lower() or None,
+            "set": set_code.lower() or None,
             "collector_number": get("collector_number") or None,
             "scryfall_id": get("scryfall_id") or None,
             "foil": _truthy(get("foil")),
             "proxy": _truthy(get("proxy")),
             "lang": _lang(get("lang")) if get("lang") else None,
-        })  # fmt: skip
+        }  # fmt: skip
+        if set_name and not item["set"]:
+            item["set_name"] = set_name
+        if get("place"):
+            item["place"] = get("place")
+        items.append(item)
     return items
 
 
@@ -200,6 +261,14 @@ def _parse_lines(text: str) -> list[dict[str, Any]]:
 async def _resolve_items(items: list[dict[str, Any]], *, proxy_default: bool = False) -> tuple[list[dict[str, Any]], list[str]]:
     """Raw items -> collection entries (English names, printing/artwork where known)."""
     items = [{**it, "qty": int(it.get("qty") or 1)} for it in items]
+    if any(it.get("set_name") and not it.get("set") for it in items):
+        try:
+            codes = await scryfall.set_codes()
+        except Exception:  # offline: the name alone still finds the card
+            codes = {}
+        for it in items:
+            if it.get("set_name") and not it.get("set"):
+                it["set"] = codes.get(str(it["set_name"]).strip().lower())
     entries: list[dict[str, Any]] = []
     need_name: list[dict[str, Any]] = []
     for it in [it for it in items if it.get("printing") and it["printing"].get("name")]:
@@ -207,6 +276,7 @@ async def _resolve_items(items: list[dict[str, Any]], *, proxy_default: bool = F
         entries.append(_entry(p["name"], qty=it["qty"], proxy=it.get("proxy") or proxy_default, foil=it.get("foil", False),
                               lang=it.get("lang") or p.get("lang") or "en", note=it.get("note") or "",
                               **{k: p.get(k) for k in PRINTING_KEYS}))  # fmt: skip
+        entries[-1]["place"] = it.get("place") or ""
     items = [it for it in items if not (it.get("printing") and it["printing"].get("name"))]
     with_print = [it for it in items if it.get("scryfall_id") or (it.get("set") and it.get("collector_number"))]
     idents = [{"id": it["scryfall_id"]} if it.get("scryfall_id") else {"set": it["set"], "collector_number": str(it["collector_number"])}
@@ -226,6 +296,7 @@ async def _resolve_items(items: list[dict[str, Any]], *, proxy_default: bool = F
         p.pop("lang", None)
         entries.append(_entry(p.pop("name"), qty=it["qty"], proxy=it.get("proxy") or proxy_default,
                               foil=it.get("foil", False), lang=lang, **p))  # fmt: skip
+        entries[-1]["place"] = it.get("place") or ""
     printed = {id(it) for it in with_print}
     need_name += [it for it in items if id(it) not in printed]
     not_found: list[str] = []
@@ -243,6 +314,7 @@ async def _resolve_items(items: list[dict[str, Any]], *, proxy_default: bool = F
                                   lang=it.get("lang") or "en", note=it.get("note") or "",
                                   image=it.get("image") or c.get("image"), image_back=c.get("image_back"),
                                   price_eur=c.get("price_eur"), price_usd=c.get("price_usd")))  # fmt: skip
+            entries[-1]["place"] = it.get("place") or ""
     not_found += [it.get("scryfall_id") or "?" for it in need_name if not it.get("name")]
     return entries, not_found
 
@@ -253,8 +325,8 @@ async def add(items: list[dict[str, Any]], *, proxy_default: bool = False, repla
     at ``place`` (text or a deck's name, with ``place_deck`` = its slug)."""
     new, not_found = await _resolve_items(items, proxy_default=proxy_default)
     place, place_deck = collection_key.clean_place(place, place_deck)
-    for e in new:
-        e["place"], e["place_deck"] = place, place_deck
+    for e in new:  # a place given here wins, else each item's own (a ManaBox binder, a Dragon Shield folder)
+        e["place"], e["place_deck"] = (place, place_deck) if place or place_deck else collection_key.clean_place(e.get("place"), "")
     with locked(COLLECTION_FILE):  # read after the (slow) lookups, so nothing saved meanwhile is lost
         before = [] if replace else load()
         merged = _merge(before + new)
@@ -283,11 +355,42 @@ async def add_printed(plan: dict[str, Any]) -> dict[str, Any]:
     return await add(items)
 
 
+_NOTHING = "Keine Karten erkannt – erwartet wird eine CSV mit Spalte „Name“ oder eine Liste wie „2 Sol Ring“."
+PREVIEW_ROWS = 8
+
+
 async def import_text(text: str, *, proxy: bool = False, replace: bool = False) -> dict[str, Any]:
     items = parse_import(text)
     if not items:
-        raise ValueError("Keine Karten erkannt – erwartet wird eine CSV mit Spalte „Name“ oder eine Liste wie „2 Sol Ring“.")
-    return {**await add(items, proxy_default=proxy, replace=replace), "lines": len(items)}
+        raise ValueError(_NOTHING)
+    return {**await add(items, proxy_default=proxy, replace=replace), "lines": len(items), "source": detect_source(text)}
+
+
+async def preview_text(text: str, *, proxy: bool = False) -> dict[str, Any]:
+    """What an import would add, without saving: the app that wrote it, counts, misses, places and a few rows."""
+    items = parse_import(text)
+    if not items:
+        raise ValueError(_NOTHING)
+    new, not_found = await _resolve_items(items, proxy_default=proxy)
+    places: dict[str, int] = {}
+    for e in new:
+        e["place"] = collection_key.clean_place(e.get("place"), "")[0]
+        if e["place"]:
+            places[e["place"]] = places.get(e["place"], 0) + e["qty"]
+    keys = ("name", "qty", "set", "set_name", "collector_number", "foil", "proxy", "lang", "place", "image")
+    return {
+        "source": detect_source(text),
+        "lines": len(items),
+        "cards": sum(e["qty"] for e in new),
+        "entries": len(_merge(new)),
+        "real": sum(e["qty"] for e in new if not e["proxy"]),
+        "proxy": sum(e["qty"] for e in new if e["proxy"]),
+        "foil": sum(e["qty"] for e in new if e["foil"]),
+        "with_printing": sum(e["qty"] for e in new if e.get("set")),
+        "places": [{"place": k, "cards": v} for k, v in sorted(places.items(), key=lambda kv: -kv[1])],
+        "not_found": not_found,
+        "rows": [{k: e.get(k) for k in keys} for e in new[:PREVIEW_ROWS]],
+    }
 
 
 def update(entry_id: str, *, qty: int | None = None, proxy: bool | None = None, foil: bool | None = None,
