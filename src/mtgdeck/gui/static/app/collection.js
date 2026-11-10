@@ -545,26 +545,152 @@ $("#coll-add-form").addEventListener("submit", async (e) => {
   } catch (err) { fail(err); }
 });
 
-// import
+// import: which app the file comes from (only for the how-to; the backend recognises the format itself)
+const IMPORT_APPS = [
+  { id: "manabox", label: "ManaBox", steps: ["Öffne in ManaBox „Sammlung“ und wähle einen Binder oder die ganze Sammlung.",
+    "Tippe auf ⋯ › „Exportieren“ › „CSV“ und schick dir die Datei auf den PC."], note: "Binder werden zu Orten." },
+  { id: "moxfield", label: "Moxfield", moxfield: true, steps: ["Öffne auf moxfield.com deine „Collection“.",
+    "Klicke auf „More“ › „Export“ und speichere die CSV-Datei."], note: "Proxys aus Moxfield bleiben Proxys." },
+  { id: "archidekt", label: "Archidekt", steps: ["Öffne auf archidekt.com deine „Collection“.", "Klicke auf „Export“, wähle CSV und speichere die Datei."] },
+  { id: "dragonshield", label: "Dragon Shield", steps: ["Öffne in der Dragon-Shield-App den Ordner (oder „All Cards“).",
+    "Wähle „Export“ › „CSV“ und schick dir die Datei auf den PC."], note: "Ordner werden zu Orten." },
+  { id: "deckbox", label: "Deckbox · Delver Lens", steps: ["Deckbox: „Inventory“ öffnen, oben rechts „Export“ klicken, Datei speichern.",
+    "Delver Lens: „Export“ › Format „Deckbox“ wählen."] },
+  { id: "tcgplayer", label: "TCGplayer", steps: ["Öffne in der TCGplayer-App deine Sammlung.", "Wähle „Export“ › „CSV“ und schick dir die Datei auf den PC."] },
+  { id: "other", label: "Andere", steps: ["Jede CSV mit einer Kopfzeile geht, wenn sie eine Spalte „Name“ oder „Scryfall ID“ hat.",
+    "Anzahl, Set-Code oder Set-Name, Nummer, Foil, Sprache und Ort werden erkannt, wenn es sie gibt."],
+    note: "Auch Cardsphere, Helvault, MTGGoldfish und Deckstats. Oder eine Liste wie „2 Sol Ring (C21) 263 *F*“." },
+];
+let collImportApp = "";
+function renderImportApps() {
+  $("#coll-import-apps").innerHTML = IMPORT_APPS.map((a) =>
+    `<button type="button" class="chip" data-app="${a.id}" aria-pressed="${a.id === collImportApp}">${esc(a.label)}</button>`).join("");
+  const app = IMPORT_APPS.find((a) => a.id === collImportApp);
+  const guide = $("#coll-import-guide");
+  guide.hidden = !app;
+  if (!app) return;
+  guide.innerHTML = `<ol>${app.steps.map((t) => `<li>${esc(t)}</li>`).join("")}</ol>${app.note ? `<p class="muted">${esc(app.note)}</p>` : ""}`
+    + (app.moxfield ? `<div id="coll-mox-slot"></div>` : "");
+  if (app.moxfield) void moxfieldCollectionButton();
+}
+async function moxfieldCollectionButton() {
+  if (!(await moxfieldWindow()) || !$("#coll-mox-slot")) return;
+  $("#coll-mox-slot").innerHTML = `<button type="button" class="btn" id="coll-mox-open">Moxfield-Fenster öffnen</button>
+    <p class="muted">Melde dich dort an und klicke bei deiner Collection auf „Export“. Conclave übernimmt die Datei direkt.</p>`;
+}
+$("#coll-import-apps").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-app]");
+  if (!b) return;
+  collImportApp = collImportApp === b.dataset.app ? "" : b.dataset.app;
+  store.set("importapp", collImportApp);
+  renderImportApps();
+});
+$("#coll-import-guide").addEventListener("click", (e) => {
+  if (!e.target.closest("#coll-mox-open")) return;
+  location.href = "https://moxfield.com/collection";  // the desktop shell catches this and opens its Moxfield window
+});
+// the Moxfield window hands over the CSV its own „Export“ produced, in parts (see moxfield.js)
+let moxParts = null;
+function takeMoxfieldPart(d) {
+  const parts = Math.min(Number(d.parts) || 1, 64), i = Number(d.part) || 0;
+  if (typeof d.csv !== "string" || i < 0 || i >= parts) return;
+  if (!moxParts || moxParts.id !== d.id) moxParts = { id: d.id, parts, got: [] };
+  moxParts.got[i] = d.csv;
+  if (moxParts.got.filter((x) => typeof x === "string").length < moxParts.parts) return;
+  const csv = moxParts.got.join("");
+  moxParts = null;
+  takeMoxfieldCollection(csv);
+}
+function takeMoxfieldCollection(csv) {
+  if (typeof csv !== "string" || !csv.trim()) { toast("Moxfield hat keine Sammlung geliefert.", "error"); return; }
+  if (parseHash().view !== "collection") go("#/collection");
+  const dlg = $("#coll-import-dialog");
+  if (!dlg.open) { openCollImport(); }
+  $("#coll-import-text").value = csv;
+  showCollImportFile("Moxfield-Export", csv);
+  void previewCollImport();
+}
+
 function resetCollImportFile() {
   $("#coll-import-drop").classList.remove("has-file", "dragging");
   $("#coll-import-file-name").textContent = "Datei hierher ziehen";
   $("#coll-import-file-hint").innerHTML = 'CSV oder TXT · oder <span class="link">Datei auswählen …</span>';
 }
+function showCollImportFile(name, text) {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim()).length;
+  $("#coll-import-drop").classList.add("has-file");
+  $("#coll-import-file-name").textContent = name;
+  $("#coll-import-file-hint").innerHTML = `${fmtNum(lines)} Zeilen gelesen · <span class="link">Andere Datei …</span>`;
+}
 async function readCollImportFile(file) {
   if (!file) return;
   if (file.size > 5 * 1024 * 1024) { toast("Die Datei ist zu groß (höchstens 5 MB).", "error"); return; }
   $("#coll-import-text").value = decodeDeckFile(await file.arrayBuffer());
-  const lines = $("#coll-import-text").value.split(/\r?\n/).filter((l) => l.trim()).length;
-  $("#coll-import-drop").classList.add("has-file");
-  $("#coll-import-file-name").textContent = file.name;
-  $("#coll-import-file-hint").innerHTML = `${fmtNum(lines)} Zeilen gelesen · <span class="link">Andere Datei …</span>`;
+  showCollImportFile(file.name, $("#coll-import-text").value);
+  void previewCollImport();
 }
-$("#coll-import-btn").addEventListener("click", () => { $("#coll-import-form").reset(); resetCollImportFile(); $("#coll-import-dialog").showModal(); });
+
+// preview: what the import would add, before anything is saved
+let collPreviewSeq = 0, collPreviewTimer = 0, collPreviewCards = 0;
+function resetCollPreview() {
+  collPreviewSeq++;
+  collPreviewCards = 0;
+  $("#coll-import-preview").hidden = true;
+  $("#coll-import-ok").textContent = "Importieren";
+}
+async function previewCollImport() {
+  clearTimeout(collPreviewTimer);
+  const text = $("#coll-import-text").value;
+  if (!text.trim()) { resetCollPreview(); return; }
+  const seq = ++collPreviewSeq, box = $("#coll-import-preview");
+  box.hidden = false;
+  box.classList.add("busy");
+  if (!box.textContent.trim()) box.innerHTML = `<span class="muted">Prüfe die Karten …</span>`;
+  try {
+    const p = await api("/api/collection/import/preview", { method: "POST", body: { text, proxy: $("#coll-import-proxy").checked } });
+    if (seq !== collPreviewSeq) return;
+    renderCollPreview(p);
+  } catch (err) {
+    if (seq !== collPreviewSeq) return;
+    collPreviewCards = 0;
+    box.innerHTML = `<span class="cip-miss">${esc(err.message)}</span>`;
+    $("#coll-import-ok").textContent = "Importieren";
+  } finally { if (seq === collPreviewSeq) box.classList.remove("busy"); }
+}
+function renderCollPreview(p) {
+  collPreviewCards = p.cards;
+  const source = p.source === "Liste" ? "Kartenliste" : p.source === "CSV" ? "CSV-Datei" : `${p.source}-Export`;
+  const facts = [`${fmtNum(p.entries)} ${p.entries === 1 ? "Eintrag" : "Einträge"}`,
+    p.cards > p.with_printing ? `${fmtNum(p.cards - p.with_printing)} ohne Ausgabe` : "",
+    p.foil ? `${fmtNum(p.foil)} Foil` : "", p.proxy ? `${fmtNum(p.proxy)} Proxy` : ""].filter(Boolean).join(" · ");
+  const places = p.places.length ? `<span class="muted">Orte: ${p.places.slice(0, 4).map((x) => `${esc(x.place)} (${fmtNum(x.cards)})`).join(", ")}${p.places.length > 4 ? ` und ${p.places.length - 4} weitere` : ""}</span>` : "";
+  const miss = p.not_found.length ? `<span class="cip-miss">${fmtNum(p.not_found.length)} nicht gefunden: ${esc(p.not_found.slice(0, 6).join(", "))}${p.not_found.length > 6 ? " …" : ""}</span>` : "";
+  const rows = p.rows.map((r) => `<li><span class="q">${fmtNum(r.qty)}×</span><span class="n">${esc(r.name)}</span>
+    <span class="m">${esc([r.set ? `${r.set.toUpperCase()} ${r.collector_number || ""}`.trim() : "", r.foil ? "Foil" : "", r.proxy ? "Proxy" : "", r.lang && r.lang !== "en" ? r.lang.toUpperCase() : ""].filter(Boolean).join(" · "))}</span></li>`).join("");
+  $("#coll-import-preview").innerHTML = `<div class="cip-head"><strong>${fmtNum(p.cards)} ${p.cards === 1 ? "Karte" : "Karten"}</strong>
+    <span class="cip-facts">${esc(source)} erkannt · ${facts}</span></div>${places}${miss}
+    ${rows ? `<ul>${rows}</ul>${p.cards > p.rows.reduce((n, r) => n + r.qty, 0) ? `<span class="muted">…</span>` : ""}` : ""}`;
+  $("#coll-import-ok").textContent = p.cards ? `${fmtNum(p.cards)} ${p.cards === 1 ? "Karte" : "Karten"} importieren` : "Importieren";
+}
+
+function openCollImport() {
+  $("#coll-import-form").reset();
+  resetCollImportFile();
+  resetCollPreview();
+  collImportApp = store.get("importapp") || "";
+  renderImportApps();
+  $("#coll-import-dialog").showModal();
+}
+$("#coll-import-btn").addEventListener("click", openCollImport);
 $("#coll-import-cancel").addEventListener("click", () => $("#coll-import-dialog").close());
 $("#coll-import-close").addEventListener("click", () => $("#coll-import-dialog").close());
 $("#coll-import-file").addEventListener("change", (e) => { void readCollImportFile(e.target.files[0]); e.target.value = ""; });
-$("#coll-import-text").addEventListener("input", () => { if ($("#coll-import-drop").classList.contains("has-file")) resetCollImportFile(); });
+$("#coll-import-text").addEventListener("input", () => {
+  if ($("#coll-import-drop").classList.contains("has-file")) resetCollImportFile();
+  clearTimeout(collPreviewTimer);
+  collPreviewTimer = setTimeout(() => void previewCollImport(), 700);
+});
+$("#coll-import-proxy").addEventListener("change", () => { if ($("#coll-import-text").value.trim()) void previewCollImport(); });
 const collImportDrop = $("#coll-import-drop");
 collImportDrop.addEventListener("dragover", (e) => {
   if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
@@ -594,11 +720,11 @@ $("#coll-import-form").addEventListener("submit", async (e) => {
   try {
     const r = await api("/api/collection/import", { method: "POST", body: { text, proxy: $("#coll-import-proxy").checked, replace } });
     $("#coll-import-dialog").close();
-    toast(`${r.added} Karten importiert.${r.not_found.length ? ` Nicht gefunden (${r.not_found.length}): ${r.not_found.slice(0, 5).join(", ")}${r.not_found.length > 5 ? " …" : ""}` : ""}`,
+    toast(`${fmtNum(r.added)} Karten importiert.${r.not_found.length ? ` Nicht gefunden (${r.not_found.length}): ${r.not_found.slice(0, 5).join(", ")}${r.not_found.length > 5 ? " …" : ""}` : ""}`,
       r.not_found.length ? "error" : "info", 8000);
     await loadCollection();
   } catch (err) { fail(err); }
-  finally { btn.disabled = false; btn.textContent = "Importieren"; }
+  finally { btn.disabled = false; btn.textContent = collPreviewCards ? `${fmtNum(collPreviewCards)} Karten importieren` : "Importieren"; }
 });
 $("#coll-empty").addEventListener("click", (e) => {
   const b = e.target.closest("[data-open]");
