@@ -158,6 +158,7 @@ function openMoxfield(id) {
 }
 
 window.conclaveMoxfield = (d) => {
+  if (d?.kind === "collection") { takeMoxfieldPart(d); return; }  // collection.js
   const cards = Array.isArray(d?.cards) ? d.cards.filter((c) => Array.isArray(c) && typeof c[0] === "string") : [];
   const commanders = Array.isArray(d?.commanders) ? d.commanders.filter((c) => typeof c === "string") : [];
   if (!cards.length) { toast("Moxfield hat kein Deck geliefert.", "error"); return; }

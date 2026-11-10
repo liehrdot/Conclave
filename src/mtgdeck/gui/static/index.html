@@ -1540,8 +1540,9 @@
       <h2>Sammlung importieren</h2>
       <button type="button" class="icon-btn" id="coll-import-close" aria-label="Schließen"><svg class="icon"><use href="#i-x"/></svg></button>
     </div>
-    <p class="muted small coll-import-lead">CSV-Export aus ManaBox, Moxfield oder Archidekt, oder eine einfache Liste.
-      Anzahl, Ausgabe, Foil und Sprache werden übernommen.</p>
+    <p class="muted small coll-import-lead">Exportiere deine Sammlung aus deiner App und lade die Datei hier. Conclave erkennt das Format selbst.</p>
+    <div class="coll-import-apps" id="coll-import-apps" role="group" aria-label="Woher kommt die Sammlung?"></div>
+    <div class="coll-import-guide" id="coll-import-guide" hidden></div>
     <label class="coll-import-drop" id="coll-import-drop">
       <input type="file" id="coll-import-file" class="sr-only" accept=".csv,.txt,text/csv,text/plain">
       <svg class="icon"><use href="#i-upload"/></svg>
@@ -1552,6 +1553,7 @@
     </label>
     <p class="or-divider"><span>oder Text einfügen</span></p>
     <textarea id="coll-import-text" rows="6" aria-label="Sammlung als Text" placeholder="2 Sol Ring&#10;1 Cultivate (M21) 177 *F*&#10;1 Demonic Tutor [proxy]&#10;&#10;oder eine CSV mit Kopfzeile: Name,Quantity,Set code,Collector number …"></textarea>
+    <div class="coll-import-preview" id="coll-import-preview" aria-live="polite" hidden></div>
     <div class="coll-import-options">
       <label class="check-row"><input type="checkbox" id="coll-import-proxy">
         <span><span class="check-row-title">Alles als Proxy markieren</span><span class="muted small">Für eine Liste gedruckter Karten.</span></span></label>
