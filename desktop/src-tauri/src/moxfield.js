@@ -24,7 +24,8 @@
   function keepCsv(text) {
     if (typeof text !== "string" || text.length > MAX_CSV) return;
     const head = text.replace(/^\ufeff/, "").split(/\r?\n/, 1)[0].toLowerCase();
-    if (/(^|[,;\t"])\s*name\s*("|[,;\t]|$)/.test(head) && /count|quantity/.test(head)) collectionCsv = text;
+    const cells = head.split(/[,;\t]/).map((c) => c.replaceAll('"', "").trim());
+    if (cells.includes("name") && cells.some((c) => c === "count" || c === "quantity")) collectionCsv = text;
   }
   const isCsvUrl = (url) => /export|csv/i.test(url) && /collection/i.test(url);
 
@@ -66,7 +67,7 @@
       this.addEventListener("load", () => {
         try {
           if (typeof this.response === "string") keepCsv(this.response);
-          else if (this.response instanceof Blob) this.response.text().then(keepCsv);
+          else if (this.response instanceof Blob) this.response.text().then(keepCsv).catch(() => {});
         } catch {}
       });
     }
