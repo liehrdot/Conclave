@@ -30,6 +30,7 @@
   <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
   <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4z"/><path d="M3 7v10l9 4 9-4V7M12 11v10"/></symbol>
   <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M8 7h7"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
   <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></symbol>
   <symbol id="i-table" viewBox="0 0 24 24"><path d="M3 10h18M6 10v9M18 10v9M9 14h6"/><circle cx="8" cy="5" r="1.8"/><circle cx="16" cy="5" r="1.8"/></symbol>
   <symbol id="i-swords" viewBox="0 0 24 24"><path d="M4 4l9 9M4 4h4M4 4v4M20 4l-9 9M20 4h-4M20 4v4"/><path d="M8.5 15.5 5 19M15.5 15.5 19 19M7 13l4 4M17 13l-4 4"/></symbol>
@@ -1533,18 +1534,29 @@
   </form>
 </dialog>
 
-<dialog id="coll-import-dialog" class="dialog small-dialog">
+<dialog id="coll-import-dialog" class="dialog coll-import-dialog">
   <form id="coll-import-form" autocomplete="off">
-    <h2>Sammlung importieren</h2>
-    <p class="muted small">CSV-Export aus ManaBox, Moxfield oder Archidekt (Anzahl, Set, Nummer, Foil, Sprache und – bei
-      Moxfield – Proxy werden übernommen) oder eine Liste wie „2 Sol Ring (C21) 263 *F*“, „1 Demonic Tutor [proxy]“.</p>
-    <label class="field">Datei <input type="file" id="coll-import-file" accept=".csv,.txt,text/csv,text/plain"></label>
-    <label class="field">… oder Text einfügen
-      <textarea id="coll-import-text" rows="7" placeholder="Name,Quantity,Set code,Collector number …&#10;oder&#10;2 Sol Ring&#10;1 Cultivate (M21) 177 *F*"></textarea>
+    <div class="dialog-head">
+      <h2>Sammlung importieren</h2>
+      <button type="button" class="icon-btn" id="coll-import-close" aria-label="Schließen"><svg class="icon"><use href="#i-x"/></svg></button>
+    </div>
+    <p class="muted small coll-import-lead">CSV-Export aus ManaBox, Moxfield oder Archidekt, oder eine einfache Liste.
+      Anzahl, Ausgabe, Foil und Sprache werden übernommen.</p>
+    <label class="coll-import-drop" id="coll-import-drop">
+      <input type="file" id="coll-import-file" class="sr-only" accept=".csv,.txt,text/csv,text/plain">
+      <svg class="icon"><use href="#i-upload"/></svg>
+      <span class="coll-import-drop-text">
+        <strong id="coll-import-file-name">Datei hierher ziehen</strong>
+        <span class="muted small" id="coll-import-file-hint">CSV oder TXT · oder <span class="link">Datei auswählen …</span></span>
+      </span>
     </label>
-    <div class="checks">
-      <label class="check"><input type="checkbox" id="coll-import-proxy"> alles als Proxy markieren</label>
-      <label class="check"><input type="checkbox" id="coll-import-replace"> bestehende Sammlung ersetzen</label>
+    <p class="or-divider"><span>oder Text einfügen</span></p>
+    <textarea id="coll-import-text" rows="6" aria-label="Sammlung als Text" placeholder="2 Sol Ring&#10;1 Cultivate (M21) 177 *F*&#10;1 Demonic Tutor [proxy]&#10;&#10;oder eine CSV mit Kopfzeile: Name,Quantity,Set code,Collector number …"></textarea>
+    <div class="coll-import-options">
+      <label class="check-row"><input type="checkbox" id="coll-import-proxy">
+        <span><span class="check-row-title">Alles als Proxy markieren</span><span class="muted small">Für eine Liste gedruckter Karten.</span></span></label>
+      <label class="check-row"><input type="checkbox" id="coll-import-replace">
+        <span><span class="check-row-title">Bestehende Sammlung ersetzen</span><span class="muted small">Sonst kommen die Karten zur Sammlung dazu.</span></span></label>
     </div>
     <div class="dialog-actions">
       <button type="button" class="btn" id="coll-import-cancel">Abbrechen</button>

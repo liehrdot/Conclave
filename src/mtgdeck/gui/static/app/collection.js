@@ -546,11 +546,41 @@ $("#coll-add-form").addEventListener("submit", async (e) => {
 });
 
 // import
-$("#coll-import-btn").addEventListener("click", () => { $("#coll-import-form").reset(); $("#coll-import-dialog").showModal(); });
+function resetCollImportFile() {
+  $("#coll-import-drop").classList.remove("has-file", "dragging");
+  $("#coll-import-file-name").textContent = "Datei hierher ziehen";
+  $("#coll-import-file-hint").innerHTML = 'CSV oder TXT · oder <span class="link">Datei auswählen …</span>';
+}
+async function readCollImportFile(file) {
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { toast("Die Datei ist zu groß (höchstens 5 MB).", "error"); return; }
+  $("#coll-import-text").value = decodeDeckFile(await file.arrayBuffer());
+  const lines = $("#coll-import-text").value.split(/\r?\n/).filter((l) => l.trim()).length;
+  $("#coll-import-drop").classList.add("has-file");
+  $("#coll-import-file-name").textContent = file.name;
+  $("#coll-import-file-hint").innerHTML = `${fmtNum(lines)} Zeilen gelesen · <span class="link">Andere Datei …</span>`;
+}
+$("#coll-import-btn").addEventListener("click", () => { $("#coll-import-form").reset(); resetCollImportFile(); $("#coll-import-dialog").showModal(); });
 $("#coll-import-cancel").addEventListener("click", () => $("#coll-import-dialog").close());
-$("#coll-import-file").addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (file) $("#coll-import-text").value = await file.text();
+$("#coll-import-close").addEventListener("click", () => $("#coll-import-dialog").close());
+$("#coll-import-file").addEventListener("change", (e) => { void readCollImportFile(e.target.files[0]); e.target.value = ""; });
+$("#coll-import-text").addEventListener("input", () => { if ($("#coll-import-drop").classList.contains("has-file")) resetCollImportFile(); });
+const collImportDrop = $("#coll-import-drop");
+collImportDrop.addEventListener("dragover", (e) => {
+  if (![...(e.dataTransfer?.types || [])].includes("Files")) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+  collImportDrop.classList.add("dragging");
+});
+collImportDrop.addEventListener("dragleave", (e) => { if (!collImportDrop.contains(e.relatedTarget)) collImportDrop.classList.remove("dragging"); });
+// a file dropped anywhere on the open dialog counts, so a slightly missed drop doesn't open the file in the window
+$("#coll-import-dialog").addEventListener("dragover", (e) => { if ([...(e.dataTransfer?.types || [])].includes("Files")) e.preventDefault(); });
+$("#coll-import-dialog").addEventListener("drop", (e) => {
+  if (!e.dataTransfer?.files?.length) return;
+  e.preventDefault();
+  e.stopPropagation();
+  collImportDrop.classList.remove("dragging");
+  void readCollImportFile(e.dataTransfer.files[0]);
 });
 $("#coll-import-form").addEventListener("submit", async (e) => {
   e.preventDefault();

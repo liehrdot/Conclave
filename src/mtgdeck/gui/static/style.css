@@ -928,8 +928,26 @@ kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid var(--bord
 .dialog-head { display: flex; justify-content: space-between; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-2); }
 .small-dialog { width: min(460px, 92vw); }
 .small-dialog h2 { margin-bottom: var(--space-2); }
-.small-dialog input { margin-top: var(--space-2); }
+.small-dialog input:not([type="checkbox"], [type="radio"], [type="file"]) { margin-top: var(--space-2); }
 .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-5); }
+/* Sammlung importieren: drop zone, text, options */
+.coll-import-dialog { width: min(520px, 92vw); }
+.coll-import-lead { margin: 0 0 var(--space-4); }
+.coll-import-drop { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); background: var(--surface-2); cursor: pointer; transition: border-color .15s, background-color .15s; }
+.coll-import-drop:hover, .coll-import-drop.dragging { border-color: var(--accent-text); background: var(--accent-soft); }
+.coll-import-drop:focus-within { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.coll-import-drop > .icon { width: 28px; height: 28px; flex: none; color: var(--accent-text); }
+.coll-import-drop-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.coll-import-drop-text strong { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.coll-import-drop.has-file { border-style: solid; border-color: var(--accent-text); }
+.or-divider { display: flex; align-items: center; gap: var(--space-3); margin: var(--space-4) 0 var(--space-2); color: var(--muted); font-size: var(--fs-sm); }
+.or-divider::before, .or-divider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+.coll-import-dialog textarea { width: 100%; font-family: var(--mono); font-size: 13px; }
+.coll-import-options { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-4); }
+.check-row { display: flex; align-items: flex-start; gap: var(--space-3); cursor: pointer; }
+.check-row input { margin: 2px 0 0; width: 16px; height: 16px; flex: none; }
+.check-row > span { display: flex; flex-direction: column; gap: 1px; }
+.check-row-title { font-size: 14px; font-weight: 550; }
 .card-choice-dialog { width: min(560px, 94vw); }
 .card-choice-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); }
 .card-choice { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-lg);
