@@ -32,6 +32,7 @@ from .. import paths
 from .. import settings as settings_mod
 from ..cards import card_text, deck_tokens, name_choices, resolve
 from ..deck import DeckEntry, to_text
+from ..deckrecord import FLAGS
 from ..http import HttpError
 from ..power import TIER_LABELS, PowerProfile
 from ..sync.remote import RemoteError
@@ -740,11 +741,14 @@ async def api_pin_order(req: PinOrder) -> dict[str, Any]:
 class DeckFlags(BaseModel):
     pinned: bool | None = None
     shelved: bool | None = None
+    planning: bool | None = None
+    built: bool | None = None
 
 
 @app.put("/api/decks/{slug}/flags")
 async def api_deck_flags(slug: str, req: DeckFlags) -> dict[str, Any]:
-    """Pin a deck to the top of the lists or mark it as not played at the moment (no new version)."""
+    """Pin a deck to the top of the lists, mark it as not played at the moment, or as „In Planung“ / „Gebaut“
+    (no new version)."""
     flags = req.model_dump(exclude_none=True)
     if not flags:
         raise HTTPException(422, "Nichts zu ändern")
@@ -752,7 +756,7 @@ async def api_deck_flags(slug: str, req: DeckFlags) -> dict[str, Any]:
         deck = storage.set_flags(slug, **flags)
     except FileNotFoundError as exc:
         raise HTTPException(404, "Deck nicht gefunden") from exc
-    return {"slug": slug, "pinned": bool(deck.get("pinned")), "shelved": bool(deck.get("shelved"))}
+    return {"slug": slug, **{k: bool(deck.get(k)) for k in FLAGS}}
 
 
 class DeckTarget(BaseModel):

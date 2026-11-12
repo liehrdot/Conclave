@@ -177,6 +177,10 @@
           <h1 id="deck-name">Deck</h1>
           <p id="deck-commanders" class="deck-commanders"></p>
           <p id="deck-facts" class="muted small"></p>
+          <div id="deck-stage" class="stage-switch" role="group" aria-label="Wie weit ist das Deck?">
+            <button type="button" data-stage="planning" aria-pressed="false" title="Noch im Bau: Karten fehlen oder sind nicht gekauft"><svg class="icon"><use href="#i-edit"/></svg>In Planung</button>
+            <button type="button" data-stage="built" aria-pressed="false" title="Gekauft und zusammengebaut"><svg class="icon"><use href="#i-check"/></svg>Gebaut</button>
+          </div>
           <p id="deck-verdict" class="verdict"></p>
           <p id="deck-desc" class="lead"></p>
           <p id="deck-against" class="muted small" hidden></p>

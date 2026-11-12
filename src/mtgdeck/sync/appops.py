@@ -285,7 +285,8 @@ def _deck_edit(p: dict[str, Any], docs: dict[str, Any], at: str) -> dict[str, An
 
 
 def _deck_flags(p: dict[str, Any], docs: dict[str, Any]) -> dict[str, Any]:
-    """Like ``storage.set_flags``: ``pinned`` / ``shelved`` (bools) set or cleared in the file, no new version."""
+    """Like ``storage.set_flags``: ``pinned`` / ``shelved`` / ``planning`` / ``built`` (bools) set or cleared in the
+    file, no new version."""
     slug = _deck_slug(p)
     old = docs.get(deck_path(slug))
     if not isinstance(old, dict):

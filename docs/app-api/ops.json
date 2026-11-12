@@ -52,6 +52,7 @@
    "decks": [
     {
      "bracket": 2,
+     "built": false,
      "cards": [
       {
        "category": "Ramp",
@@ -72,6 +73,7 @@
      "name": "Kaalia",
      "pin_rank": 0,
      "pinned": true,
+     "planning": true,
      "proxy": false,
      "record": {
       "draws": 0,
@@ -179,6 +181,7 @@
     },
     {
      "bracket": 3,
+     "built": false,
      "cards": [
       {
        "category": "Land",
@@ -214,6 +217,7 @@
      "name": "Meren",
      "pin_rank": null,
      "pinned": false,
+     "planning": false,
      "proxy": false,
      "record": {
       "draws": 0,
@@ -755,6 +759,7 @@
    "decks": [
     {
      "bracket": 2,
+     "built": false,
      "cards": [
       {
        "category": "Ramp",
@@ -775,6 +780,7 @@
      "name": "Kaalia",
      "pin_rank": 0,
      "pinned": true,
+     "planning": true,
      "proxy": false,
      "record": {
       "draws": 0,
@@ -882,6 +888,7 @@
     },
     {
      "bracket": 3,
+     "built": false,
      "cards": [
       {
        "category": "Land",
@@ -917,6 +924,7 @@
      "name": "Meren",
      "pin_rank": null,
      "pinned": false,
+     "planning": false,
      "proxy": false,
      "record": {
       "draws": 0,
@@ -1430,6 +1438,7 @@
     "decks": [
      {
       "bracket": 2,
+      "built": false,
       "cards": [
        {
         "category": "Ramp",
@@ -1450,6 +1459,7 @@
       "name": "Kaalia",
       "pin_rank": 0,
       "pinned": true,
+      "planning": true,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -1557,6 +1567,7 @@
      },
      {
       "bracket": 3,
+      "built": false,
       "cards": [
        {
         "category": "Land",
@@ -1592,6 +1603,7 @@
       "name": "Meren",
       "pin_rank": null,
       "pinned": false,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -1847,6 +1859,7 @@
     "decks": [
      {
       "bracket": 2,
+      "built": false,
       "cards": [
        {
         "category": "Ramp",
@@ -1867,6 +1880,7 @@
       "name": "Kaalia",
       "pin_rank": 0,
       "pinned": true,
+      "planning": true,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -1974,6 +1988,7 @@
      },
      {
       "bracket": 3,
+      "built": false,
       "cards": [
        {
         "category": "Land",
@@ -2009,6 +2024,7 @@
       "name": "Meren",
       "pin_rank": null,
       "pinned": false,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -2310,6 +2326,7 @@
     "decks": [
      {
       "bracket": 2,
+      "built": false,
       "cards": [
        {
         "category": "Ramp",
@@ -2330,6 +2347,7 @@
       "name": "Kaalia",
       "pin_rank": 0,
       "pinned": true,
+      "planning": true,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -2437,6 +2455,7 @@
      },
      {
       "bracket": 3,
+      "built": false,
       "cards": [
        {
         "category": "Land",
@@ -2472,6 +2491,7 @@
       "name": "Meren",
       "pin_rank": null,
       "pinned": false,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -2844,6 +2864,7 @@
     "decks": [
      {
       "bracket": 2,
+      "built": false,
       "cards": [
        {
         "category": "Ramp",
@@ -2864,6 +2885,7 @@
       "name": "Kaalia",
       "pin_rank": 0,
       "pinned": true,
+      "planning": true,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -2971,6 +2993,7 @@
      },
      {
       "bracket": 3,
+      "built": false,
       "cards": [
        {
         "category": "Land",
@@ -3006,6 +3029,7 @@
       "name": "Meren",
       "pin_rank": null,
       "pinned": false,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -3727,6 +3751,7 @@
     "decks": [
      {
       "bracket": 2,
+      "built": false,
       "cards": [
        {
         "category": "Ramp",
@@ -3747,6 +3772,7 @@
       "name": "Kaalia",
       "pin_rank": 0,
       "pinned": true,
+      "planning": true,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -3854,6 +3880,7 @@
      },
      {
       "bracket": 3,
+      "built": false,
       "cards": [
        {
         "category": "Land",
@@ -3889,6 +3916,7 @@
       "name": "Meren",
       "pin_rank": null,
       "pinned": false,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -4006,6 +4034,7 @@
      },
      {
       "bracket": 3,
+      "built": false,
       "cards": [],
       "checking": true,
       "colors": "",
@@ -4020,6 +4049,7 @@
       "name": "Vampire",
       "pin_rank": null,
       "pinned": false,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -4170,6 +4200,7 @@
     "decks": [
      {
       "bracket": 2,
+      "built": false,
       "cards": [
        {
         "category": "Ramp",
@@ -4190,6 +4221,7 @@
       "name": "Kaalia",
       "pin_rank": 0,
       "pinned": true,
+      "planning": true,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -4297,6 +4329,7 @@
      },
      {
       "bracket": 3,
+      "built": false,
       "cards": [
        {
         "category": "Land",
@@ -4332,6 +4365,7 @@
       "name": "Meren",
       "pin_rank": null,
       "pinned": false,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -4495,6 +4529,7 @@
     "decks": [
      {
       "bracket": 2,
+      "built": false,
       "cards": [
        {
         "category": "Ramp",
@@ -4515,6 +4550,7 @@
       "name": "Kaalia",
       "pin_rank": 0,
       "pinned": true,
+      "planning": true,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -4622,6 +4658,7 @@
      },
      {
       "bracket": 3,
+      "built": false,
       "cards": [
        {
         "category": "Land",
@@ -4656,6 +4693,7 @@
       "name": "Meren",
       "pin_rank": null,
       "pinned": false,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -4831,6 +4869,7 @@
     "decks": [
      {
       "bracket": 3,
+      "built": false,
       "cards": [
        {
         "category": "Land",
@@ -4866,6 +4905,7 @@
       "name": "Meren",
       "pin_rank": null,
       "pinned": true,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -4983,6 +5023,7 @@
      },
      {
       "bracket": 2,
+      "built": false,
       "cards": [
        {
         "category": "Ramp",
@@ -5003,6 +5044,7 @@
       "name": "Kaalia",
       "pin_rank": 0,
       "pinned": true,
+      "planning": true,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -5128,6 +5170,7 @@
     "decks": [
      {
       "bracket": 3,
+      "built": false,
       "cards": [
        {
         "category": "Land",
@@ -5163,6 +5206,7 @@
       "name": "Meren",
       "pin_rank": null,
       "pinned": false,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -5280,6 +5324,7 @@
      },
      {
       "bracket": 2,
+      "built": false,
       "cards": [
        {
         "category": "Ramp",
@@ -5300,6 +5345,7 @@
       "name": "Kaalia",
       "pin_rank": null,
       "pinned": false,
+      "planning": true,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -5421,11 +5467,12 @@
    }
   },
   {
-   "about": "The pinned decks get their dragged order; unpinned ones are left alone.",
+   "about": "A deck is marked „In Planung“ (still being put together).",
    "after": {
     "decks": [
      {
       "bracket": 2,
+      "built": false,
       "cards": [
        {
         "category": "Ramp",
@@ -5444,8 +5491,9 @@
       "level_en": "Bracket 2",
       "maybe": [],
       "name": "Kaalia",
-      "pin_rank": 1,
+      "pin_rank": 0,
       "pinned": true,
+      "planning": true,
       "proxy": false,
       "record": {
        "draws": 0,
@@ -5553,6 +5601,7 @@
      },
      {
       "bracket": 3,
+      "built": false,
       "cards": [
        {
         "category": "Land",
@@ -5588,6 +5637,609 @@
       "name": "Meren",
       "pin_rank": null,
       "pinned": false,
+      "planning": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "wins": 1
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-01T10:00:00+00:00",
+      "version": 2
+     }
+    ]
+   },
+   "base": "default",
+   "name": "deck-flags-planning",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-flags-planning",
+    "payload": {
+     "deck": "meren",
+     "planning": true
+    },
+    "type": "deck.flags"
+   }
+  },
+  {
+   "about": "A deck is marked „Gebaut“; that clears „In Planung“.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 2,
+      "built": true,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "level_en": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 0,
+      "pinned": true,
+      "planning": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     },
+     {
+      "bracket": 3,
+      "built": false,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder",
+        "qty": 1
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "planning": false,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 1,
+       "last": "2026-10-02T20:00:00+00:00",
+       "losses": 0,
+       "wins": 1
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "oberes Bracket 3 (Upgraded) · Einschätzung 3,7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Spielweise",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Meren – Rule 0\nStufe: oberes Bracket 3 (Upgraded) · Einschätzung 3,7\nCommander: Meren of Clan Nel Toth\nSpielweise: Opfern und zurückholen.\nTempo: frühestes Spielende nach Bracket: Zug 6+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "upper Bracket 3 (Upgraded) · estimate 3.7"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Meren of Clan Nel Toth"
+        },
+        {
+         "flag": false,
+         "label": "Play style",
+         "value": "Opfern und zurückholen."
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 6+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Meren – Rule 0\nLevel: upper Bracket 3 (Upgraded) · estimate 3.7\nCommander: Meren of Clan Nel Toth\nPlay style: Opfern und zurückholen.\nSpeed: earliest game end by bracket: turn 6+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
+      "shelved": false,
+      "slug": "meren",
+      "speed": null,
+      "tier": "high",
+      "updated": "2026-10-01T10:00:00+00:00",
+      "version": 2
+     }
+    ]
+   },
+   "base": "default",
+   "name": "deck-flags-built",
+   "op": {
+    "at": "2026-10-10T20:00:00+00:00",
+    "id": "op-deck-flags-built",
+    "payload": {
+     "built": true,
+     "deck": "kaalia"
+    },
+    "type": "deck.flags"
+   }
+  },
+  {
+   "about": "The pinned decks get their dragged order; unpinned ones are left alone.",
+   "after": {
+    "decks": [
+     {
+      "bracket": 2,
+      "built": false,
+      "cards": [
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "RWB",
+      "commanders": [
+       "Kaalia of the Vast"
+      ],
+      "description": "",
+      "legal": true,
+      "level": "Bracket 2",
+      "level_en": "Bracket 2",
+      "maybe": [],
+      "name": "Kaalia",
+      "pin_rank": 1,
+      "pinned": true,
+      "planning": true,
+      "proxy": false,
+      "record": {
+       "draws": 0,
+       "games": 0,
+       "last": null,
+       "losses": 0,
+       "wins": 0
+      },
+      "rule0": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Stufe",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Tempo",
+         "value": "frühestes Spielende nach Bracket: Zug 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changer",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "2-Karten-Combos",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Tutoren",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Extra-Züge",
+         "value": "keine"
+        },
+        {
+         "flag": false,
+         "label": "Land-Zerstörung",
+         "value": "keine"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nStufe: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nTempo: frühestes Spielende nach Bracket: Zug 8+\nGame Changer: keine\n2-Karten-Combos: keine\nTutoren: keine\nExtra-Züge: keine\nLand-Zerstörung: keine\nPasst das für eure Runde?"
+      },
+      "rule0_en": {
+       "rows": [
+        {
+         "flag": false,
+         "label": "Level",
+         "value": "Bracket 2 (Core)"
+        },
+        {
+         "flag": false,
+         "label": "Commander",
+         "value": "Kaalia of the Vast"
+        },
+        {
+         "flag": false,
+         "label": "Speed",
+         "value": "earliest game end by bracket: turn 8+"
+        },
+        {
+         "flag": false,
+         "label": "Game Changers",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Two-card combos",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Tutors",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Extra turns",
+         "value": "none"
+        },
+        {
+         "flag": false,
+         "label": "Land destruction",
+         "value": "none"
+        }
+       ],
+       "text": "Kaalia – Rule 0\nLevel: Bracket 2 (Core)\nCommander: Kaalia of the Vast\nSpeed: earliest game end by bracket: turn 8+\nGame Changers: none\nTwo-card combos: none\nTutors: none\nExtra turns: none\nLand destruction: none\nDoes this fit your table?"
+      },
+      "shelved": false,
+      "slug": "kaalia",
+      "speed": null,
+      "tier": null,
+      "updated": "2026-09-05T10:00:00+00:00",
+      "version": 1
+     },
+     {
+      "bracket": 3,
+      "built": false,
+      "cards": [
+       {
+        "category": "Land",
+        "name": "Forest",
+        "qty": 30
+       },
+       {
+        "category": "Ramp",
+        "name": "Sakura-Tribe Elder",
+        "qty": 1
+       },
+       {
+        "category": "Ramp",
+        "name": "Sol Ring",
+        "qty": 1
+       }
+      ],
+      "checking": false,
+      "colors": "BG",
+      "commanders": [
+       "Meren of Clan Nel Toth"
+      ],
+      "description": "Opfern und zurückholen.",
+      "legal": true,
+      "level": "oberes Bracket 3",
+      "level_en": "upper Bracket 3",
+      "maybe": [
+       {
+        "category": "Draw",
+        "name": "Grim Backwoods"
+       }
+      ],
+      "name": "Meren",
+      "pin_rank": null,
+      "pinned": false,
+      "planning": false,
       "proxy": false,
       "record": {
        "draws": 0,

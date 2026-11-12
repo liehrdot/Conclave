@@ -1,5 +1,5 @@
 """How a deck's record is kept, without file I/O: which keys are content, how a new version and its history entry
-look, the per-deck marks (pinned, shelved, pin rank) and the deck list's order.
+look, the per-deck marks (pinned, shelved, planning/built, pin rank) and the deck list's order.
 
 ``storage`` (the PC), ``sync.appops`` (the phone's operations on the server) and ``sync.merge`` (two devices' copies)
 all call these, so a deck saved anywhere looks the same. Stdlib only: the sync server image loads it without the
@@ -16,7 +16,9 @@ CONTENT_KEYS = ("name", "commanders", "cards", "bracket", "power_profile", "prox
 # Written on every save; everything else that is not content (guide, upgrade_plan, built_against, precon,
 # copied_from …) is carried over when a caller saves a deck dict built from scratch.
 PER_SAVE_KEYS = {"slug", "history", "version", "created", "updated", "validation", "change_note", "needs_revalidation"}
-FLAGS = ("pinned", "shelved")  # per-deck marks outside the content (``with_flags``)
+FLAGS = ("pinned", "shelved", "planning", "built")  # per-deck marks outside the content (``with_flags``)
+# „In Planung“ (still being put together) and „Gebaut“ (bought and sleeved up) exclude each other; neither = not marked.
+STAGES = ("planning", "built")
 PIN_RANK = "pin_rank"  # the user's order of the pinned decks, 0 = on top
 
 
@@ -79,13 +81,16 @@ def add_version(deck: dict[str, Any], old: dict[str, Any] | None, note: str, at:
 
 def with_flags(deck: dict[str, Any], flags: dict[str, bool]) -> dict[str, Any]:
     """A copy of ``deck`` with each of ``FLAGS`` in ``flags`` set (True) or removed; an unpinned deck loses its
-    ``pin_rank``. ``ValueError`` for a key that is no flag."""
+    ``pin_rank``, and setting one of ``STAGES`` clears the other. ``ValueError`` for a key that is no flag."""
     if not flags or set(flags) - set(FLAGS):
         raise ValueError("Unbekannte Markierung")
     out = dict(deck)
-    for key, on in flags.items():
+    for key, on in sorted(flags.items(), key=lambda kv: bool(kv[1])):  # removals first, so a set stage wins
         if on:
             out[key] = True
+            for other in STAGES if key in STAGES else ():
+                if other != key:
+                    out.pop(other, None)
         else:
             out.pop(key, None)
     if not out.get("pinned"):

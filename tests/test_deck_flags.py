@@ -1,4 +1,4 @@
-"""Pinned and shelved decks: storage, the GUI route, the buy list, the phone's read model and operation, the sync."""
+"""Pinned, shelved and planning/built decks: storage, the GUI route, the buy list, the phone's read model and operation, the sync."""
 
 import pytest
 from conftest import save_deck
@@ -41,7 +41,7 @@ def test_flags_route():
     _plain("Alpha")
     client = TestClient(app)
     r = client.put("/api/decks/alpha/flags", json={"pinned": True})
-    assert r.json() == {"slug": "alpha", "pinned": True, "shelved": False}
+    assert r.json() == {"slug": "alpha", "pinned": True, "shelved": False, "planning": False, "built": False}
     assert client.put("/api/decks/alpha/flags", json={"shelved": True}).json()["pinned"] is True
     assert client.get("/api/decks/alpha").json()["shelved"] is True
     assert client.put("/api/decks/alpha/flags", json={}).status_code == 422
@@ -135,3 +135,36 @@ def test_phone_orders_pinned_decks():
         paths(_op("deck.pin_order", {"slugs": []}))
     with pytest.raises(OpError):
         paths(_op("deck.pin_order", {"slugs": ["../x"]}))
+
+
+def test_planning_and_built_exclude_each_other():
+    _plain("Alpha")
+    storage.set_flags("alpha", planning=True)
+    row = storage.list_decks()[0]
+    assert row["planning"] and not row["built"]
+    deck = storage.set_flags("alpha", built=True)  # built clears planning
+    assert deck["built"] is True and "planning" not in deck and deck["version"] == 1
+    deck = storage.set_flags("alpha", built=False, planning=True)  # undo order does not matter: the set one wins
+    assert deck["planning"] is True and "built" not in deck
+    deck = storage.set_flags("alpha", planning=True, built=False)
+    assert deck["planning"] is True and "built" not in deck
+    storage.set_flags("alpha", planning=False)
+    assert not {"planning", "built"} & set(storage.load("alpha"))  # not marked at all
+    storage.set_flags("alpha", built=True)
+    assert "built" not in storage.copy("alpha")  # a copy is not built yet
+    client = TestClient(app)
+    r = client.put("/api/decks/alpha/flags", json={"planning": True}).json()
+    assert r["planning"] and not r["built"]
+    assert client.get("/api/decks/alpha").json()["planning"] is True
+
+
+def test_phone_marks_a_deck_as_planning_or_built():
+    from mtgdeck.sync.appdata import snapshot
+    from mtgdeck.sync.appops import apply
+
+    docs = {"decks/a.json": {"slug": "a", "name": "A", "commanders": ["Meren of Clan Nel Toth"], "version": 1, "history": [], "cards": [], "planning": True}}
+    assert snapshot(docs)["decks"][0]["planning"] is True
+    out = apply(_op("deck.flags", {"deck": "a", "built": True, "prev": {"built": False, "planning": True}}), docs)["decks/a.json"]
+    assert out["built"] is True and "planning" not in out and out["version"] == 1
+    back = apply(_op("deck.flags", {"deck": "a", "built": False, "planning": True}), {"decks/a.json": out})["decks/a.json"]
+    assert back["planning"] is True and "built" not in back

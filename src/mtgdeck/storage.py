@@ -128,8 +128,8 @@ def set_extra(deck_slug: str, key: str, value: Any) -> dict[str, Any]:
 
 
 def set_flags(deck_slug: str, **flags: bool) -> dict[str, Any]:
-    """Pin a deck (``pinned``: listed first) or shelve it (``shelved``: not played at the moment, its cards may go
-    into other decks). Kept like ``set_extra`` – no new version – and synced like the rest of the file."""
+    """Pin a deck (``pinned``: listed first), shelve it (``shelved``: not played at the moment, its cards may go
+    into other decks) or mark how far it is (``planning`` = still being put together, ``built`` = bought and built). Kept like ``set_extra`` – no new version – and synced like the rest of the file."""
     with locked(_path(deck_slug)):
         deck = with_flags(load(deck_slug), flags)
         _write_current(deck)
@@ -360,6 +360,8 @@ def list_decks() -> list[dict[str, Any]]:
                 "needs_revalidation": bool(d.get("needs_revalidation")),  # merged by the sync, check pending
                 "pinned": bool(d.get("pinned")),
                 "shelved": bool(d.get("shelved")),
+                "planning": bool(d.get("planning")),
+                "built": bool(d.get("built")),
                 "pin_rank": d.get(PIN_RANK) if d.get("pinned") else None,
             }
         )

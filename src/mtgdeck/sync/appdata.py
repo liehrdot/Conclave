@@ -56,6 +56,7 @@ def _deck(slug: str, d: dict[str, Any], games: list[dict[str, Any]]) -> dict[str
                   for c in d.get("cards") or [] if isinstance(c, dict) and c.get("name")],
         "maybe": [{"name": m["name"], "category": m.get("category") or ""} for m in d.get("maybe") or [] if isinstance(m, dict) and m.get("name")],
         "record": _record(games), "pinned": bool(d.get("pinned")), "shelved": bool(d.get("shelved")),
+        "planning": bool(d.get("planning")), "built": bool(d.get("built")),
         "pin_rank": d.get("pin_rank") if d.get("pinned") else None,
     }  # fmt: skip
 
