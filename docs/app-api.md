@@ -98,7 +98,7 @@ Types (`appops.py` has the details, `ops.json` below shows each one's effect):
 | `opponent.delete` | `id` |
 | `deck.new` | `deck: {slug, name?, commanders, bracket?}`; the slug must be free |
 | `deck.edit` | `deck` and any of `add: [{name, qty, category}]`, `remove: [names]`, `set_qty: {name: qty}`, `set_category: {name: category}`, `maybe_add: [{name, category}]`, `maybe_remove: [names]`, `note?` (≤ 200 changes) |
-| `deck.flags` | `deck`, `pinned?`, `shelved?` (booleans) |
+| `deck.flags` | `deck`, `pinned?`, `shelved?`, `planning?`, `built?` (booleans; `planning` „In Planung“ and `built` „Gebaut“ exclude each other: setting one clears the other) |
 | `deck.pin_order` | `slugs` (the pinned decks in their new order) |
 | `collection.add` | `entry: {id?, name, qty (−99…99, not 0), proxy, foil, lang, scryfall_id, set, set_name, collector_number, image, price_eur, place, place_deck}` |
 | `collection.update` | `id` and any of `qty` (0 deletes), `proxy, foil, lang, place, place_deck` |
@@ -109,7 +109,7 @@ the PC checks the deck after its next sync.
 
 ## The test cases: `docs/app-api/ops.json`
 
-`scripts/app_fixtures.py` runs every operation type (31 cases, errors included) through the server's own code and writes
+`scripts/app_fixtures.py` runs every operation type (33 cases, errors included) through the server's own code and writes
 what came out: `bases` are read models, and each case is `{name, about, base, op}` plus either `after` (the top-level
 keys of the read model the server changed, with their new value; `{}` = nothing changed) or `error` (the German
 message). An app's tests apply `op` to `bases[base]` with its own optimistic code and compare the keys in `after`; what

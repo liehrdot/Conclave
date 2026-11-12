@@ -104,7 +104,7 @@ function renderDeckList() {
   $("#deck-list").innerHTML = list.length ? list.map((d, i) => `${i === firstShelved ? `<li class="deck-list-group" title="Karten daraus kannst du für andere Decks nehmen">Pausiert</li>` : ""}<li${d.shelved ? ' class="shelved"' : ""}${sortable && !d.shelved ? ` draggable="true" data-pin="${esc(d.slug)}" title="${d.pinned ? "Ziehen, um die Reihenfolge zu ändern" : "Nach oben ziehen, um es anzuheften"}"` : ""}>
       <a href="#/deck/${enc(d.slug)}" data-slug="${esc(d.slug)}">
         <span class="name">${d.valid === false ? '<span class="dot bad" title="nicht legal"></span><span class="sr-only">nicht legal:</span>' : ""}<span class="label">${esc(d.name)}</span>${d.pinned ? `<svg class="icon pin" aria-label="angeheftet"><title>Angeheftet</title><use href="#i-pin"/></svg>` : ""}</span>
-        ${d.updated ? `<span class="meta">${esc(fmtDate(d.updated))}</span>` : ""}
+        ${d.updated || d.planning || d.built ? `<span class="meta">${stageTag(d)}${(d.planning || d.built) && d.updated ? " · " : ""}${d.updated ? esc(fmtDate(d.updated)) : ""}</span>` : ""}
       </a></li>`).join("")
     : `<li class="empty-inline">${deckIndex.length ? "Kein Treffer." : "Noch keine Decks – starte mit „Neues Deck“."}</li>`;
   markNav();
@@ -114,14 +114,34 @@ function renderDeckList() {
 async function setDeckFlag(d, key, on) {
   try {
     const r = await api(`/api/decks/${enc(d.slug)}/flags`, { method: "PUT", body: { [key]: on } });
-    if (currentDeck?.slug === d.slug) { currentDeck.pinned = r.pinned; currentDeck.shelved = r.shelved; renderDeckFlags(currentDeck); }
+    if (currentDeck?.slug === d.slug) { Object.assign(currentDeck, pickFlags(r)); renderDeckFlags(currentDeck); }
     await refreshDeckList();
     const text = key === "pinned" ? (on ? "oben angeheftet" : "nicht mehr angeheftet") : on ? "pausiert – seine Karten sind für andere Decks frei" : "wird wieder gespielt";
     toast(`„${d.name}“ ${text}.`, "ok", 5000, { label: "Rückgängig", run: () => setDeckFlag(d, key, !on) });
   } catch (err) { fail(err); }
 }
 
+const DECK_FLAGS = ["pinned", "shelved", "planning", "built"];
+const pickFlags = (r) => Object.fromEntries(DECK_FLAGS.map((k) => [k, !!r[k]]));
+const STAGES = { planning: "In Planung", built: "Gebaut" };
+// the small tag in the deck list: „In Planung“ (still being put together) or „Gebaut“ (bought and built)
+const stageTag = (d) => d.planning ? `<span class="stage-tag planning">${STAGES.planning}</span>` : d.built ? `<span class="stage-tag built">${STAGES.built}</span>` : "";
+
+// mark how far a deck is: "planning", "built", or null = not marked (a click on the pressed one clears it)
+async function setDeckStage(d, stage) {
+  const prev = d.planning ? "planning" : d.built ? "built" : null;
+  const body = stage ? { [stage]: true } : { planning: false, built: false };
+  try {
+    const r = await api(`/api/decks/${enc(d.slug)}/flags`, { method: "PUT", body });
+    if (currentDeck?.slug === d.slug) { Object.assign(currentDeck, pickFlags(r)); renderDeckFlags(currentDeck); }
+    await refreshDeckList();
+    const text = stage ? `ist jetzt „${STAGES[stage]}“` : "hat keinen Status mehr";
+    toast(`„${d.name}“ ${text}.`, "ok", 5000, { label: "Rückgängig", run: () => setDeckStage(d, prev) });
+  } catch (err) { fail(err); }
+}
+
 function renderDeckFlags(d) {
+  for (const b of document.querySelectorAll("#deck-stage [data-stage]")) b.setAttribute("aria-pressed", String(!!d[b.dataset.stage]));
   const pin = $("#pin-btn");
   pin.setAttribute("aria-pressed", String(!!d.pinned));
   pin.title = d.pinned ? "Angeheftet – klicken zum Lösen" : "Oben anheften";
@@ -132,6 +152,9 @@ function renderDeckFlags(d) {
 }
 $("#pin-btn").addEventListener("click", () => currentDeck && setDeckFlag(currentDeck, "pinned", !currentDeck.pinned));
 $("#shelve-btn").addEventListener("click", () => { $("#deck-menu").open = false; if (currentDeck) void setDeckFlag(currentDeck, "shelved", !currentDeck.shelved); });
+for (const b of document.querySelectorAll("#deck-stage [data-stage]")) {
+  b.addEventListener("click", () => currentDeck && setDeckStage(currentDeck, currentDeck[b.dataset.stage] ? null : b.dataset.stage));
+}
 $("#unshelve-btn").addEventListener("click", () => currentDeck && setDeckFlag(currentDeck, "shelved", false));
 $("#deck-filter").addEventListener("input", renderDeckList);
 

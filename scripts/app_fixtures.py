@@ -36,7 +36,7 @@ MEREN = {
     "history": [{"version": 1, "at": "2026-09-01T10:00:00+00:00", "note": "Import"}, {"version": 2, "at": "2026-10-01T10:00:00+00:00", "note": "Manuell"}],
 }  # fmt: skip
 KAALIA = {
-    "name": "Kaalia", "slug": "kaalia", "commanders": ["Kaalia of the Vast"], "bracket": 2, "version": 1, "pinned": True, "pin_rank": 0,
+    "name": "Kaalia", "slug": "kaalia", "commanders": ["Kaalia of the Vast"], "bracket": 2, "version": 1, "pinned": True, "pin_rank": 0, "planning": True,
     "created": "2026-09-05T10:00:00+00:00", "updated": "2026-09-05T10:00:00+00:00", "cards": [{"name": "Sol Ring", "qty": 1, "category": "Ramp"}],
     "validation": {"legal": True, "color_identity": "RWB"},
 }  # fmt: skip
@@ -101,6 +101,8 @@ CASES: list[tuple[str, str, str, dict[str, Any]]] = [
     ("deck-edit-commander", "The commander cannot go into the 99.", "deck.edit", {"deck": "meren", "add": [{"name": "Meren of Clan Nel Toth"}]}),
     ("deck-flags-pin", "A deck is pinned.", "deck.flags", {"deck": "meren", "pinned": True}),
     ("deck-flags-shelve", "A deck is shelved and unpinned (its pin rank goes).", "deck.flags", {"deck": "kaalia", "pinned": False, "shelved": True}),
+    ("deck-flags-planning", "A deck is marked „In Planung“ (still being put together).", "deck.flags", {"deck": "meren", "planning": True}),
+    ("deck-flags-built", "A deck is marked „Gebaut“; that clears „In Planung“.", "deck.flags", {"deck": "kaalia", "built": True}),
     ("deck-pin-order", "The pinned decks get their dragged order; unpinned ones are left alone.", "deck.pin_order", {"slugs": ["meren", "kaalia"]}),
     ("collection-add-new", "A scanned card that is not in the collection yet.", "collection.add",
      {"entry": {"id": "c3", "name": "Arcane Signet", "qty": 1, "lang": "de", "scryfall_id": "c6ec4b0c-ba8e-4f1d-9a59-bd95cc7b6b1c",

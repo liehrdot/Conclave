@@ -125,7 +125,7 @@ function newDeck(snap, op) {  // appops._deck_new: an empty deck the PC checks a
   const rule0 = (stufe) => ({ rows: [{ flag: false, label: stufe, value: level }, { flag: false, label: "Commander", value: who }], text: "" });
   snap.decks.unshift({ slug: d.slug, name: text(d.name, 120) || who, commanders, colors: "", bracket, tier: null, level, level_en: level,
     proxy: false, legal: null, description: "", version: 1, updated: op.at, checking: true, rule0: rule0("Stufe"), rule0_en: rule0("Level"),
-    speed: null, cards: [], maybe: [], record: recordOf([]), pinned: false, shelved: false, pin_rank: null });
+    speed: null, cards: [], maybe: [], record: recordOf([]), pinned: false, shelved: false, planning: false, built: false, pin_rank: null });
 }
 
 function editDeck(snap, op) {  // appops._deck_edit + maybe.change; refused or nothing changed = nothing shown
@@ -209,9 +209,15 @@ export function apply(snap, op) {
   else if (op.type === "game.delete") snap.games = snap.games.filter((g) => !(g.id === p.id && g.deck === p.deck));
   else if (op.type === "deck.new") newDeck(snap, op);
   else if (op.type === "deck.edit") editDeck(snap, op);
-  else if (op.type === "deck.flags") {  // like appops._deck_flags: pinned / shelved, no new version
+  else if (op.type === "deck.flags") {  // like appops._deck_flags / deckrecord.with_flags, no new version
     const d = snap.decks.find((x) => x.slug === p.deck);
-    for (const k of ["pinned", "shelved"]) if (d && typeof p[k] === "boolean") d[k] = p[k];
+    const keys = ["pinned", "shelved", "planning", "built"].filter((k) => typeof p[k] === "boolean");
+    for (const k of keys.sort((a, b) => p[a] - p[b])) {  // removals first, so a set stage wins
+      if (!d) break;
+      d[k] = p[k];
+      if (p[k] && k === "planning") d.built = false;  // „In Planung“ and „Gebaut“ exclude each other
+      if (p[k] && k === "built") d.planning = false;
+    }
     if (d && !d.pinned) d.pin_rank = null;
   } else if (op.type === "deck.pin_order") {  // like appops._pin_order
     (p.slugs || []).forEach((slug, i) => { const d = snap.decks.find((x) => x.slug === slug); if (d?.pinned) d.pin_rank = i; });

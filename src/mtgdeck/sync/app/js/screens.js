@@ -152,7 +152,7 @@ export function decks() {
   const row = (d) => `<a class="row${d.shelved ? " shelved" : ""}" href="#/decks/${esc(d.slug)}"${sortable && d.pinned && !d.shelved ? ` data-pinned="${esc(d.slug)}"` : ""}>
         ${thumb(d.commanders[0], d.colors)}
         <span class="main"><span class="title">${d.pinned ? `${icon("pin", "xs pin")}<span class="sr-only">Angeheftet:</span> ` : ""}${esc(d.name)}</span>
-          <span class="subtitle">${pips(d.colors)} ${esc(d.level)} · ${esc(recordText(d.record))}</span></span>${sortable && d.pinned && !d.shelved
+          <span class="subtitle">${stageTag(d)}${pips(d.colors)} ${esc(d.level)} · ${esc(recordText(d.record))}</span></span>${sortable && d.pinned && !d.shelved
           ? `<span class="grip" data-grip role="button" aria-label="${esc(d.name)} verschieben">${icon("grip", "sm")}</span>` : icon("chev-r", "sm chev")}</a>`;
   const html = `<div class="large-title"><h1>Decks</h1></div>
     ${list.length ? `${played.length ? `<div class="group" id="played-decks">${played.map(row).join("")}</div>` : ""}
@@ -211,6 +211,17 @@ function bindPinDrag(el) {
   }
 }
 
+const STAGES = { planning: "In Planung", built: "Gebaut" };
+/** The deck's „In Planung“ / „Gebaut“ tag in the Decks list (nothing when it is not marked). */
+const stageTag = (d) => (d.planning ? `<span class="stage-tag planning">${STAGES.planning}</span>` : d.built ? `<span class="stage-tag built">${STAGES.built}</span>` : "");
+
+/** Mark how far the deck is („In Planung“ / „Gebaut“); a tap on the picked one clears it. The two exclude each other. */
+function setStage(d, stage) {
+  const on = !d[stage];
+  const entry = op("deck.flags", { deck: d.slug, [stage]: on, prev: { planning: !!d.planning, built: !!d.built } });
+  toast(on ? `${d.name}: ${STAGES[stage]}` : `${d.name}: ohne Status`, { ok: true, ms: 2600, action: { label: "Rückgängig", run: () => undo(entry) } });
+}
+
 /** Pin the deck (listed first) or shelve it (not played at the moment); a toast offers to take it back. */
 function setFlag(d, key) {
   const on = !d[key];
@@ -235,6 +246,10 @@ export function deck(slug, seg = "rule0") {
       <div class="chips deck-flags">
         <button class="chip" type="button" data-flag="pinned" aria-pressed="${!!d.pinned}">${icon("pin")}${d.pinned ? "Angeheftet" : "Anheften"}</button>
         <button class="chip" type="button" data-flag="shelved" aria-pressed="${!!d.shelved}">${icon("pause")}${d.shelved ? "Pausiert" : "Pausieren"}</button></div>
+      <div class="stage-row"><span class="stage-label" id="stage-label">Status</span>
+        <div class="chips" role="group" aria-labelledby="stage-label">
+          <button class="chip stage planning" type="button" data-stage="planning" aria-pressed="${!!d.planning}">${icon("edit")}In Planung</button>
+          <button class="chip stage built" type="button" data-stage="built" aria-pressed="${!!d.built}">${icon("check")}Gebaut</button></div></div>
       ${d.shelved ? `<p class="hint-small shelved-note">Spielst du gerade nicht – Karten daraus kannst du für andere Decks nehmen.</p>` : ""}
       <div class="recordbar"><div class="w"><b>${r.wins}</b><span>Siege</span></div><div class="l"><b>${r.losses}</b><span>Niederlagen</span></div>
         <div><b>${r.games ? Math.round((100 * r.wins) / r.games) : 0} %</b><span>${plural(r.games, "Partie", "Partien")}</span></div></div>
@@ -248,6 +263,7 @@ export function deck(slug, seg = "rule0") {
     html, bar: { title: d.name, back: { href: "#/decks", label: "Decks" }, watch: ".detail-head h1", action: tabletSized() ? { label: "Bauen", run: () => { location.hash = `#/bauen/${d.slug}`; } } : null },
     bind(el) {
       for (const b of $$("[data-flag]", el)) b.addEventListener("click", () => setFlag(d, b.dataset.flag));
+      for (const b of $$("[data-stage]", el)) b.addEventListener("click", () => setStage(d, b.dataset.stage));
       for (const b of $$("[data-seg]", el)) b.addEventListener("click", () => {
         history.replaceState(history.state, "", `#/decks/${slug}/${b.dataset.seg}`);
         for (const x of $$("[data-seg]", el)) { x.setAttribute("aria-pressed", x === b); x.setAttribute("aria-selected", x === b); }
