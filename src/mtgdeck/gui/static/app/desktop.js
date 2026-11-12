@@ -126,7 +126,7 @@ function followUpdate(u, version) {
   const pending = (() => { try { return JSON.parse(store.get("update") || "null"); } catch { return null; } })();
   if (pending && !busy) {
     if (pending.to && version === pending.to && pending.from !== version) {
-      toast(`Conclave ${version} ist installiert.`, "success", 7000);
+      if (!$("#whats-new").open) toast(`Conclave ${version} ist installiert.`, "success", 9000, { label: "Was ist neu?", run: () => openWhatsNew() });
       store.set("update", "");
     } else if (u.state === "error" && u.failed_step && !updateView.update) {
       updateView.request = pending.request;  // the app restarted after a failed install: show what went wrong
@@ -287,3 +287,59 @@ $("#desktop-notify").addEventListener("change", async (e) => {
 $("#desktop-data").addEventListener("click", () => api("/api/desktop/command", { method: "POST", body: { type: "open_data" } }).catch(fail));
 $("#desktop-log").addEventListener("click", () => api("/api/desktop/command", { method: "POST", body: { type: "open_log" } }).catch(fail));
 if (/Mac|iPhone|iPad/.test(navigator.platform)) $("#palette-btn kbd").textContent = "⌘ K";
+
+// ---------- „Was ist neu?“ (issue #129): once after an update, and from Über Conclave and Ctrl+K ----------
+let whatsNewSeen = null;  // the version to mark as seen when the dialog closes (only when it opened by itself)
+const wnText = (t) => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+const wnRelease = (r, head) => `<section class="wn-release">${head ? `<h3>Conclave ${esc(r.version)}</h3>` : ""}`
+  + `<ul class="wn-items">${r.items.map((it) => `<li><div><b>${wnText(it.title)}</b><p>${wnText(it.text)}</p></div></li>`).join("")}</ul></section>`;
+function showWhatsNew(version, releases, { preview = false } = {}) {
+  const one = releases.length === 1;
+  const names = releases.map((r) => r.version).reverse();
+  $("#wn-title").textContent = one ? `Neu in Conclave ${names[0]}` : releases.length ? "Neu seit deinem letzten Update" : "Was ist neu?";
+  $("#wn-sub").textContent = preview ? `Vorschau-Version ${version}: das kommt mit Conclave ${names.at(-1) || "der nächsten Version"}.`
+    : one ? "Das bringt diese Version mit." : releases.length ? `Die Versionen ${names.join(", ").replace(/, ([^,]+)$/, " und $1")}.` : "";
+  $("#wn-body").innerHTML = releases.length ? releases.map((r) => wnRelease(r, !one)).join("")
+    : '<p class="empty-inline">Zu dieser Version gibt es keine Notizen.</p>';
+  const older = $("#wn-older");
+  older.open = false;
+  older.dataset.after = releases.at(-1)?.version || "";
+  $("#wn-older-body").innerHTML = "";
+  if (!$("#whats-new").open) { setNavOpen(false); $("#whats-new").showModal(); }
+}
+// „Frühere Versionen“: the notes older than the ones shown, loaded when opened
+$("#wn-older").addEventListener("toggle", async (e) => {
+  const box = e.currentTarget;
+  if (!box.open || $("#wn-older-body").innerHTML) return;
+  let all;
+  try { all = (await api("/api/whatsnew?all=1")).releases; } catch (err) { return fail(err); }
+  const rest = all.slice(all.findIndex((r) => r.version === box.dataset.after) + 1);
+  $("#wn-older-body").innerHTML = rest.length ? rest.map((r) => wnRelease(r, true)).join("") : '<p class="muted small">Keine älteren Notizen.</p>';
+});
+async function openWhatsNew() {
+  let d;
+  try { d = await api("/api/whatsnew?all=1"); } catch (err) { return fail(err); }
+  showWhatsNew(d.version, d.current ? [d.current] : [], { preview: d.preview });
+}
+// at the start: the notes once after an update. In the desktop app wait for the shell's first poll, since a preview
+// build's number is only the shell's. A fresh install marks its version as seen without showing anything.
+async function checkWhatsNew(tries = 0) {
+  let h;
+  try { h = await api("/api/health"); } catch { return; }
+  if (h.frozen && !desktopShell) {
+    try { desktopShell = (await api("/api/desktop")).shell; } catch { /* asked again below */ }
+    if (!desktopShell && tries < 8) return void setTimeout(() => checkWhatsNew(tries + 1), 2000);
+  }
+  let d;
+  try { d = await api("/api/whatsnew"); } catch { return; }
+  if (d.show && !$("#update-view").open) {
+    whatsNewSeen = d.version;
+    showWhatsNew(d.version, d.releases, { preview: d.preview });
+  } else if (!d.seen) void api("/api/whatsnew/seen", { method: "POST", body: { version: d.version } }).catch(() => {});
+}
+$("#whats-new").addEventListener("close", () => {
+  if (whatsNewSeen) void api("/api/whatsnew/seen", { method: "POST", body: { version: whatsNewSeen } }).catch(() => {});
+  whatsNewSeen = null;
+});
+$("#wn-close").addEventListener("click", () => $("#whats-new").close());
+$("#about-whatsnew").addEventListener("click", () => openWhatsNew());

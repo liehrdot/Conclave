@@ -111,6 +111,7 @@ function paletteItems() {
     { label: "Einstellungen", hint: "Seite · Strg+,", run: () => go("#/settings") },
     { label: "Über Conclave", hint: "Einstellungen · Version, Kanäle", run: () => go("#/about") },
     { label: "Tastenkürzel", hint: "Übersicht · ?", run: () => openShortcuts() },
+    { label: "Was ist neu?", hint: "Neu in dieser Version", run: () => openWhatsNew() },
   ];
   if (currentDeck && parseHash().view === "deck") {
     const d = currentDeck;

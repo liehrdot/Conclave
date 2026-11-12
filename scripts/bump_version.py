@@ -36,6 +36,9 @@ def main(version: str) -> int:
     data = json.loads(conf.read_text("utf-8"))
     data["version"] = version
     conf.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", "utf-8")
+    notes = ROOT / "src/mtgdeck/gui/releasenotes" / f"{version}.md"
+    if not notes.exists():  # the GitHub release and the app's „Was ist neu?“ show this file
+        print(f"Achtung: {notes.relative_to(ROOT)} fehlt noch – „Was ist neu?“ hätte nichts zu zeigen.", file=sys.stderr)
     print(f"Version {version} in {len(FILES) + 1} Dateien gesetzt – jetzt committen, taggen (v{version}) und pushen.")
     return 0
 

@@ -11,5 +11,6 @@ void refreshBlacklist();
 loadSettings().catch((err) => console.error(err));
 Promise.all([initBrackets(), refreshDeckList(), refreshCollectionSummary(), refreshTableRules(), refreshOpponents(), refreshSales()]).then(route, (err) => { fail(err); void route(); });
 void refreshSync({ quiet: true });
+setTimeout(checkWhatsNew, 1500);  // „Was ist neu?“ once after an update
 // the desktop shell polls the backend a few seconds after the start; sooner after an update, to report how it went
 setTimeout(refreshDesktop, store.get("update") ? 4000 : 20000);

@@ -45,6 +45,8 @@ DEFAULTS: dict[str, Any] = {
     "hover_preview": True,
     # Verkaufsliste: the suggested price from Cardmarket's price guide: trend | trend95 | trend90 | low
     "sale_price": "trend",
+    # „Was ist neu?“: the newest version whose notes this device has shown (gui/whatsnew.py); empty = none yet
+    "whatsnew_seen": "",
 }
 _ENV = {
     "autofill_path": "MTG_AUTOFILL_PATH",

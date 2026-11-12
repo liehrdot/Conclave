@@ -4,7 +4,7 @@ does not unpack to %TEMP%, which virus scanners dislike).
 
     uv run pyinstaller desktop/sidecar/backend.spec            → dist/conclave-backend/
 
-Bundled besides the code: the GUI's static files. The sync server, its phone app and the test helpers are left out."""
+Bundled besides the code: the GUI's static files and the release notes. The sync server, its phone app and the test helpers are left out."""
 
 import sys
 from pathlib import Path
@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 datas = [
     (str(ROOT / "src/mtgdeck/gui/static"), "mtgdeck/gui/static"),
+    (str(ROOT / "src/mtgdeck/gui/releasenotes"), "mtgdeck/gui/releasenotes"),  # „Was ist neu?“
 ]
 datas += collect_data_files("certifi")
 

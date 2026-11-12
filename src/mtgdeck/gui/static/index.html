@@ -1033,6 +1033,7 @@
         <h1>Conclave</h1>
         <p class="lead">Commander-Decks selbst bauen – am Schreibtisch, am Tisch und auf dem iPad.</p>
         <p class="muted small about-version-line"></p>
+        <p class="about-whatsnew-line"><button type="button" class="btn" id="about-whatsnew">Was ist neu?</button></p>
       </header>
 
       <section class="panel">
@@ -1372,6 +1373,26 @@
     <button type="button" class="btn" id="uv-hide">Im Hintergrund weiter</button>
     <button type="button" class="btn" id="uv-close" hidden>Schließen</button>
     <button type="button" class="btn primary" id="uv-retry" hidden>Erneut versuchen</button>
+  </div>
+</dialog>
+
+<dialog id="whats-new" class="dialog whats-new" aria-labelledby="wn-title">
+  <div class="uv-head">
+    <span class="logo uv-logo" aria-hidden="true"></span>
+    <div>
+      <h2 id="wn-title">Was ist neu?</h2>
+      <p id="wn-sub" class="muted small"></p>
+    </div>
+  </div>
+  <div class="wn-scroll">
+    <div id="wn-body"></div>
+    <details class="more wn-older" id="wn-older">
+      <summary>Frühere Versionen</summary>
+      <div id="wn-older-body"></div>
+    </details>
+  </div>
+  <div class="dialog-actions">
+    <button type="button" class="btn primary" id="wn-close" autofocus>Alles klar</button>
   </div>
 </dialog>
 
