@@ -6,7 +6,7 @@
 # (e.g. 0.1.9), or by pushing a bare tag v<version>. Never publish the release by hand first: it stays empty.
 # Secrets: TAURI_SIGNING_PRIVATE_KEY (the key whose public part is in desktop/src-tauri/tauri.conf.json),
 # TAURI_SIGNING_PRIVATE_KEY_PASSWORD (empty if the key has none).
-# Release notes (also shown in the app's update notice) come from docs/releases/<version>.md, else a default text.
+# Release notes (also shown in the app's update notice) come from src/mtgdeck/gui/releasenotes/<version>.md (the app shows the same file under „Was ist neu?“), else a default text.
 name: Release
 
 on:
@@ -82,7 +82,7 @@ jobs:
         id: notes
         shell: pwsh
         run: |
-          $file = "docs/releases/$($env:TAG.TrimStart('v')).md"
+          $file = "src/mtgdeck/gui/releasenotes/$($env:TAG.TrimStart('v')).md"
           $body = if (Test-Path $file) { Get-Content $file -Raw -Encoding utf8 } else { "Windows-Installer (pro Benutzer, ohne Adminrechte). Eine installierte App holt sich diese Version von selbst: Einstellungen → Desktop-App." }
           Write-Host "notes from $(if (Test-Path $file) { $file } else { 'the default text' })"
           $eof = "NOTES_$([guid]::NewGuid().ToString('N'))"

@@ -35,7 +35,7 @@ from ..deck import DeckEntry, to_text
 from ..http import HttpError
 from ..power import TIER_LABELS, PowerProfile
 from ..sync.remote import RemoteError
-from . import jobs, terminal
+from . import desktop as desktop_mod, jobs, terminal, whatsnew
 from . import sync as gui_sync
 from .routes import backups as backup_routes, collection as collection_routes, describe as describe_routes, desktop as desktop_routes, selling as selling_routes
 
@@ -180,6 +180,34 @@ async def index() -> FileResponse:
 async def api_health() -> dict[str, Any]:
     """Readiness for the desktop shell (no token needed): the backend is up and serving this data folder."""
     return {"ok": True, "service": "mtgdeck-gui", "version": VERSION, "home": str(paths.home()), "frozen": paths.frozen()}
+
+
+def _running_version() -> str:
+    """The version the user runs: the desktop shell's (a preview build only changes the shell's number), else ours."""
+    v = str((desktop_mod.shell() or {}).get("version") or "")
+    return v if _VERSION_RE.fullmatch(v) else VERSION
+
+
+_VERSION_RE = re.compile(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]{1,40})?")
+
+
+@app.get("/api/whatsnew")
+async def api_whatsnew(all: bool = False) -> dict[str, Any]:
+    """„Was ist neu?“: once after an update the notes of the new version(s) (``show``); ``all=1`` every version's."""
+    if all:
+        version = _running_version()
+        return {"version": version, "preview": "-" in version, "current": whatsnew.current(version), "releases": whatsnew.all_notes()}
+    return whatsnew.state(_running_version())
+
+
+class WhatsNewSeen(BaseModel):
+    version: str = Field(pattern=f"^{_VERSION_RE.pattern}$", max_length=60)
+
+
+@app.post("/api/whatsnew/seen")
+async def api_whatsnew_seen(req: WhatsNewSeen) -> dict[str, Any]:
+    whatsnew.mark_seen(req.version)
+    return {"ok": True}
 
 
 app.include_router(desktop_routes.router)
