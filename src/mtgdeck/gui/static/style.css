@@ -173,6 +173,24 @@ img { max-width: 100%; }
 .nav-bottom .count { margin-left: auto; }
 .nav-bottom .nav-group { margin: var(--space-3) 0 0; padding: 0 8px; font-size: var(--fs-sm); font-weight: 600; color: var(--muted); }
 .nav-bottom a { padding-top: 6px; padding-bottom: 6px; }
+/* the links under the deck list fold into one row of icons (#nav-collapse, store navcompact), so the list gets the height */
+.nav-bottom { position: relative; }
+.nav-collapse { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--bg); color: var(--muted); cursor: pointer; }
+.nav-collapse::before { content: ""; position: absolute; inset: -8px; }  /* a larger hit area */
+.nav-collapse:hover { color: var(--text); border-color: var(--border-strong); }
+.nav-collapse:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; }
+.nav-collapse .icon { width: 14px; height: 14px; transition: transform .15s ease; }
+.nav-compact .nav-collapse .icon { transform: rotate(180deg); }
+.nav-trash-btn { display: none; }
+.nav-compact .nav-trash { display: none; }
+.nav-compact .nav-bottom { flex-direction: row; flex-wrap: nowrap; gap: 0; }  /* one row, up to nine icons (with Verkaufen and Papierkorb) */
+.nav-compact .nav-bottom .nav-group, .nav-compact .nav-bottom .count { display: none; }
+.nav-compact .nav-bottom a, .nav-compact .nav-trash-btn:not([hidden]) { position: relative; flex: 1 1 0; min-width: 0; display: flex; justify-content: center; align-items: center; padding: 8px 0; border: 0; border-radius: var(--radius); background: none; color: var(--text); cursor: pointer; }
+.nav-compact .nav-bottom a:hover, .nav-compact .nav-trash-btn:hover { background: var(--surface-2); }
+.nav-compact .nav-bottom a[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--text); }
+.nav-compact .nav-bottom .nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.nav-compact .nav-bottom .sync-dot { position: absolute; top: 5px; right: calc(50% - 14px); margin: 0; }
+@media (prefers-reduced-motion: reduce) { .nav-collapse .icon { transition: none; } }
 .nav-trash { border-top: 1px solid var(--border); padding-top: var(--space-2); }
 .nav-trash > summary { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius); cursor: pointer; list-style: none; font-size: 14px; font-weight: 550; }
 .nav-trash > summary::-webkit-details-marker { display: none; }

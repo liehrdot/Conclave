@@ -64,6 +64,8 @@ async function refreshTrash() {
   try { items = await api("/api/trash"); } catch (err) { fail(err); return; }
   $("#nav-trash").hidden = !items.length;
   $("#trash-count").textContent = items.length || "";
+  $("#nav-trash-btn").hidden = !items.length;
+  $("#trash-count-mini").textContent = items.length || "";
   $("#trash-list").innerHTML = items.map((t) => `<li>
       <span class="name">${esc(t.name)}</span>
       <span class="actions">

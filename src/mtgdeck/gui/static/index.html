@@ -25,6 +25,8 @@
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4M12 17h.01"/></symbol>
   <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
   <symbol id="i-forward" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
   <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
   <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
@@ -82,17 +84,19 @@
       <button type="button" class="btn ghost small" id="trash-empty">Papierkorb leeren …</button>
     </details>
 
-    <nav class="nav-bottom" aria-label="Weitere Bereiche">
-      <a href="#/collection" data-nav="collection"><svg class="icon"><use href="#i-box"/></svg>Meine Sammlung <span id="coll-count" class="count"></span></a>
-      <a href="#/sell" data-nav="sell" id="nav-sell" hidden><svg class="icon"><use href="#i-tag"/></svg>Verkaufen <span id="sell-count" class="count"></span></a>
-      <a href="#/orders" data-nav="orders"><svg class="icon"><use href="#i-cart"/></svg>Sammelbestellungen <span id="order-count" class="count"></span></a>
+    <nav class="nav-bottom" id="nav-bottom" aria-label="Weitere Bereiche">
+      <button type="button" class="nav-collapse" id="nav-collapse" aria-expanded="true" aria-controls="nav-bottom" title="Menü einklappen"><svg class="icon"><use href="#i-chevron"/></svg><span class="sr-only">Menü einklappen</span></button>
+      <button type="button" class="nav-trash-btn" id="nav-trash-btn" hidden><svg class="icon"><use href="#i-trash"/></svg><span class="nav-label">Papierkorb</span> <span id="trash-count-mini" class="count"></span></button>
+      <a href="#/collection" data-nav="collection"><svg class="icon"><use href="#i-box"/></svg><span class="nav-label">Meine Sammlung</span> <span id="coll-count" class="count"></span></a>
+      <a href="#/sell" data-nav="sell" id="nav-sell" hidden><svg class="icon"><use href="#i-tag"/></svg><span class="nav-label">Verkaufen</span> <span id="sell-count" class="count"></span></a>
+      <a href="#/orders" data-nav="orders"><svg class="icon"><use href="#i-cart"/></svg><span class="nav-label">Sammelbestellungen</span> <span id="order-count" class="count"></span></a>
       <p class="nav-group" id="nav-g-round">Meine Runde</p>
-      <a href="#/opponents" data-nav="opponents"><svg class="icon"><use href="#i-swords"/></svg>Gegnerdecks <span id="opp-count" class="count"></span></a>
-      <a href="#/tables" data-nav="tables"><svg class="icon"><use href="#i-table"/></svg>Tischregeln <span id="tr-count" class="count"></span></a>
-      <a href="#/blacklist" data-nav="blacklist"><svg class="icon"><use href="#i-ban"/></svg>Blacklist <span id="bl-count" class="count"></span></a>
+      <a href="#/opponents" data-nav="opponents"><svg class="icon"><use href="#i-swords"/></svg><span class="nav-label">Gegnerdecks</span> <span id="opp-count" class="count"></span></a>
+      <a href="#/tables" data-nav="tables"><svg class="icon"><use href="#i-table"/></svg><span class="nav-label">Tischregeln</span> <span id="tr-count" class="count"></span></a>
+      <a href="#/blacklist" data-nav="blacklist"><svg class="icon"><use href="#i-ban"/></svg><span class="nav-label">Blacklist</span> <span id="bl-count" class="count"></span></a>
       <p class="nav-group">Hilfe</p>
-      <a href="#/glossary" data-nav="glossary"><svg class="icon"><use href="#i-book"/></svg>Glossar</a>
-      <a href="#/settings" data-nav="settings"><svg class="icon"><use href="#i-settings"/></svg>Einstellungen <span id="sync-dot" class="sync-dot" hidden></span></a>
+      <a href="#/glossary" data-nav="glossary"><svg class="icon"><use href="#i-book"/></svg><span class="nav-label">Glossar</span></a>
+      <a href="#/settings" data-nav="settings"><svg class="icon"><use href="#i-settings"/></svg><span class="nav-label">Einstellungen</span> <span id="sync-dot" class="sync-dot" hidden></span></a>
     </nav>
   </aside>
   <div class="scrim" id="scrim" hidden></div>

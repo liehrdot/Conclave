@@ -85,6 +85,32 @@ $("#nav-toggle").addEventListener("click", () => setNavOpen(!document.body.class
 $("#scrim").addEventListener("click", () => setNavOpen(false));
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("nav-open")) setNavOpen(false); });
 
+// the links under the deck list fold into one row of icons, so the deck list gets the height (remembered per browser)
+function setNavCompact(compact) {
+  $("#sidebar").classList.toggle("nav-compact", compact);
+  const btn = $("#nav-collapse");
+  const text = compact ? "Menü ausklappen" : "Menü einklappen";
+  btn.setAttribute("aria-expanded", String(!compact));
+  btn.title = text;
+  btn.querySelector(".sr-only").textContent = text;
+  for (const el of $$(".nav-bottom a, #nav-trash-btn")) el.title = "";
+  store.set("navcompact", compact ? "1" : "");
+}
+$("#nav-collapse").addEventListener("click", () => setNavCompact(!$("#sidebar").classList.contains("nav-compact")));
+// icons alone: the name (and count) as tooltip, filled in when the pointer gets there so counts are current
+$("#nav-bottom").addEventListener("pointerover", (e) => {
+  const el = e.target.closest(".nav-bottom a, #nav-trash-btn");
+  if (!el || !$("#sidebar").classList.contains("nav-compact")) return;
+  const count = el.querySelector(".count")?.textContent.trim();
+  el.title = el.querySelector(".nav-label").textContent + (count ? ` (${count})` : "");
+});
+$("#nav-trash-btn").addEventListener("click", () => {  // the trash list needs room: fold the menu out and open it
+  setNavCompact(false);
+  $("#nav-trash").open = true;
+  $("#nav-trash summary").focus();
+});
+setNavCompact(store.get("navcompact") === "1");
+
 // ============================================================================================
 // sidebar: saved decks
 // ============================================================================================
