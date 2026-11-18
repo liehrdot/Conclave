@@ -1,0 +1,54 @@
+# The engine of the native Mac app (github.com/liehrdot/Conclave-MacOS): the same PyInstaller folder build as the
+# Windows backend (desktop/sidecar/backend.spec), built on macOS (Apple silicon) and smoke-tested the same way:
+# it starts on a free port with a token, answers /api/health, refuses requests without the token and lists decks.
+# The Mac app builds its own copy from the Conclave commit it pins; this job only keeps that build working.
+name: macOS engine
+
+on:
+  push:
+    branches: ["**"]
+    paths: ["src/**", "desktop/sidecar/**", "pyproject.toml", "uv.lock", ".github/workflows/macos-engine.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-engine-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine-macos:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: uv sync --extra gui --extra desktop
+      - name: Build engine
+        run: uv run pyinstaller --noconfirm --clean desktop/sidecar/backend.spec
+      - name: Smoke test engine
+        run: |
+          data="$RUNNER_TEMP/mtgdata"
+          dist/conclave-backend/conclave-backend --data "$data" --port 0 --token auto > out.txt 2> err.txt &
+          pid=$!
+          url=""
+          for i in $(seq 1 120); do
+            sleep 0.5
+            url=$(sed -n 's/^MTGDECK_URL=//p' out.txt | head -1)
+            [ -n "$url" ] && break
+          done
+          cat out.txt err.txt
+          [ -n "$url" ] || { echo "engine printed no MTGDECK_URL"; exit 1; }
+          base="${url%%\?*}"
+          token="${url#*token=}"
+          curl -fsS "${base}api/health" | python3 -c 'import json,sys; h=json.load(sys.stdin); assert h["ok"] and h["frozen"], h; print(h)'
+          code=$(curl -s -o /dev/null -w '%{http_code}' "${base}api/decks")
+          [ "$code" = "401" ] || { echo "without token: expected 401, got $code"; exit 1; }
+          curl -fsS -H "Authorization: Bearer $token" "${base}api/decks" > /dev/null
+          [ -z "$(find dist/conclave-backend -type d -name claude_agent_sdk)" ] || { echo "the Claude Agent SDK must not be bundled"; exit 1; }
+          kill "$pid"
+          echo "engine: $(du -sh dist/conclave-backend | cut -f1), $(file dist/conclave-backend/conclave-backend | cut -d: -f2)"
