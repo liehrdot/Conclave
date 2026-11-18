@@ -4,6 +4,9 @@ does not unpack to %TEMP%, which virus scanners dislike).
 
     uv run pyinstaller desktop/sidecar/backend.spec            → dist/conclave-backend/
 
+The same spec builds the engine of the native Mac app (github.com/liehrdot/Conclave-MacOS) on macOS: workflow
+``macos-engine.yml`` checks that it builds and starts there.
+
 Bundled besides the code: the GUI's static files and the release notes. The sync server, its phone app and the test helpers are left out."""
 
 import sys
@@ -53,6 +56,7 @@ exe = EXE(
     upx=False,
     console=True,  # the shell reads MTGDECK_URL from stdout; it starts the exe without a visible window
     disable_windowed_traceback=False,
-    icon=str(ROOT / "desktop/icon.ico") if (ROOT / "desktop/icon.ico").exists() else None,
+    # the .ico is for Windows only; the Mac app's icon belongs to the Swift app that bundles this folder
+    icon=str(ROOT / "desktop/icon.ico") if sys.platform == "win32" and (ROOT / "desktop/icon.ico").exists() else None,
 )
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="conclave-backend")
